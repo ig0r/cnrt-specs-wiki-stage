@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frost Heave</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html" class="active" aria-current="page">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Frost Heave</span></nav>
+<article><h1>Frost Heave</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Frost Heave is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Frost Heave is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=frost-heave">frost-heave</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Frost heave is the upward movement of pavement that occurs when moisture‑laden, frost‑susceptible soils beneath a subgrade freeze and expand, temporarily reducing bearing support and producing differential uplift that can exceed the structure’s capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. This phenomenon leads to loss of serviceability—manifested as cracking, reduced ride quality, and weakened support during subsequent thaw periods—and therefore must be anticipated in pavement design through serviceability‑loss criteria and dedicated frost‑design provisions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Frost heave represents the fundamental engineering problem of loss of pavement serviceability caused by upward movement and temporary reduction in subgrade support when moisture‑laden soils freeze and later thaw. The expansion of water in frost‑susceptible subgrades generates differential uplift that can exceed bearing capacity, produce cracking, and degrade ride quality; during spring thaws the weakened subgrade further reduces support, especially for rigid pavements where added slab thickness provides only limited mitigation. Consequently pavement designs must anticipate this serviceability loss—incorporating it into terminal serviceability criteria for flexible systems and applying specific frost‑design guidance for rigid structures—and employ measures such as effective subsurface drainage to remove water, removal or replacement of frost‑sensitive soils with insulating layers, and provision of a stronger base course rather than relying solely on increased structural thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 6 (pp. 143–150), Ch. 8 (p. 164), Ch. 9 (pp. 168–169)</small></p>
+<p>Frost‑heave design must ensure that the pavement retains a high level of serviceability over its intended life by preventing differential heaving, preserving bearing support during freeze–thaw cycles, and protecting the structural materials from frost‑induced damage; this is achieved through removal or insulation of frost‑susceptible soils, provision of an adequately thick non‑frost‑susceptible layer, a stronger base course capable of supporting reduced bearing capacity, and appropriate drainage and gradual subgrade transitions to maintain safety and functional performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Frost‑heave design considerations are appropriate for any pavement whose subgrade or base can become saturated with water that subsequently freezes. This includes both concrete pavements—whether plain or receiving an asphalt overlay—and full‑depth flexible (asphalt) pavements, particularly where fine, low‑permeability soils, poor subsurface drainage, trapped water under joints, cut‑to‑fill transitions, or frozen layers beneath a thawing subgrade are present. Whenever the subgrade contains frost‑susceptible soils and freezing temperatures are expected, the approach must be applied to flexible pavements; for rigid (concrete) pavements it is invoked only when differential frost heave is anticipated or when an adequate granular foundation is lacking.</p>
+<p>The design procedure for flexible pavements requires determining a frost‑heave rate from the appropriate tables based on subgrade soil type, estimating the depth of frost penetration using the local Design Freezing Index, and applying a probability of occurrence typically between 25 % and 75 %. These inputs are used with AASHTO serviceability‑loss charts to adjust the terminal serviceability index for the project. For rigid pavements, standard design provides sufficient reserve capacity unless differential frost heave is expected; in that case the dedicated Frost Design section should be consulted rather than relying on increased slab thickness, which has limited effectiveness.</p>
+<p>Mitigation measures prescribed for both pavement types involve removing highly frost‑susceptible soils and replacing them with a non‑frost‑susceptible layer of sufficient thickness to insulate the roadbed from frost penetration, providing a stronger base course, and installing adequate drainage to prevent moisture accumulation. When an adequate granular foundation is already present under a rigid pavement, additional frost‑heave treatment is generally unnecessary. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 6 (pp. 143–150), Ch. 8 (p. 164), Ch. 9 (pp. 168–169)</small></p>
+<p>When an adequate granular foundation can be provided—especially beneath rigid pavements—or when the existing subgrade is not highly susceptible to frost, designers should favor alternatives such as a stronger base course, improved drainage, or selective grading rather than relying on increased pavement thickness for frost‑heave mitigation. If frost‑susceptible material is present, the preferred first action is its removal and replacement with a sufficiently thick layer of non‑frost‑susceptible fill that insulates the roadbed from freezing temperatures; increasing slab depth alone is justified only when removal is impractical or when full‑depth flexible designs demand additional treatment. For rigid pavements, simply adding thickness offers only marginal benefit against significant differential frost heave, so the limited success of a thicker structural design makes dedicated frost‑design strategies—such as those outlined in the Frost Design section—more appropriate. In cases where wholesale replacement is not feasible, other subgrade improvement methods are chosen when they can achieve required performance without excessive structural increase. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150), Ch. 8 (p. 164)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>Control of frost heave in PennDOT projects is dictated by drainage specifications that require subsurface drainage systems to be sized and spaced according to Publication 13M, Design Manual Part 2, Highway Design Chapter 10 Section 10.3.D, with each base‑drain outlet protected by a headwall as prescribed in Publication 72M Roadway Construction Standards. The standards further call for lateral underdrains at wet subgrade zones and cut‑to‑fill transitions, and continuous edge drains on both Interstate and non‑Interstate alignments wherever subsurface water poses a problem. Frost‑heave performance requirements are established by the 1993 AASHTO Guide for Design of Pavement Structures, Appendix G (Section G.2). Designers must obtain a frost‑heave rate from Table 9.1 or Table 9.2 based on subgrade soil type, determine the maximum serviceability loss using Figure G.7 together with the frost‑penetration depth derived from the Design Freezing Index in Appendix D, and then apply a probability range of 25 % to 75 % as directed by the District Geotechnical Engineer when employing Figure G.8. The calculated loss is added to the terminal serviceability value required in Table 6.3 to meet the pavement’s performance criteria. When soils are identified as highly frost‑susceptible, the guidance recommends their removal and replacement with a sufficiently thick layer of non‑frost‑susceptible material that insulates the subgrade; if removal is not feasible, a stronger base course combined with appropriate drainage may be used. For flexible pavements this frost‑heave treatment is mandatory, whereas rigid pavement designs rely on saturated subgrade strength and invoke additional measures only when differential frost heave is anticipated. In such cases for rigid pavements, designers are instructed to consult Section 6.2.B (Frost Design), recognizing that increasing slab thickness provides limited mitigation. The overall requirements are supplemented by the recommendations in NCHRP Synthesis 26 for seasonal‑frost roadway design. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 6 (pp. 143–150), Ch. 8 (p. 164), Ch. 9 (pp. 168–169)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>In frost‑prone regions, the design methodology begins with removal of frost‑susceptible soils and replacement by a sufficiently thick layer of non‑frost‑susceptible material to act as thermal insulation. After that, a stronger base course is provided to compensate for the reduced bearing capacity of the underlying subgrade, and appropriate drainage or gradual transitions in subgrade stiffness are incorporated to limit differential heave. Because AASHTO does not endorse increasing overall pavement thickness as a remedy, the loss of serviceability caused by frost heave must be quantified using the procedure set out in Appendix G of the 1993 AASHTO Guide for Design of Pavement Structures. The quantitative component is obtained by first selecting an appropriate frost‑heave rate from the tables that correspond to the identified subgrade type, then calculating the depth of frost penetration from the Design Freezing Index using the prescribed figure and reading the associated maximum potential serviceability loss for the prevailing drainage condition. A probability of occurrence—typically ranging between 25 % and 75 %—is assigned by the geotechnical engineer; the rate, depth‑derived loss, and probability are plotted on the serviceability‑loss chart to determine the estimated reduction, which is added to the terminal serviceability index. Since the department’s design software (DARWin) lacks a frost‑heave module, these calculations are performed with external tools: an online Frost Heave Calculator hosted in the ECMS file cabinet and a spreadsheet tool supplied on PennDOT’s PDAU web page. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p>The design chart below illustrates the method for determining frost penetration depth based on the Design Freezing Index.</p>
+<!-- concept-compliance:begin fig=ac5992d4 n=1 -->
+<figure class="cmp-figure" id="cmp-frost-heave-1">
+<img src="assets/frost-heave/ac5992d4eca9ce9a5aaa720aa292e9b3eaec15c302b69ef0d0af2da9701583c4.jpg" alt="Nomograph plotting frost penetration in inches against the design freezing index in degree days." aria-describedby="cmp-frost-heave-1-ld">
+<figcaption>Design chart for determination of frost penetration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</figcaption>
+</figure>
+<div id="cmp-frost-heave-1-ld" hidden>
+<p>A nomograph with a logarithmic x-axis and a semi-logarithmic y-axis. The horizontal axis represents the Design Freezing Index in Degree Days, ranging from 15 to 3000. The vertical axis represents Frost Penetration in Inches, ranging from 4 to 100.</p>
+<p>A single solid line indicates a positive correlation between the two variables.</p>
+</div>
+<details class="cmp-longdesc">
+<summary>Text description of this figure</summary>
+<p>A nomograph with a logarithmic x-axis and a semi-logarithmic y-axis. The horizontal axis represents the Design Freezing Index in Degree Days, ranging from 15 to 3000. The vertical axis represents Frost Penetration in Inches, ranging from 4 to 100.</p>
+<p>A single solid line indicates a positive correlation between the two variables.</p>
+</details>
+<!-- concept-compliance:end -->
+
+<p>The figure displays a log-log plot relating the Design Freezing Index (Degree Days) on the horizontal axis to Frost Penetration (Inches) on the vertical axis, showing a linear increase in depth as the freezing index rises.</p>
+<p><small>[1] — Ch. 6 (pp. 143–150), Ch. 9 (pp. 168–169)</small></p>
+<p>Design for frost heave must first address any frost‑susceptible soils by either excavating them and backfilling with a non‑frost‑susceptible material of sufficient thickness to prevent frost penetration, or by providing an insulating layer that meets the same protective function. The pavement structure is required to incorporate a stronger base course capable of sustaining reduced bearing capacity during freeze‑thaw cycles, and this requirement applies universally to full‑depth flexible pavements; rigid pavements are treated only when justified on a case‑by‑case basis. Adequate drainage and gradual transitions in the subgrade are also mandated to limit differential heaving. In the performance prediction for flexible pavements, the terminal serviceability index is increased by the loss of serviceability attributable to frost heave. That loss is quantified from three inputs: a frost‑heave rate selected from the appropriate subgrade‑soil tables (Table 9.1 or 9.2), the maximum potential serviceability loss derived from the calculated depth of frost penetration using the Design Freezing Index together with the assessed drainage quality, and an assumed probability of frost heave that is constrained to a range of 25 % to 75 % as directed by the district geotechnical engineer. The design life in years provides the time axis on the AASHTO chart for evaluating this loss, and when markedly different soil types occur within the project area separate calculations and designs must be performed. Serviceability loss is evaluated using the AASHTO Appendix G procedure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=04f2c7b2 src=pub_242_change_10::tab:p146#1 -->
+<p>Table: INTENTIONALLY BLANK (table).</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-frost-heave-1-cap" tabindex="0"><table class="ct-table" id="ct-frost-heave-1" aria-describedby="ct-frost-heave-1-sum">
+<caption id="ct-frost-heave-1-cap">INTENTIONALLY BLANK (table)</caption>
+<thead>
+<tr><th id="ct-frost-heave-1-h0-0" scope="col" colspan="2">DCP Rate</th><th id="ct-frost-heave-1-h0-2" scope="col" rowspan="2">Est.CBR%</th></tr>
+<tr><th id="ct-frost-heave-1-h1-0" scope="col">in/blow</th><th id="ct-frost-heave-1-h1-1" scope="col">mm/blow</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">9.00</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">229</td><td headers="ct-frost-heave-1-h0-2">0.5</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">6.00</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">152</td><td headers="ct-frost-heave-1-h0-2">1</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">4.50</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">114</td><td headers="ct-frost-heave-1-h0-2">2</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">3.00</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">76</td><td headers="ct-frost-heave-1-h0-2">3</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">2.50</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">64</td><td headers="ct-frost-heave-1-h0-2">4</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">2.00</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">51</td><td headers="ct-frost-heave-1-h0-2">5</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">1.75</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">44</td><td headers="ct-frost-heave-1-h0-2">6</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">1.50</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">38</td><td headers="ct-frost-heave-1-h0-2">7</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">1.25</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">32</td><td headers="ct-frost-heave-1-h0-2">9</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">1.00</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">25</td><td headers="ct-frost-heave-1-h0-2">12</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">0.90</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">23</td><td headers="ct-frost-heave-1-h0-2">14</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">0.80</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">20</td><td headers="ct-frost-heave-1-h0-2">16</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">0.70</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">18</td><td headers="ct-frost-heave-1-h0-2">19</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">0.60</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">15</td><td headers="ct-frost-heave-1-h0-2">23</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">0.50</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">13</td><td headers="ct-frost-heave-1-h0-2">28</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">0.40</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">10</td><td headers="ct-frost-heave-1-h0-2">36</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">0.35</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">9</td><td headers="ct-frost-heave-1-h0-2">42</td></tr>
+<tr><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-0">0.30</td><td headers="ct-frost-heave-1-h0-0 ct-frost-heave-1-h1-1">8</td><td headers="ct-frost-heave-1-h0-2">49</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-frost-heave-1-sum">Rows list in/blow; columns give DCP Rate (mm/blow), Est.CBR%.</p>
+<p class="ct-notes">Notes: Log (CBR) = 2.20 - 0.71Log (DCP)^1.5 + 0.075 where: CBR = California Bearing Ratio (%) DCP = Dynamic Cone Penetration Rate (mm/blow) Transportation Research Institute Technion Institute of Technology Pub. No. 87-065, Moshe &amp; Livneh (1987)</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 146.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 143–150), Ch. 9 (pp. 168–169)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>To mitigate frost‑heave effects the design must first eliminate frost‑susceptible soils by excavating them and backfilling with a sufficiently thick layer of non‑frost‑susceptible granular material that insulates the subgrade from freezing. The pavement structure should then incorporate a stronger base course capable of bearing reduced support, and appropriate drainage (e.g., base drains) should be provided to remove excess water. Uniformity of the subgrade is achieved through selective grading, blending or mixing of soils and by using gradual granular transitions at changes in soil type or fill‑cut interfaces. These measures together satisfy structural integrity, durability, constructability and long‑term performance requirements for frost‑prone locations. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>To mitigate frost heave the pavement design must replace frost‑susceptible soils with a sufficiently thick layer of non‑frost material, provide a stronger base course, install pavement base drains, and incorporate gradual subgrade transitions—typically granular or embankment fill—at any change in soil type, groundwater condition, or cut‑fill interface; reinforcement can be achieved by placing geogrids at the subgrade‑aggregate interface and using class 4 geotextiles to separate or stabilize the subgrade and subbase layers. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150)</small></p>
+<p>To mitigate frost‑heave effects, the interface between the subgrade and overlying layers should be treated by removing any frost‑susceptible soil and replacing it with a sufficiently thick layer of non‑frost‑susceptible granular material that insulates the roadbed from freezing. A stronger base course is then provided to carry reduced bearing capacity, and drainage (e.g., pavement‑base drains) is installed at the base interface to remove excess water. Where subgrade conditions change abruptly, designers should create gradual transitions using blended or graded fill or a granular non‑frost‑susceptible subbase, and may employ geogrids or Class 4 geotextiles at the subgrade‑aggregate interface for reinforcement and separation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>In frost‑heave design the engineer first screens the subgrade for soils that are highly susceptible to heaving; those soils are removed and replaced with a sufficiently thick layer of non‑frost‑susceptible material that insulates the roadbed from freezing temperatures. A stronger base course is then provided to sustain the reduced bearing capacity that can develop under frozen conditions, and drainage is enhanced by installing pavement‑base drains or other appropriate subsurface drains. High‑permeability granular materials are specified for the base and subbase so that gravity‑drainable water is removed rapidly, while closely spaced lateral underdrains are placed in wet subgrade areas and at cut‑to‑fill transitions. Drain outlets are protected against crushing or plugging to ensure prompt removal of surface runoff and to prevent ponded water from infiltrating and freezing. Positive longitudinal slopes are maintained through selective grading, blending, boulder removal, and gradual granular transitions, which keep groundwater below the pavement and limit upward migration of moisture during freeze‑thaw cycles. The depth of frost penetration is determined from the local Design Freezing Index and entered into the AASHTO chart assuming a drainage quality classified as FAIR to estimate the maximum potential serviceability loss. An estimated probability that frost heave will occur, typically taken between 25 % and 75 % for the district, is applied together with the design life to compute total serviceability loss, which is then incorporated into the terminal serviceability index for pavement design. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 6 (pp. 143–150), Ch. 9 (pp. 168–169)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>Frost‑heave design is directed toward preserving the pavement’s serviceability over its intended life by preventing differential heaving, loss of bearing support during thaw periods, and freeze‑thaw damage to the structural layers; these objectives are reflected in reduced cracking, rutting and other distress and in a ride quality that remains within acceptable limits. The expected performance is quantified through the loss of serviceability due to frost heave, which is calculated according to the procedure set out in the 1993 AASHTO Guide for Design of Pavement Structures (Appendix G) or by using the online Frost Heave Calculator. For full‑depth flexible pavements the terminal serviceability index from Table 6.3 is adjusted upward by the estimated loss, ΔPSIFH, which is derived from three inputs: the frost‑heave rate obtained from subgrade tables, the maximum potential serviceability loss based on frost penetration depth and drainage quality, and the probability that frost heave will occur. The resulting ΔPSIFH value is added to the base terminal serviceability index, providing a measurable indicator of the expected reduction in serviceability and thereby confirming whether the design meets the targeted service life, distress resistance, and ride‑quality criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150), Ch. 9 (pp. 168–169)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

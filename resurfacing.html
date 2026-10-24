@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resurfacing</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html" class="active" aria-current="page">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="rehabilitation.html">Rehabilitation</a><span class="crumb-sep">›</span><a href="overlay.html">Overlay</a><span class="crumb-sep">›</span><span class="crumb-current">Resurfacing</span></nav>
+<article><h1>Resurfacing</h1>
+<div class="meta"><div class="part-of">Part of: <a href="overlay.html">Overlay</a> <span class="edge edge-taxonomic" title="Resurfacing is a topic under Overlay.">is-subtopic-of</span></div><div class="edge-reading">Resurfacing is a topic under Overlay.</div><div><a class="tag" href="index.html?q=resurfacing">resurfacing</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Resurfacing is a thin‑overlay maintenance treatment applied when an existing pavement’s ride quality, friction or structural adequacy has fallen below acceptable limits but the underlying structure remains sufficient[1]. The agency conducts a life‑cycle cost comparison—including material, shoulder work, drainage, guide‑rail adjustments and traffic protection—and selects a bonded overlay for good‑to‑fair slabs or an unbonded overlay for moderately to severely deteriorated sections, typically using one‑ to 1½‑inch thickness (or up to two inches when the 3R criterion cannot be met)[1]. The chosen overlay must provide at least an eight‑year structural design life, meet the skid‑resistance level dictated by current traffic volumes, and receive concurrence via Form D‑4332 before construction proceeds[1].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-decision-context">Purpose and decision context</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#information-needs">Information needs</a></li><li><a href="#alternatives">Alternatives</a></li><li><a href="#decision-criteria">Decision criteria</a></li><li><a href="#analysis-methods-and-tools">Analysis methods and tools</a></li><li><a href="#stakeholders-and-constraints">Stakeholders and constraints</a></li><li><a href="#timing-and-implementation">Timing and implementation</a></li><li><a href="#outcomes-and-follow-up">Outcomes and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-decision-context">Purpose and decision context</h2>
+<p>Resurfacing is used when an agency must decide whether to rehabilitate an existing pavement instead of undertaking full reconstruction. The decision rests on a life‑cycle cost comparison that includes all overlay‑related expenses—material, shoulder work, patching, drainage, guide‑rail adjustments and traffic protection. If the resurfacing alternative yields a total agency cost at least ten percent lower than competing options (or twenty percent when user delay costs are included), the economic case for selecting resurfacing is satisfied. The choice of overlay type follows directly from the condition of the underlying structure: a bonded overlay is specified for pavements in good to fair condition to add capacity and eliminate surface distress, whereas an unbonded overlay is chosen for moderately to severely deteriorated sections to restore structural capacity. When the base remains sound and no full structural overlay is required, a thin asphalt overlay—typically one to one‑and‑half inches thick and identified by treatment codes such as 7123, 7125 or 7135—or a micro‑surfacing treatment may be applied; a thicker overlay of two inches or more is permitted when the standard 3R criteria cannot be met. The new wearing course must meet the Skid Resistance Level appropriate to the anticipated traffic volume, with the SRL designation derived from either the initial average daily traffic for new facilities or the current ADT for resurfacing projects. An overlay design is triggered whenever ride quality, structural adequacy or friction values fall below acceptable thresholds and must demonstrate a minimum eight‑year service life based on current traffic data. Completion of Form D‑4332 secures concurrence and FHWA approval before work proceeds. By meeting these technical and economic criteria, resurfacing supports the agency’s allocation of maintenance funds, its reporting of annual surface‑improvement mileage, and the establishment of a uniform condition baseline that guides subsequent pavement or bridge treatment decisions and prioritization toward the lowest life‑cycle cost. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 51), Ch. 3 (pp. 65–66), Ch. 4 (pp. 96–98), Ch. 5 (pp. 104–110), Ch. 6 (pp. 137–151), Ch. 10 (pp. 176–177), Ch. 11 (pp. 193–196), Ch. 13 (p. 218)</small></p>
+<p>Resurfacing is applied when the existing pavement surface no longer satisfies its functional or safety criteria—excessive roughness, cracking, rutting, loss of friction, or localized distress—while the underlying structure remains adequate. The need is to restore ride quality, skid resistance, and load‑bearing capacity without full reconstruction, thereby extending the pavement’s useful life and keeping life‑cycle costs low. By placing an overlay—bonded or unbonded, often using reclaimed asphalt concrete from milling—the treatment can add structural capacity, correct surface deterioration, and provide lateral support to shoulders where concrete joints exceed twenty feet or only the first few feet of a high‑type paved shoulder are distressed. When current average daily traffic exceeds five thousand vehicles or adjusted truck traffic is greater than five hundred, the widening structure is extended two feet into the shoulder and a minimum three‑foot width of Type 6, 6‑F, 6‑S, or 6‑SP shoulder may be provided. Overlay thickness and aggregate selection follow SRL design tables to ensure adequate friction for a service life typically specified between eight and twenty years. For limited lane distress, micro‑surfacing offers a cost‑effective means of filling ruts and restoring skid resistance on structurally sound pavements. Resurfacing also fulfills agency requirements to document annual miles treated, collect post‑maintenance International Roughness Index data, and integrate these measurements into pavement history records so that performance gains can be evaluated, future deterioration predicted, and the goal of a smoother, longer‑lasting road network validated. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 51), Ch. 2 (pp. 61–62), Ch. 4 (pp. 96–98), Ch. 5 (pp. 104–110), Ch. 6 (pp. 137–151), Ch. 10 (pp. 176–177), Ch. 11 (pp. 193–197), Ch. 13 (p. 218)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Resurfacing is employed as a Betterment activity—typically funded under program codes 381 or 383—for any existing roadway classification, including Interstates, freeways, expressways, arterials, collectors and local roads, when the goal is to extend service life or enhance structural and functional capacity without undertaking major capacity upgrades, realignments or geometric changes. The work is triggered during the planning phase of a pavement‑maintenance program; once condition assessment shows that an overlay, partial recycling or surface renewal can return the pavement to acceptable performance, the project proceeds to the design stage where a formal overlay design is prepared using current average daily traffic, projected growth and truck percentage to select the appropriate coarse‑aggregate skid‑resistance level and structural thickness. The design and construction occur in the rehabilitation stage, prior to any need for full reconstruction.</p>
+<p>Resurfacing is suitable for a range of asset conditions. Pavements that are in fair‑to‑excellent condition may receive a bonded concrete (or thin‑bonded) overlay, while pavements that are moderately to severely deteriorated are candidates for unbonded concrete or asphalt overlays intended to restore structural capacity. When the existing pavement is structurally sound but only requires surface renewal—such as restoring skid resistance, filling rutting on jointed plain or reinforced concrete, or treating isolated lane distress—a polymer‑modified emulsified asphalt micro‑surfacing system can be applied, especially on four‑lane roads where only one travel lane is affected. In rigid‑pavement rehabilitations a new concrete shoulder at least three feet wide (Type 6, 6‑F, 6‑S or 6‑SP) may be added while the remaining high‑type paved shoulder is resurfaced with the same material.</p>
+<p>Because resurfacing is classified as a thin‑overlay surface‑maintenance activity, it commonly involves overlays that are one to one‑and‑a‑half inches thick and may be placed with or without a leveling course. When the pavement does not satisfy the 3R (right‑type‑right‑thickness‑right‑material) criterion, the technique can be extended to two‑inch or thicker overlays. The thin‑overlay nature allows resurfacing to be scheduled together with seal‑coating in the same fiscal year, with the treated mileage counted only once.</p>
+<p>Resurfacing projects are typically targeted at sections of the resurfacing network that have reached five years of service without recent crack‑sealing; such sections undergo a close review and are maintained on a three‑ to five‑year crack‑sealing cycle. Projects aimed at improving ride quality, addressing suspected structural inadequacy or correcting low‑friction values all require the formal overlay design supported by accurate traffic information. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 51), Ch. 2 (pp. 61–62), Ch. 4 (pp. 96–98), Ch. 5 (pp. 104–110), Ch. 6 (pp. 137–139), Ch. 10 (pp. 176–177), Ch. 11 (pp. 193–196)</small></p>
+<p>Resurfacing is inappropriate when the existing pavement does not retain enough structural capacity to benefit from an added surface layer, when it shows significant deterioration such as unstable support, asphalt stripping, or unresolved drainage problems, or when it has already reached its terminal serviceability index. In those cases a reconstruction, new construction, or another rehabilitation method should be selected instead of a 3R overlay. Resurfacing also fails to meet project goals that require capacity upgrades, major realignment, substantial geometric changes, or functional obsolescence; such objectives demand full reconstruction or other structural improvements. For asphalt or composite pavements with severe distress, bonded jointed plain concrete pavement (JPCP) overlays should be avoided; an unbonded concrete overlay can address moderate to significant deterioration, while badly distressed sections with poor subgrade conditions or excess moisture are better served by rubblizing, and heavily cracked concrete that cannot be economically patched may require cracking/breaking and seating before any overlay is placed. Micro‑surfacing is limited to structurally sound surfaces where distress is confined to surface ruts or loss of skid resistance; if the base layer is deficient or structural repair is needed, a full structural overlay or deeper rehabilitation is preferable. When the primary issue is inadequate friction, geometric deficiencies, or insufficient capacity, targeted friction courses, geometry upgrades, or complete reconstruction are more effective than adding another pavement layer. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 51), Ch. 4 (pp. 96–98), Ch. 5 (p. 104), Ch. 6 (pp. 137–151)</small></p>
+<h2 id="information-needs">Information needs</h2>
+<p>Resurfacing design begins with a thorough quantification of the existing pavement condition, which must be captured through visual inspection and non‑destructive testing. Measurements of roughness, cracks, patches and rut depth are used to calculate a Present Serviceability Index, while friction values, ride quality and structural capacity are obtained from tests such as the falling weight deflectometer on the current concrete pavement. These data, together with the Terminal Serviceability Index derived from the maintenance functional classification, indicate whether the surface is structurally sound enough for a thin bonded overlay or requires a thicker layer to satisfy the 3R structural criterion. Site‑specific factors include subgrade stability, functional drainage, and shoulder type; concrete shoulders must not exceed joint spacings of twenty feet, and reclaimed asphalt base depths are prescribed at five inches for arterials and four inches for collectors and local roads. Special features such as trolley tracks or granite blocks influence material selection, while micro‑surfacing is limited to structurally sound sections where rutting is confined to a single travel lane and not related to base failure.</p>
+<p>Traffic information drives several design decisions. The minimum data set comprises current average daily traffic, projected growth rates and the percentage of trucks; a detailed truck distribution is required unless the roadway is classified as a collector or local street. When current ADT exceeds five thousand vehicles per day or the adjusted daily truck traffic (ADT multiplied by the truck, bus and recreational vehicle percentages) exceeds five hundred, shoulder widening may be warranted. High‑traffic local streets and intersections can be served with thin bonded overlays, whereas arterials with higher volumes typically require thicker layers and deeper reclaimed asphalt bases. Anticipated ADT also determines the required skid‑resistance level of the coarse aggregate, which must meet polishing‑resistance criteria outlined in Table 5.4.</p>
+<p>Cost and reporting requirements are integral to resurfacing projects. The mileage of each resurfaced segment and its associated dollar amount must be recorded for the fiscal year in which the work opens to traffic, and surface‑improvement miles and dollars are reported annually in the business plan. When seal‑coating occurs in the same fiscal year as resurfacing, mileage is counted only once while costs for both activities are reported. Patching percentages affect mileage credit: if patches cover two percent or more of the total area, full mileage credit is granted; otherwise a conversion factor of 280 square yards per mile applies. Overlay thickness options range from one to 1.5 inches with or without leveling to overlays of two inches or greater when the 3R criterion is not satisfied.</p>
+<p>Environmental considerations include ensuring adequate sub‑drainage where subsurface drainage problems exist, as functional drainage is a prerequisite for bonded jointed plain concrete pavement (JPCP) overlays. Stakeholder and procedural inputs require completion of Form D‑4332 for PDAU concurrence and FHWA approval, and consultation with the District Pavement Management Engineer or Manager when minimum thickness requirements appear incompatible with site conditions. All treatment actions must be entered into the Roadway Management System within four weeks for force‑project work or six weeks for contractor‑executed work, recording exact location, date and type of work. This pavement history data enables scheduling of International Roughness Index or rideability testing no later than three months after reopening, establishing a baseline performance metric for future deterioration analysis. Bridge condition data intersecting the corridor are also incorporated to refine treatment scope and develop cost estimates, with alternatives evaluated on the basis of lowest life‑cycle cost rather than solely on performance measures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 4 (pp. 96–98), Ch. 5 (pp. 104–110), Ch. 6 (pp. 150–151), Ch. 10 (pp. 176–177), Ch. 11 (pp. 193–197), Ch. 13 (p. 218)</small></p>
+<p>The information required for a resurfacing overlay must be highly accurate, up‑to‑date and complete. Traffic inputs form the basis of the design; therefore the designer must use the most reliable data available, at minimum the current average daily traffic, the projected growth rate and the truck percentage, and a full truck‑type distribution unless the facility is classified as a collector or local street. These traffic figures should be obtained early in the study and, if not already held by the district, requested from the Bureau of Planning and Research or generated through new counts. Equally important is the precise recording of the work performed. Segment miles treated must be captured with exactness so that the annual amount of network treated can be quantified, and mileage together with associated costs must be reported in the fiscal year in which each project opens to traffic. All resurfacing actions that meet the Betterment definition—including compliance with the required design and 3R criteria—must be entered into the prescribed tables for every county and district. Finally, the pavement history for each resurfaced segment must be complete and current to support reliable International Roughness Index (IRI) analysis. For department‑managed projects the data entry must occur within four weeks of reopening to traffic; for contractor‑performed projects the deadline is six weeks. IRI testing on the newly opened surface must then be completed no later than three months after the data entry, ensuring that ride‑quality assessments and future performance predictions are based on timely and accurate records. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 176–177), Ch. 11 (pp. 193–197)</small></p>
+<h2 id="alternatives">Alternatives</h2>
+<p>Resurfacing projects require a systematic comparison of alternative treatments that differ in material type, structural configuration, thickness and ancillary functions. For shoulder rehabilitation the alternatives comprise new concrete shoulders limited to a maximum joint spacing of twenty feet, asphalt shoulders drawn from the Type 6 family (including 6‑F, 6‑S, 6‑SP) when excavation or scarifying is needed, Type 7 shoulders where only cleaning and patching are required, Type 1 series shoulders for collectors and local roads, and the use of reclaimed asphalt material either as a recycled base for Type 6 shoulders or as an asphalt surface course for Type 7 shoulders; the choice depends on project scope such as widening, current traffic volumes exceeding five thousand average daily trips or five hundred average daily truck trips, and the condition of the existing shoulder. Overlay alternatives include a rigid Portland cement concrete (PCC) overlay that may be placed as a bonded layer when the underlying slab is in good to fair condition or as an unbonded layer when structural deterioration ranges from moderate to severe, and a flexible asphalt‑concrete overlay; these three configurations—bonded PCC, unbonded PCC and asphalt—must be evaluated against pavement condition, required structural capacity, drainage, subgrade stability and any thickness or grade constraints. Additional surface‑treatment options encompass polymer‑modified emulsified asphalt micro‑surfacing as an alternative to conventional slurry seals, seal coats and other surface treatments, as well as Type A and Type B polymer‑modified materials that can be compared with a 4.75 mm Superpave scratch course for sound pavements. The selection of aggregate for the wearing course must satisfy the required skid‑resistance level (SRL) derived from the existing average daily traffic, allowing either an exact SRL match, a higher‑SRL aggregate to provide extra friction margin, or an equivalent blend that achieves the same performance without exceeding non‑wearing layer limits. Preservation and restoration techniques listed in the pavement type definitions—structural asphalt overlays, concrete overlays, micro‑surfacing, mill‑and‑overlay, thin bonded concrete on asphalt (BCOA) and Concrete Pavement Restoration—represent further alternatives to be weighed against project goals, existing condition and cost. The DARWin overlay taxonomy expands the comparison set to seven configurations: an AC overlay on existing AC pavement; a fractured PCC slab, a solid PCC slab or an AC/PCC composite slab; a bonded PCC overlay on PCC pavement; an unbonded PCC overlay on either PCC, AC/PCC composite or AC pavement; and bonded concrete overlays of asphalt or AC/PCC composites designed with the BCOA‑ME procedure. Finally, thickness considerations divide treatments into thin overlays ranging from one to one‑and‑a‑half inches that may be applied with or without a leveling step, and thicker overlays of two inches or more employed when the three‑year resurfacing rule does not apply. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 4 (pp. 96–98), Ch. 5 (pp. 104–110), Ch. 6 (pp. 137–139), Ch. 10 (pp. 176–177), Ch. 11 (pp. 194–196)</small></p>
+<p>Bonded concrete overlays require a good‑to‑fair existing slab, stable subgrade and functional drainage, and are placed directly on the old pavement as a thin (2.5–4 in.) or thicker (4–8 in.) cement layer that adds structural capacity and typically reduces future maintenance cycles; unbonded concrete overlays are used when the pavement is moderately to severely deteriorated and need a 1‑in. asphalt separation or geotextile interlayer plus new concrete thickness, essentially creating a new pavement on the old one without relying on bonding, thereby restoring structural capacity across a wide range of deficiencies; asphalt overlays require determining overlay thickness from structural design calculations and involve saw‑cutting and sealing underlying joints before placing the new asphalt layer. The source does not provide specific information on time, traffic disruption, or risk associated with any of these options. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98)</small></p>
+<h2 id="decision-criteria">Decision criteria</h2>
+<p>The prevailing guidance places safety and performance at the forefront of any resurfacing decision. A new surface must provide sufficient friction throughout its service life, which is achieved by selecting a coarse‑aggregate skid‑resistance level appropriate to the anticipated average daily traffic and by meeting the present and terminal serviceability indices that define acceptable condition for the pavement’s functional class. In addition, the overlay must satisfy the minimum eight‑year structural design life required for durability and must restore ride quality when the existing structure is inadequate. While these performance‑related factors are primary, cost considerations become decisive only when the life‑cycle cost advantage exceeds the thresholds set by the agency: a difference of ten percent or more in agency‑only costs, or twenty percent or more when user delay costs are included, is sufficient to dictate selection. Consequently, engineering judgment may also consider traffic protection and rapid cure time—attributes exemplified by micro‑surfacing on structurally sound pavements that restores skid resistance, cures quickly, and offers a very low cost for limited rutting—but the controlling criteria remain safety, performance (serviceability and friction), durability, and, where the prescribed cost gaps are met, life‑cycle cost. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–66), Ch. 5 (pp. 104–110), Ch. 6 (pp. 150–151), Ch. 10 (pp. 176–177), Ch. 13 (p. 218)</small></p>
+<p>In determining the appropriate resurfacing strategy, the first priority is to meet the terminal serviceability index (TSI) required for the pavement’s maintenance functional classification; only when traffic volumes are markedly high should a higher TSI be selected. Once the serviceability threshold is satisfied, the structural condition of the existing surface becomes the next decisive factor: pavements in good to fair condition qualify for bonded jointed concrete overlays, whereas moderate to severe deterioration necessitates unbonded overlays that restore structural capacity. Before a bonded solution can be adopted, secondary checks on subgrade stability and functional drainage must confirm adequate support; any deficiencies shift the choice toward an unbonded overlay or more extensive rehabilitation. Concurrently, friction performance is governed by the polishing resistance of the coarse aggregate, expressed as a skid‑resistance level (SRL) that must correspond to the anticipated or current average daily traffic (ADT). The SRL designation therefore takes precedence over other material considerations, with mix design and construction techniques serving to achieve the required friction once the appropriate aggregate is selected. Project constraints such as allowable overlay thickness and grade restrictions further refine the selection, favoring thin‑bonded overlays on high‑traffic local streets when additional thickness is undesirable. Finally, among alternatives that satisfy serviceability, structural, drainage, friction, and geometric criteria, the lowest life‑cycle cost should drive the ultimate decision, using condition data only as background information. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=92bc2a55 src=pub_242_change_10::tab:p111#1 -->
+<p>Table: TABLE 5.4SRL CRITERIA.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-resurfacing-1-cap" tabindex="0"><table class="ct-table" id="ct-resurfacing-1">
+<caption id="ct-resurfacing-1-cap">TABLE 5.4SRL CRITERIA</caption>
+<thead>
+<tr><th scope="col">INITIAL OR CURRENTONE-WAY ADT</th><th scope="col">INITIAL OR CURRENTTWO-WAY ADT</th><th scope="col">SRL DESIGNATION</th></tr>
+</thead>
+<tbody>
+<tr><td>Above 10,000</td><td>Above 20,000</td><td>E</td></tr>
+<tr><td>2,501 - 10,000</td><td>5,001 - 20,000</td><td>H; Blend of E and M;Blend of E and G</td></tr>
+<tr><td>1,501 - 2,500</td><td>3,001 - 5,000</td><td>G; Blend of H and M;Blend of E and L</td></tr>
+<tr><td>501 - 1,500</td><td>1,001 - 3,000</td><td>M; Blend of H and L;Blend of G and L;Blend of E and L</td></tr>
+<tr><td>0 - 500</td><td>0 - 1,000</td><td>L</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: *E = Excellent, H = High, G = Good, M = Medium, L = Low</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 111.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (p. 110), Ch. 6 (pp. 150–151), Ch. 13 (p. 218)</small></p>
+<h2 id="analysis-methods-and-tools">Analysis methods and tools</h2>
+<p>Resurfacing projects are assessed through a combination of quantitative condition ratings and economic analysis. Serviceability indices such as the Present Serviceability Index and its Pennsylvania variant provide a numeric rating from zero to five based on measured roughness, cracking, patching and rut depth, while non‑destructive tests supply friction values, high‑speed ride quality data and structural capacity estimates that are compared against a terminal serviceability index defined for each functional class. In parallel, International Roughness Index measurements of the newly placed surface are collected and linked to historic pavement records to gauge ride quality, verify construction effectiveness and support predictions of future performance. Although these condition measures are recorded for asset‑management purposes, the primary driver for selecting a resurfacing alternative is a life‑cycle cost analysis that aggregates all relevant costs—including resurfacing, shoulder work, patching, drainage adjustments and traffic protection—into a single figure. A difference of ten percent or more in life‑cycle cost when user delay costs are excluded, or twenty percent or more when such delays are included, is considered sufficient to favor one option over another, ensuring that the chosen rehabilitation delivers the lowest overall cost while meeting the required serviceability thresholds. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–66), Ch. 6 (pp. 150–151), Ch. 11 (p. 197), Ch. 13 (p. 218)</small></p>
+<p>Resurfacing analyses are built on a set of defined assumptions that drive both cost estimates and performance forecasts. Cost calculations presuppose prescribed overlay thicknesses: for rigid pavements a 4‑inch layer when a 9.5 mm wearing‑course mix is used or 4.5 inches with a 12.5 mm mix, and for flexible pavements a 1.5‑inch layer with a 9.5 mm mix or 2 inches with a 12.5 mm mix, all constrained by the minimum‑maximum limits in Table 10.4. Engineering and mobilization expenses are excluded, while items such as shoulder work, patching, drainage adjustments, guide‑rail modifications and traffic protection are included. The financial side also assumes a discount rate drawn from the ECMS File Cabinet and an Asphalt Adjustment Multiplier that is refreshed semiannually based on past payments, introducing uncertainty about future material prices.</p>
+<!-- concept-tabular:begin key=6c72902f src=pub_242_change_10::tab:p177#1 -->
+<p>Table: TABLE 10.1SUITABILITY OF LEVELING COURSE FOR SPECIFIC APPLICATIONS BASED ON HIGHWAY ADTTABLE 10.2.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-resurfacing-2-cap" tabindex="0"><table class="ct-table" id="ct-resurfacing-2" aria-describedby="ct-resurfacing-2-sum">
+<caption id="ct-resurfacing-2-cap">TABLE 10.1SUITABILITY OF LEVELING COURSE FOR SPECIFIC APPLICATIONS BASED ON HIGHWAY ADTTABLE 10.2</caption>
+<thead>
+<tr><td></td><th id="ct-resurfacing-2-h0-1" scope="col" colspan="8">LEVELING COURSE</th></tr>
+<tr><th id="ct-resurfacing-2-h1-0" scope="col">CURRENTADT</th><th id="ct-resurfacing-2-h1-1" scope="col">FB-1</th><th id="ct-resurfacing-2-h1-2" scope="col">FB-2</th><th id="ct-resurfacing-2-h1-3" scope="col">FJ-1, FJ-1C, SP 4.75 mm</th><th id="ct-resurfacing-2-h1-4" scope="col">SP6.3 mm</th><th id="ct-resurfacing-2-h1-5" scope="col">SP 9.5 mm FG</th><th id="ct-resurfacing-2-h1-6" scope="col">SP9.5 mm</th><th id="ct-resurfacing-2-h1-7" scope="col">SP12.5 mm</th><th id="ct-resurfacing-2-h1-8" scope="col">SP19.0 mm</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-resurfacing-2-h2-0" scope="row">0 - 800</th><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-1 ct-resurfacing-2-h2-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-2 ct-resurfacing-2-h2-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-3 ct-resurfacing-2-h2-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-4 ct-resurfacing-2-h2-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-5 ct-resurfacing-2-h2-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-6 ct-resurfacing-2-h2-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-7 ct-resurfacing-2-h2-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-8 ct-resurfacing-2-h2-0">Yes</td></tr>
+<tr><th id="ct-resurfacing-2-h3-0" scope="row">801 - 1,500</th><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-1 ct-resurfacing-2-h3-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-2 ct-resurfacing-2-h3-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-3 ct-resurfacing-2-h3-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-4 ct-resurfacing-2-h3-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-5 ct-resurfacing-2-h3-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-6 ct-resurfacing-2-h3-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-7 ct-resurfacing-2-h3-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-8 ct-resurfacing-2-h3-0">Yes</td></tr>
+<tr><th id="ct-resurfacing-2-h4-0" scope="row">1,501 - 3,000</th><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-1 ct-resurfacing-2-h4-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-2 ct-resurfacing-2-h4-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-3 ct-resurfacing-2-h4-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-4 ct-resurfacing-2-h4-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-5 ct-resurfacing-2-h4-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-6 ct-resurfacing-2-h4-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-7 ct-resurfacing-2-h4-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-8 ct-resurfacing-2-h4-0">Yes</td></tr>
+<tr><th id="ct-resurfacing-2-h5-0" scope="row">3,001 - 5,000</th><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-1 ct-resurfacing-2-h5-0">No</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-2 ct-resurfacing-2-h5-0">No</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-3 ct-resurfacing-2-h5-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-4 ct-resurfacing-2-h5-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-5 ct-resurfacing-2-h5-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-6 ct-resurfacing-2-h5-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-7 ct-resurfacing-2-h5-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-8 ct-resurfacing-2-h5-0">Yes</td></tr>
+<tr><th id="ct-resurfacing-2-h6-0" scope="row">5,001 - 12,000</th><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-1 ct-resurfacing-2-h6-0">No</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-2 ct-resurfacing-2-h6-0">No</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-3 ct-resurfacing-2-h6-0">*2</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-4 ct-resurfacing-2-h6-0">*2</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-5 ct-resurfacing-2-h6-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-6 ct-resurfacing-2-h6-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-7 ct-resurfacing-2-h6-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-8 ct-resurfacing-2-h6-0">Yes</td></tr>
+<tr><th id="ct-resurfacing-2-h7-0" scope="row">12,001 - 20,000</th><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-1 ct-resurfacing-2-h7-0">No</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-2 ct-resurfacing-2-h7-0">No</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-3 ct-resurfacing-2-h7-0">*2</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-4 ct-resurfacing-2-h7-0">*2</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-5 ct-resurfacing-2-h7-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-6 ct-resurfacing-2-h7-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-7 ct-resurfacing-2-h7-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-8 ct-resurfacing-2-h7-0">Yes</td></tr>
+<tr><th id="ct-resurfacing-2-h8-0" scope="row">Above 20,000</th><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-1 ct-resurfacing-2-h8-0">No</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-2 ct-resurfacing-2-h8-0">No</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-3 ct-resurfacing-2-h8-0">No</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-4 ct-resurfacing-2-h8-0">*2</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-5 ct-resurfacing-2-h8-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-6 ct-resurfacing-2-h8-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-7 ct-resurfacing-2-h8-0">Yes</td><td headers="ct-resurfacing-2-h0-1 ct-resurfacing-2-h1-8 ct-resurfacing-2-h8-0">Yes</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-resurfacing-2-sum">Rows list CURRENTADT; columns give LEVELING COURSE (FB-1, FB-2, FJ-1, FJ-1C, SP 4.75 mm, SP6.3 mm, SP 9.5 mm FG … and three more).</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 177.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p>Design assumptions require that the existing pavement’s condition, subgrade stability and drainage functionality are known and acceptable; consequently a falling‑weight deflectometer test must be performed before overlay design. Bonded overlays are only considered when the pavement is in good to fair condition with stable subgrade and functional drainage, whereas unbonded overlays assume a sufficiently stable platform even if underlying concrete shows moderate to severe deterioration. The analysis further assumes that the resurfaced surface starts at its optimum condition upon completion and then deteriorates uniformly across the treated extent for the projected structural life, which is bounded between eight and twenty years.</p>
+<p>When polymer‑modified micro‑surfacing is selected, it is assumed that the underlying pavement is structurally sound and does not require extensive base repair, and that all quality‑control measures and material specifications are followed exactly during construction. Friction performance rests on the assumption that a coarse‑aggregate Skid Resistance Level (SRL) matching the anticipated traffic will govern polishing resistance, with the annual friction cycle approximated by a sine‑shaped pattern whose low points depend on aggregate characteristics and traffic volume.</p>
+<p>Accurate traffic inputs—current ADT, projected growth rates and truck percentages—are essential; missing or uncertain data compel additional counts or requests to the Bureau of Planning and Research, adding variability. The analysis also presumes compliance with the 3R criteria and precise mileage capture for segments opened to traffic within the fiscal year.</p>
+<p>Uncertainties arise from several sources. Future asphalt prices may shift the Asphalt Adjustment Multiplier; hidden slab defects such as faulting or pumping, and unverified drainage adequacy, can alter the choice among bonded, unbonded, rubblizing or cracking‑and‑seating methods. Construction‑phase uncertainties include the degree to which quality‑control procedures are maintained, variations in aggregate petrography, environmental conditions affecting water pressure at the tire/pavement interface, and workmanship that may modify surface texture, all of which can cause actual friction to deviate from the design SRL. Errors in mileage recording, classification under funding programs, and unknown condition of older resurfaced sections lacking crack‑sealing after five years further cloud performance estimates. Timeliness of Pavement History data entry (within four weeks for department projects and six weeks for contractor projects) and subsequent IRI testing within three months are assumed; delays or the biennial testing schedule for non‑NHS routes introduce additional uncertainty in assessing roughness outcomes. Finally, the uniform‑deterioration assumption may not reflect field reality until detailed on‑site inspections are performed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–66), Ch. 4 (pp. 96–98), Ch. 5 (pp. 104–110), Ch. 10 (pp. 176–177), Ch. 11 (pp. 193–197), Ch. 13 (p. 218)</small></p>
+<!-- formulas-check:begin pub_242_change_10::f:782420f81197 x resurfacing -->
+
+<p>The publication gives AAM as:</p>
+<!-- gaps: ad6d050c8e41d3d0 -->
+
+<!-- formula-anchor: eq-pub-242-change-10-782420f81197 -->
+
+<div class="fc-math" id="eq-pub-242-change-10-782420f81197" role="region" aria-label="Formula 1" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="{ \mathrm { A A M } } = 1 + { \mathrm { A d j u s t m e n t s } } / { \mathrm { T o t a l ~ o f ~ A s p h a l t ~ P a y m e n t s } } ."><mrow><mrow><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">A</mi><mi mathvariant="normal">M</mi></mrow></mrow><mo>&#x0003D;</mo><mn>1</mn><mo>&#x0002B;</mo><mrow><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">j</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">s</mi></mrow></mrow><mo>&#x0002F;</mo><mrow><mrow><mi mathvariant="normal">T</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mtext>&#x000A0;</mtext><mi mathvariant="normal">o</mi><mi mathvariant="normal">f</mi><mtext>&#x000A0;</mtext><mi mathvariant="normal">A</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">t</mi><mtext>&#x000A0;</mtext><mi mathvariant="normal">P</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">s</mi></mrow></mrow><mo>&#x0002E;</mo></mrow></math></div>
+<p>The Asphalt Adjustment Multiplier is computed from asphalt price adjustments and the total of asphalt payments made over the preceding twelve months. As the asphalt price adjustments increase, the multiplier rises. Conversely, as the total of asphalt payments increases, the multiplier falls.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-3" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-3">Symbols: Asphalt Adjustment Multiplier from adjustments and total asphalt payments ([1] PDF p. 66)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="AAM"><mrow><mi>A</mi><mi>A</mi><mi>M</mi></mrow></math></td><td>Asphalt Adjustment Multiplier</td><td>not stated near this formula</td><td>output</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Adjustments"><mrow><mi>A</mi><mi>d</mi><mi>j</mi><mi>u</mi><mi>s</mi><mi>t</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi><mi>s</mi></mrow></math></td><td>asphalt price adjustments</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Total~of~Asphalt~Payments"><mrow><mi>T</mi><mi>o</mi><mi>t</mi><mi>a</mi><mi>l</mi><mtext>&#x000A0;</mtext><mi>o</mi><mi>f</mi><mtext>&#x000A0;</mtext><mi>A</mi><mi>s</mi><mi>p</mi><mi>h</mi><mi>a</mi><mi>l</mi><mi>t</mi><mtext>&#x000A0;</mtext><mi>P</mi><mi>a</mi><mi>y</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi><mi>s</mi></mrow></math></td><td>total of asphalt payments</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+</table></div>
+
+<p><small>[1] — PDF p. 66</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats: not stated in the publication near this formula.</p>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<details class="fc-calc"><summary>Calculator: Asphalt Adjustment Multiplier from adjustments and total asphalt payments ([1] PDF p. 66)</summary><iframe src="_apps/pub-242-change-10-782420f81197.html" title="Calculator: Asphalt Adjustment Multiplier from adjustments and total asphalt payments ([1] PDF p. 66)" loading="lazy"></iframe><p><a href="_apps/pub-242-change-10-782420f81197.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-24.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 115 words before and 641 words after the formula.</p>
+<p>Found by the search:</p>
+<ul>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Adjustments"><mrow><mi>A</mi><mi>d</mi><mi>j</mi><mi>u</mi><mi>s</mi><mi>t</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi><mi>s</mi></mrow></math> from PDF p. 66, beside the formula</li>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Total~of~Asphalt~Payments"><mrow><mi>T</mi><mi>o</mi><mi>t</mi><mi>a</mi><mi>l</mi><mtext>&#x000A0;</mtext><mi>o</mi><mi>f</mi><mtext>&#x000A0;</mtext><mi>A</mi><mi>s</mi><mi>p</mi><mi>h</mi><mi>a</mi><mi>l</mi><mi>t</mi><mtext>&#x000A0;</mtext><mi>P</mi><mi>a</mi><mi>y</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi><mi>s</mi></mrow></math> from PDF p. 66, beside the formula</li>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="AAM"><mrow><mi>A</mi><mi>A</mi><mi>M</mi></mrow></math> from PDF p. 66, 1 step / 36 words before the formula</li>
+</ul>
+</details>
+
+<!-- formulas-check:end -->
+
+<h2 id="stakeholders-and-constraints">Stakeholders and constraints</h2>
+<p>Input for a resurfacing project begins with the district supplying current traffic counts, which are sent to the Bureau of Planning and Research for refinement and development of truck‑distribution curves; when the bureau cannot provide the data the district must conduct its own surveys. Cost and thickness considerations are supplied by the District Pavement Management Engineer (or Pavement Manager), who receives the semi‑annual Asphalt Adjustment Multiplier from the Highway Design Technical Services and is consulted on special minimum‑thickness issues. Those cost inputs, together with regional engineering factors such as subgrade condition, adjacent pavement types, local materials, right‑of‑way constraints and maintenance impacts, are evaluated by the District Pavement Type Selection Committee, which formulates a pavement‑type recommendation. Technical design of the overlay is prepared by a certified Project Management Engineer or Project Manager; the design package, including the completed Form D‑4332 and any life‑cycle cost analysis, is first reviewed and endorsed by the Bureau of Design and Development, with any required waivers routed through that office. The District Engineer then grants final approval for PennDOT‑oversight resurfacing work, while Federal Highway Administration concurrence is obtained when the project falls under federal oversight, and the Pavement Design Approval Unit provides additional concurrence as required. For the selection of the specific rehabilitation method—bonded or unbonded overlay, rubblizing type, or other treatment—the District Pavement Engineer reviews engineering inputs such as falling‑weight deflectometer results, pavement condition, slab stability and drainage adequacy, and exercises discretionary authority to approve the chosen approach. When a full shoulder resurfacing is contemplated, that decision rests with the District Executive, who may elect to pave the entire shoulder with the same material and design as the widening structure. Finally, management uses the State of the Interstate report prepared by the Bureau of Maintenance Operations and supplemental district planning information to prioritize projects, selecting those that achieve the lowest life‑cycle cost. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 3 (pp. 65–66), Ch. 4 (pp. 96–98), Ch. 6 (pp. 137–139), Ch. 10 (pp. 176–177), Ch. 13 (p. 218)</small></p>
+<p>Resurfacing is classified as a 3R activity under Publication 13, Design Manual Part 2, which limits projects to extending service life or adding structural capacity without major geometric changes and directs designers to Chapter 10 for overlay guidance. When the work involves Federal‑aid or fully state‑funded highways, the Pavement Preservation Guidelines become a policy constraint that governs funding eligibility and design scope. All resurfacing designs must conform to Publication 242, the Pavement Policy Manual, be prepared by a certified PME/PM using DARWin software, and be submitted on Form D‑4332 for Board of Directors approval; any deviation requires a waiver and Federal projects additionally require FHWA review. Design life must be at least eight years but may not exceed twenty years, and the structural analysis must incorporate current average daily traffic counts, projected growth, and truck percentages.</p>
+<p>Overlay thickness is prescribed by design standards: rigid pavements receive a first asphalt overlay of four inches with a 9.5 mm wearing mix or 4½ inches with a 12.5 mm mix; flexible pavements are overlaid with 1½ inches (9.5 mm) or two inches (12.5 mm). When an existing concrete or brick pavement is overlaid for the first time, a minimum binder thickness of 2½ inches is required, and the wearing course must meet the prescribed minimum thickness for the selected material. The required thickness is calculated using the AASHTO design method referenced in Chapter 10.</p>
+<p>Concrete shoulder joints may not be spaced more than twenty feet. Shoulder type and extension are governed by traffic counts: if average daily traffic exceeds five thousand or adjusted daily truck‑traffic exceeds five hundred, a two‑foot widening into the shoulder is required; otherwise one foot, unless an optional shoulder type is selected. Reclaimed asphalt may be used in recycled base courses for specified shoulder types provided recycling guidelines are followed and minimum depths are met.</p>
+<p>Prior to designing any overlay on existing Portland cement concrete pavement a Falling Weight Deflectometer test must be performed; the results together with observed slab condition determine whether a bonded overlay (allowed only for pavements in good‑to‑fair condition, stable subgrade, functional drainage) or an unbonded overlay (permitted for moderate to severe deterioration) is permissible. Micro‑surfacing can be selected only when the pavement is structurally sound, free of significant base damage, and does not require a structural overlay; its detailed specifications must be adhered to exactly as outlined in the selection guide.</p>
+<p>The PennDOT friction policy imposes additional constraints: the coarse‑aggregate skid resistance level (SRL) for the wearing course must be chosen from Table 5.4 based on anticipated traffic volume, recorded on design approval forms and contracts, limited to aggregates listed in Publication 34, and verified with AASHTO T‑242 testing; higher SRL values are prohibited on non‑wearing layers such as leveling courses or shoulders.</p>
+<p>Life‑cycle cost analysis must capture all resurfacing costs—including overlay material, shoulder work, patching, drainage, guide‑rail adjustments, maintenance and traffic protection—while excluding engineering and mobilization expenses. A change in pavement type is justified only when the agency‑only LCC differs by at least ten percent (or twenty percent when user delay costs are included), with asphalt unit prices adjusted using the semiannual Asphalt Adjustment Multiplier.</p>
+<p>Funding is allocated through Betterment programs identified as code 381 for fully state‑funded work or code 383 when federal maintenance funds—or matching state contributions—are employed. All mileage and cost data must be entered into the Highway Maintenance budgeting system (Plant Maintenance M‑213) with tracking by fiscal year. Reporting rules further constrain how projects are recorded: if sealing and resurfacing occur in the same fiscal year the mileage is counted once while both costs are reported; when they fall in different years mileage is reported separately for each operation. Asset‑management policy imposes strict data‑entry timelines, requiring pavement history to be entered within four weeks for department‑run projects or six weeks for contractor‑performed work, and an International Roughness Index survey must be completed within three months of that entry.</p>
+<p>Finally, the selected overlay must achieve at least the terminal serviceability index prescribed for the road’s maintenance functional classification; a higher TSI may be used when traffic volumes are substantially above typical levels. Project boundaries are defined by the most recent resurfacing, rehabilitation, or reconstruction segment to ensure uniform pavement type and condition within a project. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 51), Ch. 2 (pp. 61–62), Ch. 3 (pp. 65–66), Ch. 4 (pp. 96–98), Ch. 5 (pp. 104–110), Ch. 6 (pp. 137–151), Ch. 10 (pp. 176–177), Ch. 11 (pp. 193–197), Ch. 13 (p. 218)</small></p>
+<h2 id="timing-and-implementation">Timing and implementation</h2>
+<p>The decision to resurface a pavement should be taken as soon as the need for treatment is confirmed through the regular condition‑assessment cycle and an initial structural appraisal. Each spring the State of the Interstate (SOI) report supplies the latest pavement‑condition data, which, when combined with a lowest life‑cycle‑cost analysis, identifies whether resurfacing is warranted before district plans are finalized. Once a potential need—such as poor ride quality, low friction values, or suspected structural deficiency—is flagged, planners move to the early design phase where current average daily traffic (ADT), growth forecasts and truck percentages are collected so that the appropriate Skid Resistance Level can be selected using the Table 5.4 guidelines. At this stage a Falling Weight Deflectometer (FWD) test is performed on the existing surface; the results together with observed distress determine whether the pavement is in good‑to‑fair condition, suitable for a bonded overlay, or moderately to severely deteriorated, calling for an unbonded overlay or another rehabilitation method. If the FWD evaluation shows that the structure remains sound and distress is limited to surface‑level problems such as ruts not caused by base failure, the decision can shift to a cost‑effective micro‑surfacing treatment, which restores ride quality and skid resistance without extensive base repair. Finally, when the pavement’s serviceability has declined to its Terminal Serviceability Index for the applicable Maintenance Functional Classification—indicating that it no longer meets user requirements—the resurfacing decision is solidified, and any overlay design must meet at least that terminal serviceability value before detailed design proceeds. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (pp. 104–110), Ch. 6 (pp. 150–151), Ch. 10 (pp. 176–177), Ch. 13 (p. 218)</small></p>
+<p>Resurfacing is set in motion whenever the existing pavement exhibits conditions that compromise its performance or when prescribed administrative milestones are reached. Structural deficiencies, surface deterioration, reduced ride quality, low friction values, or any indication that the pavement may be structurally inadequate all trigger the need for an overlay, which must be designed using current traffic data and sized for at least an eight‑year structural life but not more than twenty years. A falling‑weight deflectometer test is required on concrete pavements before an overlay design can proceed. When the serviceability of a pavement falls to its terminal serviceability index (TSI) for its functional classification, or when deficiencies such as inadequate friction, geometric upgrades, or insufficient capacity are identified, resurfacing becomes necessary; designers may elect a higher TSI if traffic volumes are unusually high. Surface‑level distress on an otherwise sound structure—such as lane‑limited rutting, loss of skid resistance, or minor joint problems not caused by base failure—calls for micro‑surfacing rather than a full structural overlay. Shoulder conditions also prompt action: if a high‑type paved shoulder shows distress only in the first few feet adjacent to the main carriageway, a minimum three‑foot width of Type 6 (or equivalent) shoulder must be added and the remainder resurfaced with the same material; when a widening project involves traffic volumes exceeding 5,000 average daily traffic or an ADTT greater than 500, the new structure is extended two feet into the shoulder, which in turn requires resurfacing of that portion. For concrete shoulders placed during rehabilitation, joint spacing may not exceed twenty feet, establishing another condition for intervention. Administrative triggers include the entry of a resurfacing (or reconstruction) project into the Roadway Management System, after which pavement‑history data must be recorded within four weeks for Department‑force projects or six weeks for contractor projects, and the testing staff schedules an International Roughness Index measurement within three months of that entry. Finally, each spring the State of the Interstate report is produced; a system‑wide analysis of condition since the last optimum treatment identifies any increase in uniform deterioration as a signal that new resurfacing may be required to maintain performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=4b8ab4f9 src=pub_242_change_10::tab:p151#1 -->
+<p>Table 6.4 lists the terminal serviceability index values for each maintenance functional code.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-resurfacing-3-cap" tabindex="0"><table class="ct-table" id="ct-resurfacing-3" aria-describedby="ct-resurfacing-3-sum">
+<caption id="ct-resurfacing-3-cap">TABLE 6.4TSI VALUES FOR EACH MFC</caption>
+<thead>
+<tr><th id="ct-resurfacing-3-h0-0" scope="col" rowspan="2">MAINTENANCEFUNCTIONALCODE</th><th id="ct-resurfacing-3-h0-1" scope="col" rowspan="2">DESCRIPTION</th><th id="ct-resurfacing-3-h0-2" scope="col" colspan="3">INITIAL SERVICEABILITY LEVEL</th><th id="ct-resurfacing-3-h0-5" scope="col" rowspan="2">TERMINALSERVICEABILITYLEVEL</th></tr>
+<tr><th id="ct-resurfacing-3-h1-2" scope="col">RIGID</th><th id="ct-resurfacing-3-h1-3" scope="col">COMPOSITE</th><th id="ct-resurfacing-3-h1-4" scope="col">FLEXIBLE</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-resurfacing-3-h2-0" scope="row">A</th><th id="ct-resurfacing-3-h2-1" scope="row">Interstate highways</th><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-2 ct-resurfacing-3-h2-0 ct-resurfacing-3-h2-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-3 ct-resurfacing-3-h2-0 ct-resurfacing-3-h2-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-4 ct-resurfacing-3-h2-0 ct-resurfacing-3-h2-1">4.2</td><td headers="ct-resurfacing-3-h0-5 ct-resurfacing-3-h2-0 ct-resurfacing-3-h2-1">3.0</td></tr>
+<tr><th id="ct-resurfacing-3-h3-0" scope="row">B</th><th id="ct-resurfacing-3-h3-1" scope="row">Limited Access and Major Arterial highways</th><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-2 ct-resurfacing-3-h3-0 ct-resurfacing-3-h3-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-3 ct-resurfacing-3-h3-0 ct-resurfacing-3-h3-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-4 ct-resurfacing-3-h3-0 ct-resurfacing-3-h3-1">4.2</td><td headers="ct-resurfacing-3-h0-5 ct-resurfacing-3-h3-0 ct-resurfacing-3-h3-1">3.0</td></tr>
+<tr><th id="ct-resurfacing-3-h4-0" scope="row">C</th><th id="ct-resurfacing-3-h4-1" scope="row">Minor Arterial highways</th><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-2 ct-resurfacing-3-h4-0 ct-resurfacing-3-h4-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-3 ct-resurfacing-3-h4-0 ct-resurfacing-3-h4-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-4 ct-resurfacing-3-h4-0 ct-resurfacing-3-h4-1">4.2</td><td headers="ct-resurfacing-3-h0-5 ct-resurfacing-3-h4-0 ct-resurfacing-3-h4-1">2.5</td></tr>
+<tr><th id="ct-resurfacing-3-h5-0" scope="row">D</th><th id="ct-resurfacing-3-h5-1" scope="row">Collector highways</th><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-2 ct-resurfacing-3-h5-0 ct-resurfacing-3-h5-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-3 ct-resurfacing-3-h5-0 ct-resurfacing-3-h5-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-4 ct-resurfacing-3-h5-0 ct-resurfacing-3-h5-1">4.2</td><td headers="ct-resurfacing-3-h0-5 ct-resurfacing-3-h5-0 ct-resurfacing-3-h5-1">2.5</td></tr>
+<tr><th id="ct-resurfacing-3-h6-0" scope="row">E</th><th id="ct-resurfacing-3-h6-1" scope="row">Local Access highways</th><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-2 ct-resurfacing-3-h6-0 ct-resurfacing-3-h6-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-3 ct-resurfacing-3-h6-0 ct-resurfacing-3-h6-1">4.5</td><td headers="ct-resurfacing-3-h0-2 ct-resurfacing-3-h1-4 ct-resurfacing-3-h6-0 ct-resurfacing-3-h6-1">4.2</td><td headers="ct-resurfacing-3-h0-5 ct-resurfacing-3-h6-0 ct-resurfacing-3-h6-1">2.0</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-resurfacing-3-sum">Rows list maintenance functional codes and highway types. Columns provide initial serviceability levels for different pavement types and terminal serviceability levels.</p>
+<p class="ct-notes">Notes: *Note: The terminal serviceability level to be used in flexible pavement design is the value listed in Table 6.4 PLUS the estimated loss of serviceability due to frost heave. Frost Heave is to be considered in Asphalt Overlays of fractured PCC and full depth asphalt pavements; see Section 9.3 for further details.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 151.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 4 (pp. 96–98), Ch. 5 (p. 104), Ch. 6 (pp. 150–151), Ch. 10 (pp. 176–177), Ch. 11 (p. 197), Ch. 13 (p. 218)</small></p>
+<p>Carrying out the chosen resurfacing overlay requires assembling several key resources before construction can begin and following a defined timeline through post‑construction monitoring. First, accurate traffic information—current average daily traffic, projected growth rates, and the percentage of trucks (including a truck distribution for non‑collector or local roads)—must be obtained early in the design phase; when not available locally it is requested from the Bureau of Planning and Research or generated by a truck classification count. The design package must incorporate a completed Form D‑4332, which is then routed to the Pavement Design and Approval Unit for concurrence and FHWA approval prior to any field work. A pavement design that satisfies the 3R criteria outlined in Publication 13M is also required. The district’s plant‑maintenance program, as specified in M‑213, supplies the necessary equipment and activities such as mixer paver, seal coat units, various finishers, level‑and‑scratch machines, recycling equipment, slurry‑seal applicators, ultrathin friction course installers, widening tools, concrete patching kits, shoulder‑upgrade gear, crack‑sealing and joint‑sealing devices. Throughout the construction year progress reports are generated and mileage and cost data are recorded in the fiscal year the project opens to traffic, establishing an annual budgeting and reporting schedule. After the resurfaced segment reopens, the Pavement Testing and Asset Management Section of BOMO must enter a pavement‑history record within four weeks for force projects or six weeks for contractor projects; this entry triggers a weekly search that schedules International Roughness Index (IRI) testing to be completed no later than three months after data entry. The overlay itself is designed for an eight‑ to twenty‑year structural life, providing the overall service‑life horizon for the project. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 176–177), Ch. 11 (pp. 193–197)</small></p>
+<h2 id="outcomes-and-follow-up">Outcomes and follow-up</h2>
+<p>Success for a resurfacing project is realized when the new overlay fully corrects any identified structural deficiencies, surface deterioration, or rideability problems and the pavement immediately returns to its optimum condition. All required preparatory actions—such as falling‑weight deflectometer testing of the existing concrete, full‑depth patching where needed, slab stabilization or jacking for faulted slabs, and provision of adequate subdrainage—must be completed before placement. For bonded overlays a proper bond must be achieved that adds structural capacity and eliminates distress; for unbonded overlays the overlay must restore sufficient structural capacity on moderately to severely deteriorated sections. The finished surface must meet its design thickness specifications, provide improved ride quality, and be capable of lasting at least the prescribed minimum design life of eight years but not exceed twenty years.</p>
+<p>The resurfaced wearing course must also maintain an adequate level of friction and surface texture throughout its service life, preventing water pressure buildup at the tire‑pavement interface. This is verified by AASHTO T 242 friction testing and the assignment of a Skid Resistance Level that follows Table 5.4 guidelines based on anticipated average daily traffic, with the selected SRL documented in design approvals and contracts. Serviceability is measured through non‑destructive testing that yields present serviceability index (PSI) or pavement surface rating values derived from roughness, cracking, patching, rut depth and other condition data; these values are compared to the terminal serviceability index required for the roadway’s functional classification.</p>
+<p>Administrative measures of success include completing the work to 3R design standards, applying the prescribed thin‑overlay thickness—between one and one‑and‑a‑half inches, or two inches or more when the 3R criterion is not met—and accurately recording the resulting surface‑improvement mileage. Mileage must be captured once per fiscal year even if a seal coat occurs in the same year, reported in the Betterment mileage tables and Plant Maintenance M‑213 progress reports, and submitted to the Governor’s Office of Budget as part of the annual performance measure. The project must be entered into the Pavement History system within four weeks for department‑run projects (six weeks for contractor projects), and International Roughness Index testing must be performed within three months of entry to confirm improved smoothness. Finally, the post‑resurfacing condition is tracked annually in the State of the Interstate report, where pavement‑condition performance measures verify that the pavement began at optimum condition and will deteriorate at the expected uniform rate, supporting selection of the lowest life‑cycle‑cost alternative for future work. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (p. 110), Ch. 6 (pp. 150–151), Ch. 10 (pp. 176–177), Ch. 11 (pp. 193–197), Ch. 13 (p. 218)</small></p>
+<p>After a resurfacing treatment the pavement’s condition is tracked through a layered monitoring program that begins with immediate performance measurement and continues into long‑term asset management. Within four weeks of a department‑performed job—or six weeks for contractor work—the project is entered into the Roadway Management System, where the segment limits are defined by the most recent resurfacing extent. Weekly, the Pavement Testing and Asset Management team scans these entries and schedules non‑destructive testing, including roughness profiling, friction testing, structural capacity evaluation, and International Roughness Index (IRI) measurement, which must be completed no later than three months after data entry. The resulting present serviceability index (PSI or PSR) values and IRI scores are uploaded to PennDOT’s RMS, where they are compared with the terminal serviceability index appropriate for the road’s functional classification; meeting or exceeding that threshold confirms success and provides a benchmark for calibrating initial serviceability estimates used in AASHTO‑93 design. Concurrently, progress reports generated throughout the year capture the exact miles resurfaced and associated costs once the segment is marked “open to traffic” in MPMS; these figures are recorded in the standardized Betterment Projects spreadsheet and reported to county and district summaries. Annual surface‑improvement mileage—counted once per fiscal year when resurfacing and seal coating occur together, or separately when they span different years—is submitted to the Governor’s Office of Budget, forming part of the state’s performance measures. Each spring the State of the Interstate (SOI) report compiles the pavement‑condition data for every segment, emphasizing life‑cycle cost over raw condition scores. By integrating serviceability benchmarks, mileage and cost records, and system‑wide trend analyses, the agency creates a feedback loop that informs budget requests, highlights sections needing additional maintenance such as crack sealing, refines district rehabilitation plans, and ultimately guides more cost‑effective resurfacing decisions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 150–151), Ch. 11 (pp. 193–197), Ch. 13 (p. 218)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-21.2: formula-block display math (md->html reverse builder; per-page inject) */
+div.fc-math { overflow-x: auto; margin: 1rem 0; }
+
+/* FR-MH-21.12(a): formula-block calculator disclosure (md->html reverse builder; per-page inject) */
+details.fc-calc { margin: 1rem 0; }
+details.fc-calc > summary { cursor: pointer; }
+details.fc-calc iframe { display: block; box-sizing: content-box; width: calc(100% - 2px);
+  height: 28rem; margin-top: .5rem; border: 1px solid var(--border); }
+</style>
+<script>
+window.addEventListener("message", function (e) {
+  if (!e.data || e.data.type !== "fc-calc-height") return;
+  var frames = document.querySelectorAll("details.fc-calc iframe");
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].contentWindow === e.source) frames[i].style.height = e.data.height + "px";
+  }
+});
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transverse Joint</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html" class="active" aria-current="page">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="rigid-pavement.html">Rigid Pavement</a><span class="crumb-sep">›</span><span class="crumb-current">Transverse Joint</span></nav>
+<article><h1>Transverse Joint</h1>
+<div class="meta"><div class="part-of">Part of: <a href="rigid-pavement.html">Rigid Pavement</a> <span class="edge edge-taxonomic" title="Transverse Joint is a topic under Rigid Pavement.">is-subtopic-of</span></div><div class="edge-reading">Transverse Joint is a topic under Rigid Pavement.</div><div><a class="tag" href="index.html?q=transverse-joints">transverse-joints</a><a class="tag" href="index.html?q=transverse-joint">transverse-joint</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>In rigid concrete pavements a transverse joint is the perpendicular discontinuity that links adjacent slabs, providing both load‑transfer and an expansion gap so that thermal movement can be accommodated while preserving structural continuity[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It achieves this by installing coated dowel bars perpendicular to traffic, fully bonded with epoxy, polyester or vinyl‑ester binders, and sealing the joint face with a rubberized sealant whose reservoir meets the shape‑factor requirements of Publication 408 Section 521, thereby preventing water, chlorides and incompressible material from infiltrating the pavement[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The joint’s spacing—typically 15 ft for plain concrete and 30 ft for reinforced concrete—and proper seal integrity maintain a low load‑transfer coefficient (J), supporting slab bearing, limiting deflection, faulting, spalling and other distress that would otherwise degrade ride quality and service life[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>The transverse joint is employed in rigid pavements to counter a suite of distress mechanisms that arise when the joint loses its ability to accommodate slab movement and to maintain load transfer. When joints become cracked, open, or otherwise deteriorated they break the continuity of the concrete slab, permitting water, chlorides, and incompressible material to infiltrate the pavement structure. This loss of seal integrity initiates early‑stage distress that can evolve into spalling, compression or point‑loading failures as adjacent slabs expand and contract without a proper gap. In addition, voids created by pumping action, subgrade consolidation, or settlement beneath the joint reduce slab support, producing excessive deflection, joint faulting, corner breaks, diagonal cracking and eventual slab breakup. Poor lateral support at slab corners raises the load‑transfer coefficient (J), increasing corner stresses and the likelihood of transverse‑joint faulting and other cracking patterns. By preserving load transfer across slabs, providing adequate expansion space, and preventing water ingress, the transverse joint directly addresses these conditions—cracked or open joints, seal loss, spalling, loss of support, high J values, and associated cracking and deflection—that would otherwise degrade pavement performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 84–92), Ch. 8 (p. 163)</small></p>
+<p>The treatment of transverse joints in concrete pavements is aimed principally at extending the pavement’s service life. Routine actions such as cleaning and resealing—often applied to about half of the joints on a ten‑year cycle—and targeted interventions like saw‑cutting, sealant renewal, and dowel‑bar retrofits for failed joints both preserve joint performance and restore functionality when deterioration occurs. On older roadways where full rehabilitation is not cost‑effective, periodic cleaning and sealing are used to keep the structure serviceable. Consequently, repair of damaged joints and restoration of function are employed as means to achieve the overarching objective of prolonging the pavement’s useful life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–73), Ch. 4 (pp. 89–90)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress associated with transverse joints is observed along the joint line where concrete slabs meet, and it also manifests beneath the slab as voids that concentrate near those joints, any accompanying cracks, and especially at the outer corners of the slab. The affected length can be categorized: repairs that address sections from about fifteen inches up to six feet are considered spot‑type interventions, whereas failures extending beyond six feet require longer‑length treatments. In terms of severity, minor spalling along the joint line may be remedied with partial‑depth patches, while deeper or more extensive cracking and corner breakage demand full‑depth corner repairs or slab stabilization measures such as dowel bar retrofits. The underlying loss of support caused by the voids produces excessive deflection and stress, which initially appear as localized joint faulting but can evolve into diagonal cracking, corner breaks and ultimately complete slab breakup if left unattended. Although a precise progression rate is not quantified, the condition is understood to advance from isolated faulting toward widespread structural degradation over time. This deterioration compromises ride quality, reduces pavement serviceability, and creates safety and operational concerns for traffic until corrective actions—such as installing rigid polystyrene boards or premolded expansion‑joint materials to preserve movement space—are implemented. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 90–92)</small></p>
+<p>Distress that transverse joints are intended to control originates from a combination of moisture‑related degradation, insufficient load‑transfer capacity, and inadequate structural support. Water that penetrates beneath the concrete creates a pumping action; together with subgrade consolidation and settlement it generates voids especially adjacent to joints and slab corners. The resulting loss of bearing support produces excessive slab deflection, faulting, corner breaks and diagonal cracking. When the dowel system is poorly constructed—insufficient bonding along the dowel length, missing or aged seals, or absent dowels at lateral shoulders—the joint’s ability to transfer load diminishes, allowing compression and point‑loading stresses to develop as slabs expand and contract with temperature cycles. Heavy traffic loads amplify these stresses, and on soft subgrades (low k‑values) the load‑transfer coefficient J rises further, accelerating cracking. Drainage deficiencies that allow water, chlorides and incompressible materials to accumulate beneath the pavement exacerbate the pumping mechanism and prevent restoration of support. Consequently, compromised joints, unstable subgrade, and inadequate drainage act synergistically to accelerate spalling, faulting, slab rocking and overall deterioration that transverse joints are designed to mitigate. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–98), Ch. 8 (p. 163)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Transverse‑joint cleaning and sealing is appropriate for existing Portland cement concrete pavements that are being restored rather than overlaid, where the subgrade is stable and the drainage system functions properly to keep water, chlorides and incompressible material out of the structure. The work should be done when a sealant reservoir can be formed with the required shape factor and when joints are just beginning to show distress, or on older roadways where full joint rehabilitation is not economically justified but continued service is expected. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90)</small></p>
+<p>A transverse joint should not be cleaned and sealed when the sealant reservoir cannot be formed to meet the required shape factor, when the pavement is scheduled for an overlay, or when the joint exhibits more than minor distress. In those situations the joint must be addressed with a different strategy such as full joint rehabilitation, partial‑depth or full‑depth concrete repairs, dowel‑bar retrofits, slab jacking, or full‑depth patching. Likewise, a partial‑depth repair is only appropriate when the depth of the required restoration does not exceed half the slab thickness; if the needed repair depth is greater than this limit, a full‑depth pavement patch must be used instead. When spalling at a transverse joint results from inadequate joint performance, the preferred remedy shifts to slab stabilization and dowel‑bar retrofit rather than a simple joint patch. Corner spalls that extend beyond the mid‑slab depth also demand full‑depth corner repairs because a joint‑only approach cannot reliably restore the structural integrity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–91)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>Determining whether a transverse joint is required begins with a thorough visual inspection of each existing joint. The inspector looks for early signs of distress such as spalling, loss of sealant, faulting of the joint, accumulation of fines on the traffic lane or shoulder adjacent to the joint, small depressions or blow‑holes at the joint, corner breaks and any general slab settlement. When any of these indicators are observed, the joint is considered a candidate for stabilization. In addition to visual cues, the sealant reservoir of each joint must be measured to verify compliance with the shape‑factor criteria set out in the applicable specifications; a reservoir that fails to meet those dimensions triggers cleaning and resealing of the joint. For older pavements where full rehabilitation would not be cost‑effective but service life must be preserved, routine cleaning and sealing are performed even when only minor distress is evident.</p>
+<p>If no prior performance testing has been carried out, the guidance calls for at least twenty‑five percent of the transverse joints to receive treatment as a precautionary measure. Where more detailed evaluation is feasible, deflection testing of the rigid pavement is conducted to quantify the load‑transfer efficiency of the existing joints. The resulting load‑transfer coefficient (J) is compared with the acceptable range; values toward the lower end of that range indicate satisfactory transfer and support retaining the current joint configuration, whereas low efficiencies—reflected by higher J values—signal inadequate transfer and may justify installing additional transverse joints or modifying existing ones. This combination of visual assessment, sealant‑reservoir measurement, a minimum treatment proportion, and load‑transfer testing provides a comprehensive basis for deciding both the necessity and optimal location of transverse joint interventions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–92), Ch. 8 (p. 163)</small></p>
+<p>Transverse joint work should be initiated whenever the pavement’s existing joints have progressed beyond minor wear to a condition that compromises load transfer or slab support. Failure of a transverse joint—evidenced by faulting, accumulation of fines, small blow‑hole depressions, corner breaks, or overall slab settlement—triggers rehabilitation of the joint, typically by saw‑and‑seal or stabilization with grout, hot asphalt, or high‑density polyurethane; if no testing has been done, at least 25 % of the joints (and all patch joints) are stabilized. When a full‑depth concrete patch is placed on a badly deteriorated slab, transverse joints must be provided to ensure proper load transfer, and during reconstruction of Portland cement concrete sections longer than about 500 ft the pavement must be rebuilt with perpendicular joints spaced at approximately 15 ft, aligning new joints with existing ones for single‑lane reconstructions. In scheduled maintenance cycles, all transverse joints are sawed and sealed when an asphalt wearing course or shoulder overlay is applied (typically around year 20) and again after a full‑depth patch (around year 35); in earlier years only about half of the joints are cleaned and resealed. For older pavements where full joint rehabilitation is not economically justified but service is to continue, cleaning and sealing are performed as part of a Concrete Pavement Restoration project once the sealant reservoir meets the required shape‑factor specifications, addressing early or minor distress without extensive repair. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–74), Ch. 4 (pp. 84–92)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Transverse joints are installed to provide load transfer and accommodate thermal movement. Load‑transfer is achieved by placing coated dowel bars perpendicular to the joint, each bar being fully bonded to the existing slab with an anchoring binder such as epoxy, polyester or vinyl‑ester. The spacing of the joints depends on pavement type: 30 ft for jointed reinforced concrete pavements and 15 ft for jointed plain concrete pavements; overlay joints are constructed in the same manner but need not align with existing joints. After placement the joint is sealed with a rubberized joint sealant whose reservoir must satisfy the shape‑factor requirements of Publication 408 Section 521, as illustrated in Publication 72M RC‑20M.</p>
+<p>Maintenance follows a timed program. In the first five years roughly one‑quarter of the transverse joints are cleaned and resealed; at ten, thirty and forty‑five years fifty percent receive clean‑and‑seal treatment, while at twenty and thirty‑five years all joints are sawed to a depth of 1½ inches or 2 inches, sealed, and overlaid with an asphalt wearing course four to four‑and‑half inches thick. Prior to the overlay a scratch course of sixty pounds per square yard is placed on every joint and Type 7 paved shoulders are provided; sealant is applied during crack sealing at an average rate of 615 linear feet per mile. At the thirty‑five‑year interval full‑depth patching may be performed over up to one percent of the pavement area before the overlay, and heavy‑duty membranes can be installed beneath the sealant where additional protection is required. Dowel bar retrofits are also used in transverse joints to improve load transfer.</p>
+<p>When a partial‑depth repair is needed, the patch depth must not exceed one‑half of the slab thickness. Spot repairs between fifteen inches and six feet long constitute Type 1 repairs, while lengths greater than six feet are classified as Type 2. The repair mix is Class AA cement‑concrete modified for normal curing; accelerated or rapid‑set mixes may be specified when traffic‑opening constraints exist. An expansion‑joint material matching the original joint width is placed between the new patch and adjacent slabs to preserve space for thermal movement.</p>
+<p>Void stabilization beneath a slab is accomplished by drilling holes in accordance with Publication 72M and filling them with one of three grout products: a cement‑based fluid grout (approximately one cubic foot per hole, about a quarter bag of cement), hot liquid asphalt (thirty to fifty gallons per hole) or a high‑density two‑component polyurethane (about 0.4 lb per square foot). At least twenty‑five percent of transverse joints are treated when no prior testing exists, and joint and crack sealing is applied concurrently to limit water ingress while traffic control is maintained until the grout cures or the asphalt cools. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–76), Ch. 4 (pp. 84–98)</small></p>
+<p>The performance of a transverse joint is governed primarily by the condition of the existing joint, the properties of the repair or overlay materials, and the compatibility between those materials and the underlying pavement structure. Joints that are failed must be fully rehabilitated before any further work; intact joints should be thoroughly cleaned and resealed to provide a sound substrate for an unbonded overlay or for dowel‑bar retrofits at mid‑panel cracks. The cleaning process includes longitudinal and transverse joint cleaning, removal of spalls, and sealing with the specified rubberized sealant whose reservoir must meet the shape‑factor requirements of the applicable specifications. When joints exhibit only minor distress, a cost‑effective rehabilitation consists of cleaning and resealing; severely spalled joints that will receive an overlay require filling with a 4.75 mm asphalt wearing course material rather than sealant. Load transfer across the joint is essential, and it depends on the presence of properly installed dowel bars that are fully bonded along their embedded length using compatible binders such as epoxy, polyester or vinylester. Coated dowels must be placed perpendicular to the joint at the spacings prescribed for the pavement type—30 ft for reinforced concrete (RC‑21M) and 15 ft for plain concrete (RC‑27M)—and sealed appropriately. The lateral support of the slab, reflected in the load‑transfer coefficient J, must be matched to subgrade reaction (k) values and traffic composition; higher truck percentages or lower k-values require larger J values, whereas good support from doweled joints or tied shoulders permits lower J values. Material selection for the joint repair must closely match the original concrete. Class AA cement‑concrete modified or an accelerated mix is preferred over rapid‑set options because of superior compatibility, and high‑early‑strength cement should be avoided due to its tendency to shrink excessively. Expansion‑joint filler material is required to re‑establish the designed joint width and to prevent new patch concrete from contacting adjacent slabs during temperature‑driven expansion and contraction cycles. Support beneath the slab also influences performance. Voids created by pumping action, subgrade consolidation or settlement near the joint reduce support and can cause faulting, fines accumulation, depressions and corner breaks. These voids should be stabilized with a compatible grout—such as cement‑based grout, hot‑asphalt undersealing, or low‑viscosity high‑density polyurethane that cures to a rigid, water‑ and chemical‑resistant foam—allowing sufficient cure time before traffic returns. Finally, the overall condition of the existing pavement and subgrade dictates whether a bonded or unbonded overlay is appropriate. Bonded concrete overlays require a slab in good to fair condition, stable support and functional drainage to develop a reliable bond; unbonded overlays rely on a separation layer and place new joints according to the thickness of the fresh concrete rather than aligning with existing transverse joints. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=1b75479b src=pub_242_change_10::tab:p163#1 -->
+<p>The table below specifies load transfer coefficient values for various joint and shoulder configurations.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-transverse-joint-1-cap" tabindex="0"><table class="ct-table" id="ct-transverse-joint-1">
+<caption id="ct-transverse-joint-1-cap">TABLE 8.2 LOAD TRANSFER COEFFICIENT VALUES, J</caption>
+<thead>
+<tr><th scope="col">DESCRIPTION</th><th scope="col">VALUE</th></tr>
+</thead>
+<tbody>
+<tr><td>JPCP and unbonded concrete overlays (dowelledjoints) with tied concrete shoulders, widened lanewith asphalt or RCC shoulders, or monolithic ortied curb and gutter</td><td>2.7 - 3.1 (See notes)</td></tr>
+<tr><td>JPCP and unbonded concrete overlays (dowelledjoints) with untied concrete shoulders, untied curband gutter, or standard lane width with asphalt,RCC, aggregate, or turf shoulders</td><td>3.2</td></tr>
+<tr><td>Unbonded concrete overlays (undowelled joints)with tied concrete shoulders, widened lane withasphalt or RCC shoulders, or monolithic or tiedcurb and gutter</td><td>3.6 4.2 (See notes)</td></tr>
+<tr><td>Unbonded concrete overlays (undowelled joints)with untied concrete shoulders, untied curb andgutter, or asphalt, RCC, aggregate, or turf shoulders</td><td>3.8 4.4 (See notes)</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 163.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 84–98), Ch. 8 (p. 163)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>When a transverse joint begins to show early signs of distress, the first action is to clean the joint of all debris and to form a sealant reservoir that complies with the shape‑factor requirements outlined in Publication 408, Specifications, Section 521. The cleaned joint is then sealed using the prescribed rubberized or asphalt joint‑sealing material as part of a concrete pavement rehabilitation (CPR) effort; this same cleaning and sealing procedure is also applied to older roadways where full joint reconstruction is not economically justified but continued service life is required. For installation or repair, the work area must be prepared by removing any deteriorated concrete in accordance with Publication 408, Section 525.3, which details the construction‑repair preparation, concrete removal, partial‑depth repair, and curing procedures. After removal, a premolded expansion‑joint strip that matches the existing joint width is placed between the new patch and the adjacent slabs so that the fresh material does not contact the surrounding slab and sufficient space for movement is maintained. The appropriate repair concrete—either Class AA cement concrete modified or an accelerated mix, selected based on the required traffic opening time—is then placed, finished to grade, and cured as specified in the same publication, ensuring that the joint can accommodate expansion‑contraction cycles throughout its service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–91)</small></p>
+<p>Implementation of transverse joints in pavement structures depends on the type of work being performed and follows distinct equipment, sequencing, environmental, and traffic‑control requirements. For routine maintenance that includes saw‑cutting and sealing of all transverse joints, the activity is incorporated into the 20‑year mill overlay of the asphalt wearing course and shoulders as well as the 35‑year full‑depth patching program, during which every joint is cut with a saw and immediately sealed. No special weather or traffic limitations are prescribed for these operations. When a partial‑depth concrete repair is required, the procedure begins with preparation of the repair zone, removal of deteriorated slab material, placement of the selected patch mix—typically a Class AA cement concrete that may be modified or accelerated—and installation of a rigid polystyrene board or a premolded expansion‑joint strip matching the existing joint width. The sequence must respect the local thermal regime; periods when cool nights are followed by hot daytime temperatures heighten the need for adequate joint spacing to prevent compression failures. Traffic may not be returned to service until the patch has cured for the period specified in Publication 408, which governs the allowable opening time. Stabilization of existing slabs uses a different set of equipment: drilling rigs create access holes that are immediately followed by injection pumps delivering cement grout, hot asphalt, or high‑density polyurethane beneath the concrete. The close coupling of drilling and injection allows both crews to share a single set of Maintenance and Protection of Traffic (MPT) controls and confines work to one lane at a time. Environmental constraints require waiting for each material to achieve its required hardening or cooling interval—approximately twelve hours for cement grout and at least thirty minutes for hot asphalt or polyurethane—before the pavement can be reopened. Appropriate safety gear is mandatory when handling hot asphalt, and traffic control devices must remain in place throughout the operation until the injected material has fully hardened. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (p. 74), Ch. 4 (pp. 90–92)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>When a transverse joint is inspected, the reviewer must first confirm that the dowel bars used are of the specified type and have the required coating, and that they are anchored with an approved binder—epoxy, polyester, or vinylester—and bonded continuously along their entire embedded length. The joint spacing must match the design criteria, typically 30 feet for jointed reinforced concrete pavement (JRCP) or 15 feet for jointed plain concrete pavement (JPCP), and each joint must be cut perpendicular to the direction of traffic flow. Prior to sealant placement the joint surface is required to be thoroughly cleaned, and the newly formed sealant reservoir must conform to the shape‑factor limits set out in the applicable specifications. The sealing material applied shall be the approved rubberized or asphalt joint sealant, and after installation the seal must form a continuous, fully bonded film with no voids. In addition, the grout used for stabilization—whether cement grout, hot‑asphalt undersealing, or high‑density polyurethane—must be placed according to the prescribed mix proportions and volume, and allowed to cure for the specified period before traffic is reopened. Finally, the completed joint is examined for any indications that slab support has been compromised, such as faulting of the joint, accumulation of fines adjacent to the joint or crack, small blow‑hole depressions in the shoulder, corner breaks, or overall slab settlement, confirming that all material selections, preparation steps, installation actions, and post‑construction conditions meet the acceptance criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–92)</small></p>
+<p>A satisfactory transverse joint is one that demonstrates proper load transfer, correct sealant reservoir geometry, appropriate repair detailing, and the absence of distress after slab‑stabilization work. Load transfer is achieved by installing dowel bars in every patch joint, using coated dowels anchored with epoxy, polyester or vinylester binders so that each dowel is bonded along its full embedded length; joint spacing must follow the standards—30 ft for reinforced concrete sections (RC‑21M) and 15 ft for plain concrete sections (RC‑27M)—with joints cut perpendicular. On lane reconstructions new joints should align with existing joints or include an intermediate joint when spacing would exceed roughly 20 ft. The sealant reservoir must be formed to the shape factor prescribed in Publication 408 Section 521, as illustrated in RC‑20M, and the joint must be thoroughly cleaned and sealed with the specified rubberized or asphalt sealing material, particularly where only minor distress is evident. After a partial‑depth repair the original joint geometry must be reconstituted using an expansion‑joint material that matches the existing joint width, ensuring that the fresh concrete patch does not contact adjacent slabs; sufficient clearance must remain to permit free thermal movement without compression or point‑loading of the patch. Finally, after any required slab‑stabilization work the joint should exhibit full support with no faulting, no accumulation of fines at the joint or nearby cracks, no blow‑hole depressions in the shoulder, and no corner breaks or settlement, confirming that voids have been adequately filled and structural integrity restored. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–92)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>The transverse joint is a pivotal element in concrete pavement systems because it governs load transfer, accommodates thermal movement, and serves as a conduit for moisture protection. In long‑life designs that target a 50‑year service life, the joints are systematically cleaned and sealed: half of them at years 10, 20 and 40 and all of them at year 30. This regimen safeguards the joint faces, limits crack propagation, and maintains smooth ride quality, thereby preserving pavement functionality and durability throughout the design period. Effective load transfer is achieved through proper dowelling and secure anchorage of the joints, with prescribed spacing of 15 ft or 30 ft depending on slab type (e.g., RC‑21M requires 30‑foot joint spacing, perpendicular joints, coated dowel bars, and appropriate seals). When high‑performance dowel bars are installed in repairs expected to remain in service for more than 20 years, the load‑bearing interaction of adjacent slabs is sustained, which further extends the pavement’s service life. Sealing the joints with a sealant that provides the correct reservoir shape factor (as defined in Publication 408, Section 521) prevents ingress of water, chlorides and other deleterious agents. This protection reduces spalling, faulting and loss of load‑transfer capacity, especially on older roadways where full joint rehabilitation is not economically justified; effective seals can therefore allow continued service without the need for an overlay. When deterioration occurs, repairing the joint with expansion‑joint material that recreates the original gap ensures slabs retain freedom to move. The repair must avoid contact with adjacent slabs and use materials that prevent intrusion into neighboring joints. Partial‑depth repairs, performed according to Publication 408 Section 525, can restore rideability and are capable of lasting for the remainder of the pavement’s design life. In cases where voids develop beneath the joint, slab stabilization—drilling holes at the joint and injecting cement grout, hot asphalt or high‑density polyurethane—fills the voids, restores full sub‑base support, reduces slab deflection, and mitigates faulting, corner breaks, diagonal cracking and eventual slab breakup. Although this does not increase the original structural capacity, it improves structural integrity and consequently extends durability and expected service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 72–73), Ch. 4 (pp. 84–92)</small></p>
+<p>Transverse joints are prone to several recurring distresses. The most frequent manifestation is loss of load‑transfer capacity, which may appear as crushing of the joint area, spalling that extends beyond the slab’s mid‑depth, shrinkage cracks, faulting and the development of voids beneath the slab. These primary symptoms often evolve into secondary problems such as accumulation of fines, blow‑hole depressions, corner breaks, diagonal cracking and ultimately full‑slab breakup. When load transfer is compromised, only a full‑depth patch can restore performance; partial‑depth repairs are limited to superficial spalling that does not involve severe joint loss. These failures are driven by a combination of material, construction and environmental factors. Poorly bonded dowels or insufficient anchoring—using epoxy, polyester or vinylester binders—reduce the ability of the joint to transfer loads. The use of high early‑strength concrete increases the risk of excessive shrinkage cracking. Joint spacing or alignment that does not meet design requirements further limits performance. Inadequate support beneath the slab, an unstable subgrade and deficient drainage allow water and chlorides to infiltrate the seal, promoting pumping action, subgrade consolidation and settlement that create voids adjacent to the joint. Rapid temperature cycles, with cool nights and hot days, exacerbate expansion‑contraction stresses, leading to compression failure of partial‑depth patches and point‑loading failures when cracks propagate toward the repair area instead of vertically. Timely maintenance can mitigate these distresses. Early resealing at the first sign of faulting or loss of load transfer is recommended, because postponement increases spalling and may require more extensive rehabilitation. Joint rehabilitation—creating new sealant reservoirs and resealing—is most cost‑effective when applied to joints that are just beginning to show minor distress. For minor spalling, slab stabilization together with dowel‑bar retrofit can be effective. When partial‑depth repairs are undertaken, isolation of the fresh concrete from the adjacent slab using a premolded expansion‑joint material that matches the existing joint width (or a rigid polystyrene board for longitudinal joints) and selection of an appropriate repair mix such as Class AA cement concrete modified or an accelerated mix are essential to prevent compression and point‑loading failures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–92)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After a transverse joint is placed, its performance should be verified by conducting deflection testing on the slab to determine the joint’s load‑transfer efficiency. The test results guide the selection of an appropriate load transfer coefficient (J); good or normal efficiencies justify using a lower J value, while low efficiencies require a higher J value. This post‑construction evaluation ensures that the joint provides adequate lateral support and meets design expectations. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (p. 163)</small></p>
+<p>The need for additional maintenance, repair, or rehabilitation of a transverse joint is signaled whenever the joint shows any indication that its ability to accommodate slab movement has been compromised. Early symptoms such as the appearance of cracks within the joint, loss or degradation of sealant, and water intrusion point to minor distress; at this stage cleaning and resealing—or a modest joint rehabilitation that restores the sealant reservoir—are usually sufficient. More advanced deterioration is evident when the joint surface becomes crushed or visibly cracked, when load‑transfer capacity diminishes, or when spalling appears. If spalling extends only through the top half of the slab depth and is not accompanied by severe joint problems, a partial‑depth patch may be appropriate, but any spalling that penetrates beyond the mid‑slab depth, reaches roughly one‑half of the slab thickness, or occurs at corners signals that the original joint is no longer performing adequately and full‑depth repair, slab stabilization, or dowel‑bar retrofit becomes necessary. Observable faulting of the joint, accumulation of fines in the joint or adjacent cracks, small blow‑hole depressions on the shoulder, corner breaks, overall slab settlement, rocking, pumping, or loss of rideability are additional indicators that support beneath the slab has been lost and corrective action—such as slab jacking, dowel‑bar retrofit, or full‑depth patching—is required. Finally, when structural deficiencies appear in the pavement surrounding the joint, including extensive surface spalling, major working cracks, or unstable subgrade and drainage conditions affecting joint performance, these trends also demand either targeted rehabilitation of the joint or broader interventions such as slab stabilization and overlay placement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 84–98)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

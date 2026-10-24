@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Base Course</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html" class="active" aria-current="page">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><span class="crumb-current">Base Course</span></nav>
+<article><h1>Base Course</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-structure.html">Pavement Structure</a> <span class="edge edge-taxonomic" title="Base Course is a topic under Pavement Structure.">is-subtopic-of</span></div><div class="edge-reading">Base Course is a topic under Pavement Structure.</div><div><a class="tag" href="index.html?q=base-course">base-course</a><a class="tag" href="index.html?q=base-courses">base-courses</a><a class="tag" href="index.html?q=base">base</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>The base course is the structural layer placed directly beneath the surface course when an existing pavement lacks sufficient capacity or cannot adequately manage moisture, serving to restore a uniform load‑bearing foundation that distributes vehicle stresses while rapidly conveying surface and subsurface water by gravity to prevent “bathtub” conditions and loss of subgrade support[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It is typically constructed from highly permeable granular or treated materials—such as asphalt‑treated permeable base, cement‑treated permeable base, or an Asphalt Rich Base Course—and may be placed as roller‑compacted concrete, hot‑mix, or cold‑recycled asphalt depending on traffic volume, subgrade conditions, and design thickness requirements[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>The base course is employed whenever the existing pavement structure lacks sufficient structural capacity or cannot adequately manage moisture, leading to excessive deflection, rutting, bottom‑up cracking, or loss of support from a weakened subgrade. Its principal function is to restore and provide a uniform load‑bearing foundation that distributes vehicle stresses while rapidly conveying surface and subsurface water away by gravity, thereby preventing “bathtub” conditions and preserving the bearing value of the underlying soil. To achieve this, designers specify highly permeable granular or treated materials—typically asphalt‑treated permeable base (ATPB) or cement‑treated permeable base (CTPB)—placed over an appropriate subbase such as a 2A layer. For new or reconstructed sections with total base thickness greater than six inches, an Asphalt Rich Base Course (ARBC) is required to deliver the highest tensile strength at the bottom of the pavement, improving resistance to cracking and moisture damage throughout service life. In rehabilitation projects where cold recycling is suitable, existing asphalt is milled to a prescribed depth, mixed with emulsified asphalt, placed and compacted to achieve a uniform base thickness between three and five inches; this method yields a higher‑strength base but is limited to roads carrying fewer than about 200 daily equivalent single axle loads. When the subgrade is frost‑susceptible or otherwise weak, a stronger granular base compensates for reduced bearing support, limiting differential heave during freeze‑thaw cycles. In rigid‑pavement designs for interstates and expressways, the combined base and subbase must provide an effective modulus of subgrade reaction capable of supporting traffic under seasonal variations; designers assign elastic moduli of 15 000 psi for spring‑thaw conditions, 30 000 psi for normal summer/fall conditions, and 50 000 psi when frozen, using a weighted‑average loss‑of‑support factor to adjust the effective k‑value for potential erosion or pumping. Thus, the base course addresses the fundamental engineering problem of insufficient structural capacity and moisture management, ensuring load distribution, stability, and durability across a range of traffic loads and environmental conditions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=7ebb05ea src=pub_242_change_10::tab:p162#1 -->
+<p>The table below lists loss of support factors for various base course and subbase materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-base-course-1-cap" tabindex="0"><table class="ct-table" id="ct-base-course-1" aria-describedby="ct-base-course-1-sum">
+<caption id="ct-base-course-1-cap">TABLE 8.1LOSS OF SUPPORT FACTORS(*) For forensic purposes only</caption>
+<thead>
+<tr><th scope="col">TYPE OF MATERIAL</th><th scope="col">LOSS OF SUPPORT FACTOR</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">OGS*</th><td>1.0</td></tr>
+<tr><th scope="row">2A Subbase</th><td>1.0</td></tr>
+<tr><th scope="row">Asphalt Base Course/Superpave Base Course</th><td>0.5</td></tr>
+<tr><th scope="row">Rubblized PCC Base Course</th><td>0.5</td></tr>
+<tr><th scope="row">Cracked and Seated PCC Base Course</th><td>0.5</td></tr>
+<tr><th scope="row">Asphalt or Cement Treated Permeable Base (ATPB or CTPB)</th><td>0.5</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-base-course-1-sum">Rows list types of pavement materials and base courses. Columns provide the corresponding loss of support factor values for each material type.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 162.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–60), Ch. 5 (pp. 111–123), Ch. 6 (pp. 143–150), Ch. 8 (pp. 160–162)</small></p>
+<p>The base course must satisfy a set of interrelated functional, structural, durability, safety and serviceability objectives. Functionally it is required to provide a stable platform that distributes traffic loads and transfers stresses to the subgrade while simultaneously allowing rapid removal of surface and subsurface water, thereby protecting the pavement from moisture‑related damage. Structurally the material must possess sufficient strength: roller‑compacted concrete layers are designed with thicknesses ranging from four to eighteen inches to achieve compressive strengths on the order of 4 000–10 000 psi, and for asphalt‑rich base courses a total thickness greater than six inches is required, with the bottom three to six inches placed using low‑traffic (&lt;0.3 million ESAL) mixes that contain 2.5 % air voids and a nominal maximum aggregate size of 25 mm, which deliver the highest tensile strength at the pavement base. The mix must also develop adequate structural strength after a minimum curing period of one week under low humidity and high temperature before the wearing course is placed; cold‑recycled mixes are limited to a compacted depth of three to five inches and require the addition of virgin coarse aggregate when fine reclaimed material dominates, together with a protective wearing surface. Durability is achieved by maintaining a dry subgrade: highly permeable aggregates with large voids prevent capillary rise, and rapid drainage reduces frost‑heave, rutting, surface roughness and bottom‑up cracking, extending the pavement’s service life to about twenty years when supported by a properly prepared subgrade or subbase capable of sustaining compaction. Safety considerations include providing a stable work platform for construction equipment, restricting traffic on newly placed mixes unless detours are available, and ensuring adequate surface texture; exposed RCC surfaces on roads with speed limits of 35 mph or higher must be diamond‑ground to meet skid‑resistance requirements. Serviceability is addressed by preserving ride quality—avoiding excessive roughness that would be penalized by the International Roughness Index—and by incorporating adequate drainage, sound underlying layers and traffic control during construction so that the base course continues to perform throughout its design life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–59), Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–123)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Base Course is appropriate for a wide range of pavement types and project conditions. In flexible pavement designs it serves as the layer immediately beneath the surface course, and is required when the approved structure specifies either an aggregate‑cement or an aggregate‑lime/pozzolan base; both materials must be offered as alternatives in the bid and their thicknesses selected within allowable lift limits while balancing unit costs, minimum and maximum depths, and structural coefficients to achieve the target structural number. For asphalt‑concrete pavements a base course is used for all new or reconstructed sections, especially when the total base thickness exceeds six inches; in those cases an Asphalt Rich Base Course (ARBC) is placed in the bottom three to six inches of the first lift using mix designs limited to less than 0.3 million ESALs and a nominal maximum aggregate size of 25 mm to provide high tensile strength and resistance to bottom‑up cracking. When the 20‑year design traffic falls between 0.3 and less than 3.0 million ESALs, the base course does not require a binder change, although polymer‑modified binders may be specified for severe rutting and fiber‑modified mixes may be used in the bottom lift with PG 58S‑28, PG 64S‑22 or PG 64E‑22 binders. Cold‑recycled base courses are suitable for rehabilitating existing asphalt pavements by processing the in‑place material without heating; they require at least two inches of existing asphalt, a structurally sound and well‑drained underlying base and subgrade, and the ability to limit or detour traffic during construction and curing. Such mixes are typically overlaid with a Superpave overlay, but a cold‑mix asphalt overlay or surface treatment may be acceptable on low‑volume roads. Cold recycling should not be used where daily truck traffic exceeds 200 ESALs, where AADT is roughly greater than 3,000 two‑lane vehicles, or where drainage conditions are poor; in those situations polymer‑modified emulsions are recommended to improve early strength. In rigid pavement systems the base layer provides structural support and load distribution beneath concrete surface courses such as Jointed Plain Concrete Pavement or Roller Compacted Concrete. The base is normally constructed of Asphalt Treated Permeable Base (ATPB) or Cement Treated Permeable Base (CTPB) placed over a 2A subbase, with open‑graded subbase prohibited for concrete pavements. This configuration is required on Interstate and Expressway projects and may also be employed in rehabilitation projects where the original pavement was built on OGS, ATPB or CTPB, subject to coordination with HDTD. Roller Compacted Concrete can serve as a concrete base course when placed beneath an asphalt wearing course or surface treatment on low‑volume roads having average daily traffic of 2,000 vehicles or less and speed limits of 55 mph or lower, and it is also permitted for temporary pavements such as median crossovers or widening areas. In all of these applications the RCC or other base material rests on a prepared subgrade and subbase capable of supporting compaction during construction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=c53618bf src=pub_242_change_10::tab:p174#1 -->
+<p>The table below lists structural coefficients for various base course materials in flexible pavements.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-base-course-2-cap" tabindex="0"><table class="ct-table" id="ct-base-course-2" aria-describedby="ct-base-course-2-sum">
+<caption id="ct-base-course-2-cap">TABLE 9.3 STRUCTURAL COEFFICIENTS FOR MATERIALS IN FLEXIBLE PAVEMENTS</caption>
+<thead>
+<tr><th id="ct-base-course-2-h0-0" scope="col">PAVEMENT COMPONENT</th><th id="ct-base-course-2-h0-1" scope="col">STRUCTURALCOEFFICIENT</th></tr>
+<tr><th id="ct-base-course-2-h1-0" scope="col" colspan="2">Surface Course; New Construction, Reconstruction, or Overlay:</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-base-course-2-h2-0" scope="row">Superpave 6.3 mm, 9.5 mm, 12.5 mm, 19.0 mm, 25.0 mm(Wearing and Binder Courses)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h2-0">0.44</td></tr>
+<tr><th id="ct-base-course-2-h3-0" scope="row">FB-1, FB-2 (Wearing and Binder Courses)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h3-0">0.20</td></tr>
+<tr><th id="ct-base-course-2-h4-0" scope="row">FJ-1, FJ-1C, FJ-4, Superpave 4.75 mm (Wearing Courses)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h4-0">0.35</td></tr>
+<tr><th id="ct-base-course-2-h5-0" scope="row">Base Course; New Construction, or Reconstruction:</th><td></td></tr>
+<tr><th id="ct-base-course-2-h6-0" scope="row">Plain Cement Concrete (PCBC)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h6-0">0.50</td></tr>
+<tr><th id="ct-base-course-2-h7-0" scope="row">Lean Cement Concrete (LCBC)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h7-0">0.40</td></tr>
+<tr><th id="ct-base-course-2-h8-0" scope="row">Superpave 25.0 mm Base Course</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h8-0">0.40</td></tr>
+<tr><th id="ct-base-course-2-h9-0" scope="row">Superpave 37.5 mm Base Course</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h9-0">0.40</td></tr>
+<tr><th id="ct-base-course-2-h10-0" scope="row">Superpave Asphalt Rich Base Course (ARBC)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h10-0">0.40</td></tr>
+<tr><th id="ct-base-course-2-h11-0" scope="row">Crushed Aggregate (CABC)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h11-0">0.14</td></tr>
+<tr><th id="ct-base-course-2-h12-0" scope="row">Crushed Aggregate, Type DG (CABCDG)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h12-0">0.18</td></tr>
+<tr><th id="ct-base-course-2-h13-0" scope="row">Aggregate - Asphalt (ABBC)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h13-0">0.30</td></tr>
+<tr><th id="ct-base-course-2-h14-0" scope="row">Aggregate - Cement (ACBC)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h14-0">0.40</td></tr>
+<tr><th id="ct-base-course-2-h15-0" scope="row">Aggregate - Lime - Pozzolan (ALPBC)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h15-0">0.40</td></tr>
+<tr><th id="ct-base-course-2-h16-0" scope="row" colspan="2">Existing Materials to be Overlaid:</th></tr>
+<tr><th id="ct-base-course-2-h17-0" scope="row">Cement Concrete (Good condition, &lt; 5% patching)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h17-0">0.40</td></tr>
+<tr><th id="ct-base-course-2-h18-0" scope="row">Cement Concrete (Fair condition, &lt; 10% patching)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h18-0">0.30</td></tr>
+<tr><th id="ct-base-course-2-h19-0" scope="row">Cement Concrete (Failed - no patching or &gt; 10% patching)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h19-0">0.25</td></tr>
+<tr><th id="ct-base-course-2-h20-0" scope="row">Cracked/Break and Seated Cement Concrete</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h20-0">0.25</td></tr>
+<tr><th id="ct-base-course-2-h21-0" scope="row">Asphalt Concrete</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h21-0">0.30</td></tr>
+<tr><th id="ct-base-course-2-h22-0" scope="row">Cold Recycled Asphalt Base Course</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h22-0">0.30</td></tr>
+<tr><th id="ct-base-course-2-h23-0" scope="row">Full Depth ReclamationPulverizationCalcium Chloride and similar additivesAsphalt StabilizationChemical Stabilization</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h23-0">0.110.140.25 - 0.300.32 - 0.35</td></tr>
+<tr><th id="ct-base-course-2-h24-0" scope="row">Scarified Asphalt Concrete</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h24-0">0.14</td></tr>
+<tr><th id="ct-base-course-2-h25-0" scope="row">Brick with Rigid BaseBrick with Flexible Base</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h25-0">0.400.20</td></tr>
+<tr><th id="ct-base-course-2-h26-0" scope="row">Crushed Aggregate Base Course</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h26-0">0.14</td></tr>
+<tr><th id="ct-base-course-2-h27-0" scope="row">Crushed Aggregate Base Course, Type DG</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h27-0">0.18</td></tr>
+<tr><th id="ct-base-course-2-h28-0" scope="row">Miscellaneous Existing Materials(CP-2, AT-1, HEs, Oil Bond Stone, Bit. Road Mixes)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h28-0">0.20</td></tr>
+<tr><th id="ct-base-course-2-h29-0" scope="row">Subbase; New Construction, Reconstruction, or Existing to be Overlaid*:</th><td></td></tr>
+<tr><th id="ct-base-course-2-h30-0" scope="row">Open Graded Subbase</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h30-0">0.11</td></tr>
+<tr><th id="ct-base-course-2-h31-0" scope="row">No. 2A Subbase</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h31-0">0.11</td></tr>
+<tr><th id="ct-base-course-2-h32-0" scope="row">Lime and Cement Stabilized Subgrade</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h32-0">0.12</td></tr>
+<tr><th id="ct-base-course-2-h33-0" scope="row">Asphalt Treated Permeable Base Course (ATPBC)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h33-0">0.20</td></tr>
+<tr><th id="ct-base-course-2-h34-0" scope="row">Cement Treated Permeable Base Course (CTPBC)</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h34-0">0.20</td></tr>
+<tr><th id="ct-base-course-2-h35-0" scope="row">Rubblized Cement Concrete</th><td headers="ct-base-course-2-h0-1 ct-base-course-2-h1-0 ct-base-course-2-h35-0">0.20</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-base-course-2-sum">Rows list pavement components categorized by layer type (Surface, Base, Existing Materials, Subbase) and condition. Columns provide the corresponding structural coefficients for flexible pavement design.</p>
+<p class="ct-notes">Notes: * See Section 10.2 for guidance regarding subbase inclusion in overlay designs.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 174.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–123), Ch. 8 (pp. 160–162), Ch. 9 (pp. 172–173)</small></p>
+<p>When traffic volumes exceed about two thousand average daily trips, speed limits are higher than fifty‑five miles per hour, or the contract requires International Roughness Index measurements for ride‑quality incentives, a roller‑compacted concrete base is no longer appropriate and a conventional pavement design should be used. Likewise, if an RCC surface will be exposed to speeds of thirty‑five miles per hour or more, diamond grinding becomes mandatory, which often leads designers to select alternative base treatments. For projects that call for a total base thickness greater than six inches, the guidelines prescribe an Asphalt Rich Base Course because its low‑ESAL mix design provides the highest tensile strength at the bottom of the pavement and improves resistance to bottom‑up cracking and moisture damage; in low‑traffic situations (ESALs between 0.3 and less than three million) where rutting is not a concern, districts may retain the existing base and concentrate any material changes on the wearing or binder courses instead. Cold‑recycled bases become unsuitable when daily equivalent single axle loads reach two hundred or more, when the existing pavement lacks at least two inches of asphalt to achieve a three‑inch total thickness, when poor drainage or overly coarse underlying soils are present, or when traffic cannot be controlled or detoured during construction and curing; under those conditions designers typically turn to conventional hot‑mix placement or full‑depth reclamation. Finally, if the subgrade exhibits low or highly variable California Bearing Ratio values—whether isolated weak zones, widespread low CBR across the site, or large stretches with markedly different soils—and especially when CBR approaches five, a uniform base‑course thickness is insufficient. The preferred response is to improve the problematic subgrade areas, subdivide the project into sections that reflect the differing soil conditions, or apply subgrade strengthening methods such as lime, cement stabilization, or rock capping. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–123), Ch. 6 (pp. 143–150)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The design of a base‑course begins with a comprehensive site assessment that records the present condition of the pavement, its construction and maintenance history, and the quality of drainage. A distress survey is performed to document existing cracking, rutting or other failures and to identify the underlying causes so that any wet subgrade zones can be corrected before work proceeds. Traffic information must include both the current average daily traffic and an estimate of future loading; for a roller‑compacted concrete (RCC) base the roadway should not exceed 2 000 vehicles per day and the posted speed limit must be 55 mph or less, while projects that experience 200 or more equivalent single axle loads (ESALs) per day are generally excluded from cold‑recycling approaches. The anticipated traffic levels are used to size the structural layers and to evaluate life‑cycle performance.</p>
+<p>Material data are obtained by sampling and testing the existing asphalt surface, base, subbase and subgrade. These tests verify the thickness of reclaimed aggregate, confirm that virgin aggregates meet gradation requirements, and define the composition of any reclaimed layer that will be incorporated into the new base. When an RCC mix is specified, the design calls for cement, a dense fine‑aggregate gradation with a maximum particle size under one inch, and a low water‑cement ratio in the range of 0.30 to 0.40; air entrainment may be used but admixtures are limited.</p>
+<p>Geotechnical input consists of in‑situ testing such as falling‑weight deflectometer (FWD), dynamic cone penetrometer (DCP) or light weight deflectometer (LWD) to quantify subgrade stiffness and strength, and a verification that the prepared subgrade and any underlying subbase are capable of supporting the compaction effort required for the RCC layer. The presence of untreated reclaimed material, soils, or oversized stones must be ruled out.</p>
+<p>Environmental considerations include climate effects on pavement life expectancy and the need for at least one week of curing under favorable weather—low humidity and high temperature—before the wearing course is placed. If the RCC base will remain exposed to traffic traveling 35 mph or faster, surface‑texturing provisions are required. Proper drainage must be ensured throughout the design period to prevent moisture‑related deterioration.</p>
+<p>Together these site, traffic, material, geotechnical, environmental and existing‑condition inputs provide the basis for determining appropriate base‑course thicknesses and ensuring long‑term structural performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 121–126)</small></p>
+<p>The design and construction of the base course are governed by a coordinated set of PennDOT specifications, AASHTO pavement design procedures, and project‑specific constraints that together assure structural capacity, drainage performance, and durability. The primary reference for flexible pavements is Publication 408, which defines material eligibility, mix‑design methods, and performance criteria. Recycled concrete aggregate may be incorporated in subbase or cold‑recycled base layers as prescribed in Section 703.2(a)7, while reclaimed asphalt pavement (RAP) is authorized for hot‑mix, warm‑mix, and cold‑recycled bases to conserve binder and aggregates. Superpave Restricted Performance Specification requirements are set out in Section 413, and the volumetric mix system requires selection of a performance‑grade binder according to Table 5.5 together with an equivalent single axle load (ESAL) range for a 20‑year design life. When the calculated ESAL falls between 0.3 and less than 3.0 million, the base course mix may remain unchanged; however, if the total base thickness exceeds six inches an Asphalt Rich Base Course (ARBC) must be placed in the lower three to six inches, limited to a maximum aggregate size of 25 mm, air voids not exceeding 2.5 %, and an ESAL design below 0.3 million. Mix‑design diversity is capped at three individual designs per project and five for major projects, and any deviation from the prescribed ESAL range requires approval by the PDAU.</p>
+<!-- concept-tabular:begin key=528eba29 src=pub_242_change_10::tab:p175#2 -->
+<p>The table below specifies the minimum and maximum design thicknesses for various Superpave asphalt materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-base-course-3-cap" tabindex="0"><table class="ct-table" id="ct-base-course-3" aria-describedby="ct-base-course-3-sum">
+<caption id="ct-base-course-3-cap">TABLE 9.5SUPERPAVE MATERIAL THICKNESSES</caption>
+<thead>
+<tr><th scope="col">SUPERPAVE MATERIAL</th><th scope="col">MINIMUMDESIGNTHICKNESS</th><th scope="col">MAXIMUMDESIGNTHICKNESS</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">4.75 mm Wearing Course*</th><td>0.625 in</td><td>0.75 in</td></tr>
+<tr><th scope="row">6.3 mm Wearing Course*</th><td>0.75 in</td><td>1.25 in.</td></tr>
+<tr><th scope="row">9.5 mm Fine Grade Wearing Course*</th><td>1 in</td><td>&lt;1.5 in</td></tr>
+<tr><th scope="row">9.5 mm Wearing Course*</th><td>1.5 in</td><td>2 in</td></tr>
+<tr><th scope="row">12.5 mm Wearing Course*</th><td>2 in</td><td>3 in</td></tr>
+<tr><th scope="row">19.0 mm Binder Course</th><td>2.5 in</td><td>4.5 in</td></tr>
+<tr><th scope="row">25.0 mm Binder Course</th><td>3 in</td><td>5.5 in</td></tr>
+<tr><th scope="row">25.0 mm Base Course</th><td>3 in</td><td>As required by design</td></tr>
+<tr><th scope="row">37.5 mm Base Course**</th><td>4.5 in</td><td>As required by design</td></tr>
+<tr><th scope="row">Asphalt Rich Base Course</th><td>3 in</td><td>6.0 in</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-base-course-3-sum">Rows list Superpave material types, columns give minimum and maximum design thicknesses for each type.</p>
+<p class="ct-notes">Notes: *When used as a wearing course, not for scratch or leveling. Reference Table 10.5 when using as a scratch or leveling course. **Use only when material quantity requirement is greater than 5,000 tons. For Superpave Maximum Construction Lift Thicknesses reference Publication 408, Specifications, Section 313.3(h)1.b.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 175.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p>Cold‑recycled base courses follow Publication 408 Sections 341 and 342 together with the mix‑design procedures of Bulletin 27; they must be compacted to a thickness between three and five inches, cured for at least one week under low humidity and elevated temperature, and are limited to routes carrying roughly fewer than two hundred daily ESALs or where at least two inches of existing asphalt is available for recycling. Heavier traffic corridors should employ polymer‑modified emulsions instead. Full‑Depth Reclamation is addressed in Publication 408 Section 344 and the corresponding Chapter 5 of Bulletin 27.</p>
+<p>Roller‑Compacted concrete (RCC) may be used as a base course under the authority of Publication 408 Sections 502 and 323, with design thickness ranging from four to eighteen inches. RCC placement is restricted to roadways with an average daily traffic of 2,000 vehicles or less and a speed limit not exceeding 55 mph. Control‑joint spacing follows Publication 72M RC‑27M: joints are spaced fifteen to twenty feet for sections thinner than eight inches, and for thicker sections the spacing equals the pavement thickness multiplied by 2.5 feet.</p>
+<p>Drainage provisions are dictated by Publication 72M Roadway Construction Standards for edge and outlet protection and by Publication 13M Design Manual Part 2 Chapter 10 Section 10.3.D for sizing base drains and determining outlet spacing. Continuous base drains must be installed along pavement edges and the low side of superelevated sections, with outlets protected from crushing or plugging to maintain system functionality.</p>
+<p>For rigid‑pavement projects the base course design must also comply with the 1993 AASHTO Pavement Design Procedures executed through the AASHTOWare DARWin program. Designers are required to input traffic loading, serviceability limits, material moduli, a chosen reliability level, and uniform drainage coefficients (mi = 1.0). The base layer is limited to approved permeable materials—specifically Asphalt‑Treated Permeable Base (ATPB) or Cement‑Treated Permeable Base (CTPB)—which must be bid as separate alternatives. On Interstate and Expressway alignments the ATPB or CTPB must rest on a 2A subbase; open‑graded subbase material is prohibited, and drainage layers may only be specified where a positive outlet can be guaranteed, otherwise a dense base with longitudinal edge drains shall be used. Seasonal elastic modulus values for the base are prescribed at 15 000 psi during spring thaw, 30 000 psi under normal conditions, and 50 000 psi when frozen, while the resilient‑modulus ratio of subbase to native soil may not exceed four. Thickness limits are taken from the minimum and maximum lift depths in Tables 9.4 and 9.5, and structural coefficients must be obtained from Table 9.3.</p>
+<p>Project‑specific evaluation is required before any repair; the cause of existing base failure must be identified and replacement material should match the type and thickness of the original to preserve proper drainage and avoid bathtub conditions. Subgrade strength expressed as CBR values imposes additional constraints: values greater than ten require approval by the Chief Geotechnical Engineer, and no CBR exceeding twenty may be used in the Heukelom‑Klomp correlation. Frost‑susceptible subgrades demand a stronger base course in accordance with AASHTO guidance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p>The following figure provides a design chart for determining frost penetration, which is critical when addressing frost-susceptible subgrades.</p>
+<!-- concept-compliance:begin fig=ac5992d4 n=1 -->
+<figure class="cmp-figure" id="cmp-base-course-1">
+<img src="assets/base-course/ac5992d4eca9ce9a5aaa720aa292e9b3eaec15c302b69ef0d0af2da9701583c4.jpg" alt="Nomograph plotting frost penetration in inches against the design freezing index in degree days." aria-describedby="cmp-base-course-1-ld">
+<figcaption>Design chart for determination of frost penetration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</figcaption>
+</figure>
+<div id="cmp-base-course-1-ld" hidden>
+<p>A nomograph with a logarithmic x-axis and a semi-logarithmic y-axis. The horizontal axis represents the Design Freezing Index in Degree Days, ranging from 15 to 3000. The vertical axis represents Frost Penetration in Inches, ranging from 4 to 100.</p>
+<p>A single solid line indicates a positive correlation between the two variables.</p>
+</div>
+<details class="cmp-longdesc">
+<summary>Text description of this figure</summary>
+<p>A nomograph with a logarithmic x-axis and a semi-logarithmic y-axis. The horizontal axis represents the Design Freezing Index in Degree Days, ranging from 15 to 3000. The vertical axis represents Frost Penetration in Inches, ranging from 4 to 100.</p>
+<p>A single solid line indicates a positive correlation between the two variables.</p>
+</details>
+<!-- concept-compliance:end -->
+
+<p>The figure displays a log-log plot relating the design freezing index to frost penetration depth, showing that deeper frost penetration occurs as the number of degree days increases.</p>
+<p><small>[1] — Ch. 2 (pp. 54–60), Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–123), Ch. 6 (pp. 143–150), Ch. 8 (pp. 160–162), Ch. 9 (pp. 172–173)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The base course may be designed as a roller‑compacted concrete (RCC) layer by following the PennDOT concrete pavement design procedures in Chapter 8, Section 8.15 to compute the required thickness; an empirical joint‑spacing relationship then sets control‑joint spacing equal to 2.5 times the RCC thickness in feet for lifts eight inches or thicker. When the base is asphaltic, the Superpave volumetric mixture system is employed: a performance‑grade binder is selected and 20‑year design ESALs are calculated to place the project within one of five ESAL ranges that dictate mix proportions. For total base thicknesses greater than six inches an Asphalt Rich Base Course (ARBC) is required in the lower three to six inches, using a nominal maximum aggregate size of 25 mm, 2.5 % air voids and a mix limited to less than 0.3 million ESALs (approximately 50 gyrations). Cold‑recycled asphalt base courses are treated through field procedures rather than analytical models: the existing pavement is milled to the specified depth, emulsified asphalt—preferably polymer‑modified when daily AADT exceeds about 3,000 vehicles or truck percentages are high—is mixed into the reclaimed material, placed to a target grade and compacted to achieve a density before overlay. The mix design follows Publication 27 (Bulletin 27) which prescribes test methods, allowable emulsions and a minimum curing period of one week under warm, low‑humidity conditions; the compacted thickness must lie between three and five inches and projects with daily ESALs of 200 or more are excluded from cold‑recycling selection. In rigid pavement analysis the base course is combined with the sub‑base to obtain an effective modulus of subgrade reaction (k) by weighting the loss‑of‑support factors of each layer according to their depths, using the expression LS₁·D₁/(D₁+D₂)+LS₂·D₂/(D₁+D₂). The resulting k is then adjusted with a seasonal base elastic modulus—15 000 psi for spring thaw, 30 000 psi for normal summer/fall conditions, and 50 000 psi for frozen periods—while ensuring that the sub‑base modulus does not exceed four times the resilient modulus of the underlying soil. For full‑depth flexible pavements the required structural number is calculated with SN = Σ a_i d_i m_i, where the structural coefficients a_i are taken from Table 9.3 and all drainage coefficients m_i are set to 1.0. The computed SN is converted to individual layer thicknesses using either the Specified Thickness Design or the Optimized Thickness Design procedures available in the DARWin software; the Layered Analysis method is not permitted, and material cost per inch together with minimum and maximum depth limits guide the selection of an economically optimal base‑course thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–123), Ch. 8 (pp. 161–162), Ch. 9 (pp. 172–173)</small></p>
+<p>The design of the base course is governed by a set of explicit criteria that address structural adequacy, material characteristics, drainage capacity, traffic exposure and construction reliability. For flexible pavements the calculated structural number derived from the chosen thickness must exceed the required design structural number, with the thickness constrained between the minimum and maximum lift depths prescribed in the standard tables; the structural coefficient for each layer is taken from the designated table and all layer drainage coefficients are set to unity. When a permeable asphalt‑treated or cement‑treated base is used over a 2A subbase in rigid pavement, its contribution to the effective modulus of subgrade reaction is evaluated with season‑dependent elastic moduli—15 kpsi for spring thaw, 30 kpsi under normal conditions and 50 kpsi when frozen—and these values are adjusted as necessary so that the ratio of subbase resilient modulus to native soil does not exceed four. A loss‑of‑support factor is applied to each layer to account for possible erosion or pumping, and a weighted average of base and subbase depths is used to obtain the overall k value. Permeability is a mandatory attribute; both base and subbase materials must be highly permeable so that gravity‑drainable water can be removed rapidly. The slope of the subbase should be maximized to accelerate drainage, and base drains and outlet spacing are sized in accordance with the PennDOT design manual. Lateral underdrains are strongly encouraged at wet subgrade locations or cut‑to‑fill transitions, and all outlets must be protected from crushing or plugging. Material‑specific limits are imposed by traffic and speed conditions. Roller‑compacted concrete (RCC) may serve as a base only on roads with an average daily traffic of 2 000 vehicles or less and a posted speed limit of 55 mph or lower; its thickness may range from four to eighteen inches and the concrete must achieve a compressive strength between roughly 4 000 and 10 000 psi. When the total base thickness exceeds six inches, the bottom three to six inches of the first lift must be an Asphalt Rich Base Course (ARBC) mix designed for less than 0.3 million equivalent single axle loads, with air voids limited to about 2.5 % and a nominal maximum aggregate size of 25 mm to provide high tensile strength and resistance to bottom‑up cracking. For designs whose 20‑year ESAL forecast falls between 0.3 and less than 3.0 million, the base course composition need not be altered beyond this requirement. Cold‑recycled bases are permitted only when heavy truck traffic is absent; projects that generate 200 or more daily ESALs are excluded unless a detour can be provided during construction and curing. The recycled mix must be compacted to a thickness between three and five inches and allowed at least one week of curing in warm, low‑humidity conditions before the wearing surface is placed. If the reclaimed asphalt pavement is fine‑graded, virgin coarse aggregate (No. 8, 57 or 67) must be added to satisfy the specifications, and polymer‑modified emulsions are required when two‑lane AADT exceeds three thousand, truck percentages are high, or early/late season recycling could impair curing. Finally, for any base course that is an aggregate‑cement or aggregate‑lime/pozzolan type, both material options must be listed as alternatives in the project bid to provide redundancy and ensure reliability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–123), Ch. 8 (pp. 161–162), Ch. 9 (pp. 172–173)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>The base course may be provided with a range of thicknesses depending on the material selected. When reinforced cement concrete (RCC) is used as the base beneath an asphalt wearing surface, the structural thickness may be any value between four and eighteen inches; sections thinner than eight inches require control joints spaced fifteen to twenty feet, while thicker sections use joint spacing equal to 2.5 times the pavement thickness in feet. For conventional new or reconstructed pavements the minimum total base‑course thickness is six inches, with an Asphalt Rich Base Course (ARBC) placed in the lower portion of that layer and occupying between three and six inches of the first lift; the ARBC aggregate size shall not exceed 25 mm. In a cold‑recycled base course the compacted depth of the recycled mixture must be at least three inches and may not exceed five inches, which is achieved by ensuring an existing asphalt layer of at least two inches and adding one inch of reclaimed or virgin aggregate to meet the three‑inch minimum. The report does not prescribe any dimensional requirements for subbase, treated‑soil, slab, shoulder, edge‑support, or reinforcement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–123)</small></p>
+<p>The base‑course thickness is obtained from the standard PennDOT concrete pavement design procedures and may vary between four and eighteen inches; RCC can be placed in a single lift or built up in multiple lifts to achieve the required depth. Joint spacing follows the rule that pavements thinner than eight inches receive control joints every fifteen to twenty feet, while for sections eight inches thick or more the spacing equals the thickness multiplied by 2.5 ft. Where the RCC base serves as a shoulder or ties into existing concrete pavement, its control joints are required to line up with the adjacent mainline joint pattern. The source does not provide guidance on cross‑slope, transition design, or other tie‑in details beyond joint alignment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>The Base Course specification must begin by identifying the material class that will be used—granular aggregate, roller‑compacted concrete (RCC), Asphalt Rich Base Course (ARBC), cold‑recycled asphalt base, an Asphalt‑treated or Cement‑treated Permeable Base, or a cement‑based mixture such as aggregate‑cement or aggregate‑lime‑pozzolan. For each class the required material properties and mix proportions are then prescribed. Granular bases are required to be highly permeable aggregates; their ability to convey water by gravity is demonstrated through permeability performance, and PennDOT uses the particle‑size distribution (gradation) as the primary indicator test. The gradation must produce a void structure that allows rapid water flow. When the base is provided as RCC, the mix consists of cement, aggregate and water in the same basic proportions as conventional concrete but with a lower water‑to‑cement ratio, typically 0.40 and permitted down to 0.30. A dense aggregate gradation with a maximum size not exceeding one inch is required; air entrainment may be used and admixtures are limited. The resulting mixture should have a compressive strength in the range of approximately four thousand to ten thousand pounds per square inch. If the total base thickness exceeds six inches, an Asphalt Rich Base Course must be placed in the bottom three to six inches of the first lift. ARBC mixes are limited to low‑traffic designs handling fewer than 0.3 million equivalent single axle loads, use a nominal maximum aggregate size of 25 mm (1 inch), and are compacted to design air voids of about 2.5 percent to provide high tensile strength at the pavement bottom. Cold‑recycled asphalt bases consist of reclaimed asphalt pavement milled to a specified depth and blended with an emulsified asphalt binder. When the reclaimed material is a wearing course or fine‑graded mix, virgin coarse aggregate of No. 8, 57 or 67 size must be added to satisfy the mix design. Polymer‑modified emulsions are recommended for high‑traffic conditions. The compacted thickness shall lie between three and five inches, and a minimum curing period of one week under favorable weather is required before the wearing course can be placed. Permeable bases used in rigid pavements may be Asphalt‑treated Permeable Base (ATPB) or Cement‑treated Permeable Base (CTPB) placed over a 2A subbase. The design assigns an elastic modulus of approximately 15 kpsi for spring‑thaw conditions, 30 kpsi for normal summer/fall conditions, and 50 kpsi for frozen winter conditions, with adjustments so that the ratio of subbase to soil resilient modulus does not exceed four. Regardless of material type, all base layers must have a drainage coefficient of 1.0, and their thickness must fall within the minimum and maximum lift depths prescribed in the design tables. The appropriate structural coefficient for the selected mix (aggregate‑cement or aggregate‑lime‑pozzolan) is obtained from Table 9.3. Repairs to an existing base shall use material that is similar in type and thickness to preserve drainage characteristics and avoid bathtub failure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–60), Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–123), Ch. 8 (pp. 161–162), Ch. 9 (pp. 172–173)</small></p>
+<p>The selection and proportioning of base‑course materials begin with an assessment of the structural demand imposed by projected traffic volumes, environmental conditions, and subgrade characteristics. For conventional granular bases the primary criterion is rapid drainage; a highly permeable mix is achieved through an appropriate particle‑size gradation that also retains sufficient coarse content to provide a stable platform for construction equipment, recognizing that a modest reduction in permeability may be required to improve workability during placement. When a rigid concrete base is specified, the mixture is a very dry concrete using cement, aggregate and water with a low water‑to‑cement ratio—typically around 0.40 and as low as 0.30—to obtain compressive strengths between 4,000 psi and 10,000 psi; the aggregate is densely graded with a maximum size under one inch and the design thickness ranges from four to eighteen inches according to the anticipated traffic loads and subgrade preparation. For base courses exceeding six inches in total thickness an Asphalt‑Rich Base Course (ARBC) is placed in the lower three to six inches, employing a mix limited to less than 0.3 million ESALs, with air voids near 2.5 % and a nominal maximum aggregate size of 25 mm to deliver high tensile strength at the pavement bottom and resistance to moisture‑induced cracking while remaining constructible. In cold‑recycling applications the compacted thickness is limited to three–five inches, followed by at least one week of curing under warm, low‑humidity conditions; if the reclaimed asphalt pavement is fine‑graded, virgin coarse aggregate (No. 8, 57 or 67) is added, and polymer‑modified emulsions are used when daily traffic exceeds about three thousand AADT, truck percentages are high, or early strength is required, with projects carrying more than two hundred daily ESALs or exhibiting poor drainage excluded to safeguard durability and performance. Reclaimed‑pavement bases may be stabilized mechanically by adding aggregate or RAP to achieve a suitable gradation, or chemically using cement, lime, fly ash or similar agents, with type and dosage determined through laboratory testing to meet strength targets without inducing brittleness; excessive stabilizer content is avoided to preserve durability. In rigid‑pavement designs the base consists of an Asphalt or Cement Treated Permeable Base over a 2A subbase, and the combined depths are proportioned so that their weighted loss‑of‑support factor yields an effective k‑value; this value is adjusted with an appropriate elastic modulus—15 000 psi for spring‑thaw conditions, 30 000 psi for normal conditions, or 50 000 psi for frozen conditions—and the subbase‑to‑soil resilient‑modulus ratio is limited to four, ensuring that structural capacity, durability, constructability and overall performance meet design requirements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=b5dba4e4 src=pub_242_change_10::tab:p122#1 -->
+<p>The table below specifies cold recycling options based on ADT volume.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-base-course-4-cap" tabindex="0"><table class="ct-table" id="ct-base-course-4" aria-describedby="ct-base-course-4-sum">
+<caption id="ct-base-course-4-cap">TABLE 5.7ADT CRITERIA</caption>
+<thead>
+<tr><th scope="col">ADT VOLUME</th><th scope="col">COLD RECYCLING OPTION</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">1,000 and less</th><td>Provide a surface treatment (double application) as a minimumfor wearing course.</td></tr>
+<tr><th scope="row">1,001 to 3,000</th><td>Provide a Superpave wearing course or cold mix wearingcourse (FB modified, FB-2, or FB-1).</td></tr>
+<tr><th scope="row">3,001 to 10,000</th><td>Provide a Superpave wearing course.</td></tr>
+<tr><th scope="row">10,001 to 15,000</th><td>If daily ESALs are less than 200, provide a Superpave wearingcourse and binder course.</td></tr>
+<tr><th scope="row">More than 15,000</th><td>Do not use.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-base-course-4-sum">Rows list ADT volume ranges, columns give cold recycling options.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 122.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–126), Ch. 8 (pp. 161–162)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>When RCC is placed as a base course it is installed without forms, steel reinforcement, or dowel bars, so no load‑transfer devices are required. Control joints are optional and only provided if the design specifies them; when used, joint spacing follows the RCC guidelines—15 to 20 ft for sections thinner than eight inches, or a spacing equal to 2.5 times the pavement thickness in feet for sections eight inches thick or greater. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<p>The base course is designed to provide a seamless and durable interface with the layers above and below it, adjacent structural elements, and surrounding roadway features. High‑permeability base and subbase materials are selected by gradation so that water can flow freely; the subbase is sloped as steeply as practical to promote gravity drainage, and drain pipes are placed at close spacing with continuous edge drains running along the pavement’s outer margin, on the low side of any superelevation, and in median sections where water problems have been identified. Lateral underdrains are installed at cut‑to‑fill transitions and other wet subgrade areas, while all base‑drain outlets are protected by headwalls to prevent crushing or plugging, ensuring that the drainage system functions reliably. When a roller‑compacted concrete (RCC) base is used, it is placed on a prepared, adequately compacted subgrade and subbase surface capable of supporting the dry‑mix concrete during placement; the RCC layer can be positioned directly beneath an asphalt wearing course or other surface treatment without diamond grinding unless it will remain exposed as the final pavement surface for speeds of 35 mph or higher. Control joints in the RCC are aligned with the spacing and alignment of any adjacent concrete mainline to maintain continuity across the joint interface. For cold‑recycled base courses, existing asphalt is milled, mixed with emulsified binder, placed to the required grade and compacted; the restored base is then bonded to a Superpave asphalt overlay, although a cold‑mix asphalt overlay or surface treatment may be used when traffic volumes are low. The structural interaction between the base and subbase is treated as a combined system: their thicknesses are added and a weighted loss‑of‑support factor is applied to compute an effective modulus of subgrade reaction. Design specifications require that the base consist of an Asphalt or Cement Treated Permeable Base (ATPB or CTPB) over a 2A subbase, with any additional subbase material incorporated before evaluating combined stiffness, thereby ensuring appropriate load distribution while respecting limits on the ratio between subbase modulus and roadbed resilient modulus. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 98–99), Ch. 5 (p. 121), Ch. 8 (pp. 161–162)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>When designing the base course, engineers must provide a well‑drained system that removes water quickly from the surface and from within the layers. The materials selected for the base and subbase are required to be highly permeable granular aggregates so that gravity‑drainable water can flow freely; the slope of the subbase is maximized to increase the rate of drainage. Lateral underdrains are installed in wet subgrade zones and at every cut‑to‑fill transition, while continuous edge drains run along the outer edge on the low side of superelevations and wherever median drainage is needed, with outlets protected from crushing or plugging. Positive longitudinal slope is maintained throughout to keep the layer dry.</p>
+<p>Where frost‑susceptible subgrade exists, a stronger base course is specified to compensate for reduced bearing support, and pavement base drains (or comparable drainage provisions) are provided to mitigate moisture infiltration, freeze‑thaw effects, and other environmental stresses. If soil conditions vary across the project, the design may be divided into sections so that each thickness can accommodate appropriate drainage.</p>
+<p>For projects with total base thickness greater than six inches, an Asphalt Rich Base Course (ARBC) is placed as a three‑to‑six‑inch bottom lift. ARBC mixes are limited to designs of less than 0.3 million ESAL and are compacted to about 2.5 % air voids, which maximizes tensile strength at the base and improves resistance to moisture‑induced cracking. The Superpave system is used to select binder grades and mixture properties that match the local climatic extremes.</p>
+<p>In cold‑recycled pavements, only structurally sound, well‑drained bases and subgrades are accepted; projects showing deterioration from poor drainage are excluded. After placement, a minimum one‑week curing period under low humidity and high temperature is required before the wearing course is applied to ensure adequate strength despite moisture and climate effects.</p>
+<p>When computing structural response, the base and subbase are treated as a single composite for the effective k‑value. For Interstate and Expressway rigid pavements, an Asphalt or Cement Treated Permeable Base (ATPB or CTPB) over a 2A subbase is required; such drainage layers may be used only where a positive outlet can be provided, otherwise a dense base with longitudinal edge drains is specified. The elastic modulus of the base is adjusted for seasonal climate conditions—approximately 15 000 psi during spring thaw, 30 000 psi in normal summer/fall, and 50 000 psi when frozen—to capture moisture and temperature effects, and loss‑of‑support factors are applied to account for potential erosion or pumping.</p>
+<p>Finally, the design procedure assigns a uniform drainage coefficient of 1.0 to all pavement layers, indicating that no additional environmental adjustments to the coefficient are prescribed beyond the physical drainage features described above. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 111–126), Ch. 6 (pp. 143–150), Ch. 8 (pp. 161–162), Ch. 9 (pp. 172–173)</small></p>
+<p>When RCC is used as a base course it must be placed on a prepared subgrade and sub‑base that can sustain the required compaction, and it is limited to roadways with an average daily traffic of 2,000 vehicles or less and a posted speed limit of 55 mph or lower. If the RCC surface will remain exposed and the design speed is 35 mph or higher, the surface must be textured by diamond grinding before any wearing course is applied. Geometric control joint spacing is prescribed: for RCC thinner than eight inches joints are spaced between fifteen and twenty feet, while for thicknesses of eight inches or more the spacing equals the pavement thickness multiplied by 2.5 feet. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>Base Course performance is anticipated to meet a twenty‑year design service life regardless of whether the layer is constructed with roller‑compacted concrete (RCC) or an asphalt‑rich base course (ARBC). For RCC, the high compressive strength ranging from 4 000 to 10 000 psi underpins its ability to sustain repetitive traffic loads, and this strength level serves as the proxy for distress resistance rather than a separate durability test. In contrast, ARBC achieves its longevity by delivering the highest tensile strength at the bottom of the pavement structure; compliance with mix specifications—limiting the design equivalent single axle load (ESAL) exposure to less than 0.3 million, maintaining design air voids near 2.5 percent, using a nominal maximum aggregate size of 25 mm and providing an initial lift thickness between three and six inches for total base sections exceeding six inches—provides measurable criteria that confirm resistance to bottom‑up cracking and moisture damage throughout the twenty‑year period. Ride‑quality performance for the Base Course is evaluated with the International Roughness Index, but because RCC surfaces tend to be rougher than conventional concrete or asphalt, the guidance explicitly advises against selecting RCC where IRI measurements are tied to payment incentives. When ARBC is installed in accordance with its specifications it is expected to satisfy acceptable IRI thresholds consistent with standard pavement quality requirements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–113)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=a3c41bc5 src=pub_242_change_10::tab:p175#1 -->
+<p>The table below specifies the minimum and maximum thicknesses for various surface, base, and subbase materials across different highway classifications. It relates to the section <a href="#scope-and-applicability">Scope and applicability</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-base-course-5-cap" tabindex="0"><table class="ct-table" id="ct-base-course-5" aria-describedby="ct-base-course-5-sum">
+<caption id="ct-base-course-5-cap">TABLE 9.4MINIMUM AND MAXIMUM THICKNESS OF SURFACE, BASE, AND SUBBASE MATERIALS FOR SUPERPAVE MIXES</caption>
+<thead>
+<tr><th id="ct-base-course-5-h0-0" scope="col" rowspan="2">COURSES</th><th id="ct-base-course-5-h0-1" scope="col">MAXIMUMTHICKNESS</th><th id="ct-base-course-5-h0-2" scope="col" colspan="3">MINIMUMTHICKNESS</th></tr>
+<tr><th id="ct-base-course-5-h1-1" scope="col">ALL HIGHWAYCLASSIFICATIONS</th><th id="ct-base-course-5-h1-2" scope="col">MFCA &amp; B</th><th id="ct-base-course-5-h1-3" scope="col">MFCC &amp; D</th><th id="ct-base-course-5-h1-4" scope="col">MFCE</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-base-course-5-h2-0" scope="row">Surface</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h2-0">4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h2-0">N/A</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h2-0">3.5 in* - 4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h2-0">3.5 in* - 4 in</td></tr>
+<tr><th id="ct-base-course-5-h3-0" scope="row">CABC, CABC-DG</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h3-0">16 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h3-0">N/A</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h3-0">8 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h3-0">6 in</td></tr>
+<tr><th id="ct-base-course-5-h4-0" scope="row">Subbase</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h4-0">As Required</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h4-0">N/A</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h4-0">6 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h4-0">6 in</td></tr>
+<tr><th id="ct-base-course-5-h5-0" scope="row">Surface</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h5-0">4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h5-0">N/A</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h5-0">3.5 in* - 4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h5-0">3.5 in* - 4 in</td></tr>
+<tr><th id="ct-base-course-5-h6-0" scope="row">Agg./Cement Base Courses</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h6-0">12 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h6-0">N/A</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h6-0">5 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h6-0">5 in</td></tr>
+<tr><th id="ct-base-course-5-h7-0" scope="row">Subbase</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h7-0">As Required</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h7-0">N/A</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h7-0">6 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h7-0">6 in</td></tr>
+<tr><th id="ct-base-course-5-h8-0" scope="row">Surface</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h8-0">4.5 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h8-0">4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h8-0">3.5 in* - 4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h8-0">1 in** - 2 in</td></tr>
+<tr><th id="ct-base-course-5-h9-0" scope="row">Superpave Base Course</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h9-0">15 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h9-0">3 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h9-0">3 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h9-0">4 in</td></tr>
+<tr><th id="ct-base-course-5-h10-0" scope="row">Subbase</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h10-0">As Required</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h10-0">8 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h10-0">6 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h10-0">6 in</td></tr>
+<tr><th id="ct-base-course-5-h11-0" scope="row">Surface</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h11-0">4.5 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h11-0">N/A</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h11-0">3.5 in* - 4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h11-0">1 in** - 2 in</td></tr>
+<tr><th id="ct-base-course-5-h12-0" scope="row">Agg./Asphalt Base Course</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h12-0">12 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h12-0">N/A</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h12-0">5 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h12-0">5 in</td></tr>
+<tr><th id="ct-base-course-5-h13-0" scope="row">Subbase</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h13-0">As Required</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h13-0">N/A</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h13-0">6 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h13-0">6 in</td></tr>
+<tr><th id="ct-base-course-5-h14-0" scope="row">Surface</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h14-0">4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h14-0">4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h14-0">3.5 in* - 4 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h14-0">3.5 in* - 4 in</td></tr>
+<tr><th id="ct-base-course-5-h15-0" scope="row">Plain Cement Concrete Base Course</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h15-0">12 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h15-0">7 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h15-0">5 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h15-0">5 in</td></tr>
+<tr><th id="ct-base-course-5-h16-0" scope="row">Subbase</th><td headers="ct-base-course-5-h0-1 ct-base-course-5-h1-1 ct-base-course-5-h16-0">As Required</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-2 ct-base-course-5-h16-0">8 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-3 ct-base-course-5-h16-0">6 in</td><td headers="ct-base-course-5-h0-2 ct-base-course-5-h1-4 ct-base-course-5-h16-0">6 in</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-base-course-5-sum">Rows list COURSES; columns give MAXIMUMTHICKNESS (ALL HIGHWAYCLASSIFICATIONS), MINIMUMTHICKNESS (MFCA &amp; B, MFCC &amp; D, MFCE).</p>
+<p class="ct-notes">Notes: *3.5 inches may only be used if 1 inch SP 9.5 mm FG Wearing Course is used with 2.5 inches SP 19.0 mm Binder Course. **1 inch may only be used if 1 inch SP 9.5 mm FG Wearing Course is used.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 175.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

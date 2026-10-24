@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ride Quality</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html" class="active" aria-current="page">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><span class="crumb-current">Ride Quality</span></nav>
+<article><h1>Ride Quality</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-condition-assessment.html">Pavement Condition Assessment</a> <span class="edge edge-taxonomic" title="Ride Quality is a topic under Pavement Condition Assessment.">is-subtopic-of</span></div><div class="edge-reading">Ride Quality is a topic under Pavement Condition Assessment.</div><div><a class="tag" href="index.html?q=ride-quality">ride-quality</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Ride Quality, most often quantified by the International Roughness Index (IRI), is a performance metric that captures the smoothness of a concrete pavement surface and directly influences occupant comfort, safety, and asset‑management decisions [1]. It is employed throughout the pavement life cycle—from preliminary engineering assessments that determine whether conventional Concrete Pavement Restoration is feasible, to selecting appropriate treatments such as diamond grinding or ultra‑thin bonded wearing courses, and finally to verify that newly constructed or rehabilitated sections meet the minimum smoothness thresholds set in Publication 408 [1]. Reliable Ride Quality evaluation depends on timely entry of complete Pavement History data and IRI testing performed within three months of a segment’s reopening to traffic, ensuring that the measured roughness accurately reflects the as‑built condition for performance incentives and long‑term service‑life forecasting [1].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-decision-context">Purpose and decision context</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#information-needs">Information needs</a></li><li><a href="#alternatives">Alternatives</a></li><li><a href="#decision-criteria">Decision criteria</a></li><li><a href="#analysis-methods-and-tools">Analysis methods and tools</a></li><li><a href="#stakeholders-and-constraints">Stakeholders and constraints</a></li><li><a href="#timing-and-implementation">Timing and implementation</a></li><li><a href="#outcomes-and-follow-up">Outcomes and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-decision-context">Purpose and decision context</h2>
+<p>Ride Quality, most often expressed through International Roughness Index measurements, serves as a pivotal decision‑making metric across the concrete pavement life cycle. In the preliminary engineering phase it is used to assess whether an existing pavement can be successfully rehabilitated with conventional Concrete Pavement Restoration; inadequate ride quality leads to the conclusion that restoration is not feasible. When rehabilitation proceeds, the measured ride quality determines the appropriate surface treatment: if improvement is required and the pavement does not contain Vanport Limestone aggregate, diamond grinding is prescribed, whereas pavements built with aggregates prone to rapid polishing are directed toward an ultra‑thin bonded wearing course or a high‑friction surface treatment. Ride Quality also guides material selection at the design stage; when incentive payments depend on IRI performance, roller‑compacted concrete should be excluded because its surface roughness can vary with placement equipment and may fail to meet the smoothness criteria needed for those incentives. After construction or resurfacing, ride‑quality data are used to verify that the finished pavement satisfies the smoothness standards required for effective asset management, to evaluate the success of the work, and to forecast the service life before further treatment becomes necessary. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–99), Ch. 11 (p. 197)</small></p>
+<p>Ride Quality addresses the need to provide a smooth, low‑roughness pavement surface that ensures occupant comfort and safety. Rough or uneven concrete surfaces—particularly those containing aggregates such as Vanport Limestone that polish rapidly—reduce ride comfort and can diminish skid resistance. The performance goal is to achieve an acceptable International Roughness Index (IRI) level by applying appropriate treatments, including diamond grinding, micro‑surfacing, ultra‑thin bonded wearing courses, high‑friction surface treatments, or suitable overlays, which restore profile, cross‑slope, and friction while preserving long‑term pavement life. Specifications require meeting minimum ride‑quality thresholds set in Publication 408 (Section 404.4 or 507.4) and prohibit the use of roller‑compacted concrete where IRI will be used for performance incentives. Early‑stage preservation actions must be taken before advanced distresses develop, and rehabilitation decisions must consider both short‑ and long‑term impacts on rideability, avoiding flexible base replacements that could compromise future smoothness. Accurate assessment also depends on timely collection of Pavement History data and IRI testing within three months after reopening to traffic, enabling reliable asset‑management decisions. In sum, Ride Quality seeks to eliminate the problem of uncomfortable driving experiences caused by surface roughness, structural deficiencies, or inadequate measurement, thereby meeting the performance goal of a uniform, comfortable riding experience throughout the pavement network. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–99), Ch. 5 (pp. 115–120), Ch. 11 (p. 197), Ch. 12 (pp. 203–205)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Ride Quality is an appropriate performance criterion for a range of pavement projects that involve either the creation of a new surface or the preservation of existing assets. In concrete‑pavement rehabilitation, including CPR studies, it is evaluated during the preliminary‑engineering phase together with subgrade/subbase condition and friction adequacy to determine whether the structure can be successfully repaired; at the design stage the specification may call for diamond grinding to raise ride quality, except when the pavement contains Vanport Limestone aggregate because its skid resistance deteriorates rapidly after grinding, in which case an ultra‑thin bonded wearing course or a high‑friction surface treatment is prescribed. Ride Quality also governs all construction, reconstruction and resurfacing efforts, where International Roughness Index data are collected on the “new” pavement within three months of entering Pavement History information and subsequently monitored through annual (NHS) or biennial (non‑NHS) IRI collections. For preservation‑type treatments—micro‑surfacing, ultra‑thin bonded wearing courses and diamond grinding on both flexible and rigid pavements—the objective is to improve ride quality early in the maintenance cycle before advanced distresses such as rutting develop; these thin‑layer interventions are subject to a minimum ride‑quality level defined in Publication 408 and are exempt from a full pavement design. Thus Ride Quality is relevant for new‑surface projects, concrete rehabilitation, and preservation treatments applied to assets that exhibit roughness, early‑stage surface distress, or require post‑construction performance verification. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–84), Ch. 11 (p. 197), Ch. 12 (pp. 203–205)</small></p>
+<p>Ride‑quality improvement or assessment methods become inappropriate when the pavement material or construction type compromises the intended performance. For concrete pavements that use Vanport Limestone aggregate, diamond grinding—normally prescribed for ride‑quality enhancement—is unsuitable because the grinding removes the mortar layer and exposes an aggregate whose skid resistance declines rapidly; in such cases a different surface treatment, such as an ultra‑thin bonded wearing course or a high‑friction surface treatment, should be selected. Likewise, employing the International Roughness Index to evaluate ride quality is not appropriate for roller‑compacted concrete (RCC) pavements. The inherent texture of RCC produces IRI values that are typically higher than those of conventional Portland cement concrete or asphalt, making compliance with IRI‑based specifications or payment incentives unrealistic; therefore projects requiring IRI verification should specify a conventional concrete or asphalt pavement instead of RCC. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99)</small></p>
+<h2 id="information-needs">Information needs</h2>
+<p>Ride Quality assessment via IRI relies on accurate condition and site information captured in the Pavement History database, specifically the dates and types of construction, reconstruction or resurfacing for each segment. The system requires that this history be entered promptly—within four weeks for Department‑initiated projects and within six weeks for contractor projects—so that testing can be scheduled within three months after entry. Without these timely entries, analysts cannot relate IRI measurements to the pavement’s initial rideability or predict deterioration, making the data less useful for asset management. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 11 (p. 197)</small></p>
+<p>The ride‑quality information must be entered promptly after a project reopens to traffic—within four weeks for Department‑run work and within six weeks for contractor work—and the resulting IRI measurements must be taken within three months of that entry. Only when the Pavement History records are both complete (covering every resurfacing, reconstruction, etc.) and current can the IRI values accurately reflect the actual smoothness experienced by vehicle occupants. Incomplete or outdated entries would undermine the reliability of ride‑quality assessments. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 11 (p. 197)</small></p>
+<h2 id="alternatives">Alternatives</h2>
+<p>When ride quality is the primary performance metric, the agency should compare a set of preservation and rehabilitation treatments that are appropriate to the pavement type and condition. For rigid pavements, diamond grinding remains the baseline treatment for restoring smoothness, but when the aggregate tends to polish rapidly the alternatives shift to an ultra‑thin bonded wearing course or a high‑friction surface treatment. In addition, full‑depth PCC patching, accelerated rapid‑setting concrete, and precast concrete paving systems are viable repair options because they differ in opening time, shrinkage behavior, and ability to achieve target IRI after any post‑install grinding. For larger rehabilitation projects the feasible choices narrow to three: concrete pavement restoration, a new concrete overlay, or an asphalt overlay, each evaluated against existing distress, drainage, rehabilitatability and life‑cycle cost. Where a thin surface layer is preferred, a 6.3 mm (≈¼‑inch) Superpave asphalt overlay can be compared with micro‑surfacing, ultra‑thin bonded wearing courses, and profile‑correction techniques such as heater planing or milling; the overlay must meet the minimum 1½‑inch thickness requirement on sound structures with adequate drainage. Roller‑compacted concrete, although an available pavement type, should be excluded from projects where IRI will be measured because its texture is typically rougher than conventional Portland‑cement concrete and hot‑mix asphalt. By juxtaposing these options—diamond grinding, ultra‑thin bonded wearing courses, high‑friction surface treatments, CPR, concrete or asphalt overlays, rapid‑setting or precast repair units, micro‑surfacing, thin Superpave overlay, and milling/heater planing—the designer can select the treatment that best restores ride quality while satisfying structural, traffic, and cost constraints. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–99), Ch. 5 (pp. 115–120), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="decision-criteria">Decision criteria</h2>
+<p>The decision framework should be anchored in performance, with ride‑quality preservation taking precedence over all other considerations. Engineers must assess both the immediate and future degradation of ride quality when contemplating alternatives such as flexible‑base replacements in concrete repairs, ensuring that any loss—whether short‑term or long‑term—is acceptable before approval. Likewise, the guidance for roller‑compacted concrete (RCC) explicitly bars its use in sections where the International Roughness Index will be measured for incentive payments, because the inherently rougher RCC surface can generate inconsistent IRI values. In both contexts, performance of ride quality dominates cost, schedule, durability and other criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–99)</small></p>
+<p>Competing Ride Quality criteria are prioritized by first applying the project‑specific Ride Specification and ensuring that the pavement meets the required minimum ride quality, as defined in Publication 408. Only after those ride‑related thresholds are satisfied should the project address the broader Pavement Preservation geometric standards and subsequent safety or ancillary items. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 203–204)</small></p>
+<h2 id="analysis-methods-and-tools">Analysis methods and tools</h2>
+<p>Ride quality is evaluated through direct roughness measurements and a suite of non‑destructive tests such as deflection testing, faulting measurement, friction testing, ground‑penetrating radar, MIRA, and MIT Scan systems. These data are incorporated into life‑cycle cost analysis to compare rehabilitation alternatives, but the source does not reference condition ratings, decision trees, risk assessment, or benefit‑cost analysis for ride quality specifically. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84)</small></p>
+<p>Ride‑quality results hinge on two principal assumptions that, when violated, introduce notable uncertainty into the International Roughness Index values. First, for Roller Compacted Concrete (RCC) pavements it is assumed that the paver and roller equipment used during placement dominate the final surface texture; because RCC inherently yields a rougher finish than conventional concrete or asphalt, any variation in equipment performance translates directly into variability in IRI outcomes. Consequently, the guidance explicitly recommends excluding RCC from sections where IRI will be tied to payment incentives, acknowledging the uncertainty that the material‑equipment interaction creates. Second, the reliability of all IRI measurements rests on the premise that Pavement History data are entered both promptly and completely. The protocol specifies a four‑week entry window for Department‑managed projects and a six‑week window for contractor‑managed projects; entries delayed beyond these periods, testing conducted before a pavement has reopened to traffic, or reliance on the biennial survey cycle for non‑National Highway System routes all generate uncertainty about whether the recorded IRI truly reflects current smoothness. Together, equipment‑driven surface roughness and timing gaps in data capture constitute the dominant sources of uncertainty affecting ride‑quality assessments. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 11 (p. 197)</small></p>
+<h2 id="stakeholders-and-constraints">Stakeholders and constraints</h2>
+<p>Input for ride‑quality assessment comes from the Districts, which must enter Pavement History data for every maintenance or construction project promptly. The Bureau of Maintenance and Operations’ Asset Management Division, specifically the Pavement Testing and Asset Management Section, uses that input to schedule and conduct IRI testing, analyze the results, and report on pavement smoothness, thereby making the decisions about when and how ride quality is measured and documented. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 11 (p. 197)</small></p>
+<p>The choice of treatment to achieve the required ride quality is bounded by a series of PennDOT specifications, design manuals and funding policies. All concrete‑pavement improvements must follow Publication 408; Section 514 requires diamond grinding as the default method for restoring profile and International Roughness Index (IRI), except when Vanport Limestone aggregate is used or when the aggregate tends to polish rapidly, in which case an ultra‑thin bonded wearing course or a High Friction Surface Treatment may be applied. Full‑depth slab patching must comply with Publication 72M and Roadway Construction Standards RC‑26M, and after installation precast units are placed at least ¼ inch above the surrounding surface so that a final diamond grind can restore cross‑slope, profile and IRI. The use of roller‑compacted concrete is prohibited on projects where ride quality will be measured for payment incentives, and any exposed RCC pavement on routes with speed limits of 35 mph or higher must also receive diamond grinding to provide the required texture.</p>
+<p>Overlay selections are limited by Chapter 5 and Publication 408 Section 413.3(b). On Interstate highways a Superpave wearing‑course overlay cannot be less than 1½ inches thick without prior PDAU approval, and thin asphalt overlays must respect the depth limits in Table 9.5 and weather restrictions. For flexible‑pavement preservation projects an overlay thicker than 2 inches is ineligible, while a standard 6.3‑mm Superpave wearing course must use PG 64E‑22 binder. Micro‑surfacing or ultra‑thin bonded wearing courses are required for early‑cycle applications aimed at improving skid resistance and ride quality.</p>
+<p>Ride‑quality performance is also governed by procedural timelines: districts must enter construction data within four weeks of a department‑initiated reopening (six weeks for contractor‑initiated work), and the Pavement Testing and Asset Management staff must conduct IRI testing on the newly opened surface within three months of that entry. Every preservation project must apply the appropriate Ride Specification and achieve at least the minimum ride quality thresholds set out in Publication 408 Sections 404.4 or 507.4. Patching is limited to ten percent of the pavement area unless a cost‑effectiveness analysis justifies a larger extent, and all repairs must be verified by Falling Weight Deflectometer testing before proceeding. Finally, any design exception must follow the documentation and approval procedures outlined in Publication 10C, Design Manual Part 1C, with funding allocated only to actions deemed cost‑effective by PennDOT’s Pavement Management System. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 84–99), Ch. 5 (pp. 115–120), Ch. 11 (p. 197), Ch. 12 (pp. 203–205)</small></p>
+<h2 id="timing-and-implementation">Timing and implementation</h2>
+<p>The timing for the ride‑quality decision is anchored at several early points in a pavement project. First, it must be taken during the preliminary engineering stage when the existing surface is being evaluated for rehabilitation; ride quality appears among the factors considered at that point. The same decision point precedes any choice to replace a concrete slab with a flexible base, requiring the pavement engineer to assess both short‑ and long‑term impacts on ride quality before committing to the material substitution. In addition, once a new surface is placed, the decision is refined after the initial International Roughness Index measurement has been collected and analyzed; project data are required to be entered within four to six weeks of reopening to traffic, and the IRI test must be performed no later than three months after that entry, providing timely information for the ride‑quality judgment. Finally, the decision should be made early in the maintenance cycle—before advanced distresses develop—so that treatments such as micro‑surfacing or an ultra‑thin bonded wearing course can be applied to improve ride quality while the pavement condition remains relatively good. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–89), Ch. 11 (p. 197), Ch. 12 (pp. 204–205)</small></p>
+<p>Action for Ride Quality is set off by a series of defined events, thresholds and timing requirements. Whenever a project calls for an International Roughness Index (IRI) measurement—whether to assess ride quality or to trigger payment incentives—the use of roller‑compacted concrete (RCC) pavement is prohibited, and if an exposed RCC surface will serve traffic traveling at 35 mph or faster the surface must be diamond‑ground before opening. A deterioration in rideability on existing pavements also triggers corrective work; for Interstates any Superpave Wearing Course overlay thinner than 1½ inches requires prior approval from the PDAU, while thin overlays on other roads are permissible only when the surface is asphalt, the underlying structure is sound with less than two percent patching needed, and both surface and subsurface drainage are adequate or will be upgraded. Whenever a pavement segment is resurfaced, reconstructed or otherwise altered, its Pavement History must be entered into the Roadway Management System within four weeks for Department‑managed projects or six weeks for contractor‑managed projects; following that entry, the Pavement Testing staff must complete an IRI measurement on the new surface within three months. Annual IRI collection is performed on all National Highway System routes and a two‑year cycle covers non‑NHS roads to keep ride‑quality data current for asset‑management decisions. Preservation projects that fail to meet the minimum ride‑quality level defined in Publication 408 (Sections 404.4 or 507.4) must have the appropriate Ride Specification applied to bring the surface into compliance. Finally, early signs of distress—such as emerging rutting, loss of smoothness, or other identifiable surface problems—prompt timely preservation treatments like micro‑surfacing or an ultra‑thin bonded wearing course before those distresses advance to later stages in the maintenance cycle. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 115–120), Ch. 11 (p. 197), Ch. 12 (pp. 203–205)</small></p>
+<p>To assess ride quality under the selected option, the Bureau of Maintenance and Operations’ Asset Management Division – specifically the Pavement Testing and Asset Management Section – must deploy its staff and IRI measurement equipment, optionally supplemented by the Videologging contractor, while relying on pavement‑history records stored in the Roadway Management System. Districts are required to enter new pavement history data within four weeks for force projects or six weeks for contractor projects; the testing unit then runs a weekly scan of these entries and must complete IRI testing on the newly opened surfaces within three months of entry. Routine IRI collection proceeds annually on the National Highway System and on a two‑year cycle for non‑NHS routes, ensuring that both scheduled and post‑construction ride‑quality data are captured in a timely manner. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 11 (p. 197)</small></p>
+<h2 id="outcomes-and-follow-up">Outcomes and follow-up</h2>
+<p>Success for Ride Quality is achieved when the completed pavement meets the smoothness criteria set out in the applicable Ride Specification and attains at least the minimum ride‑quality value prescribed by Publication 408 (Section 404.4 or Section 507.4). Verification of this condition relies on International Roughness Index (IRI) measurements taken on the newly opened surface. To ensure that the IRI accurately reflects post‑construction conditions, pavement history for each project must be entered into the database within four weeks for Department‑managed projects and within six weeks for contractor‑performed projects after traffic reopening. An IRI test is then required to be completed no later than three months after that data entry, providing a current IRI value that demonstrates the achieved rideability. Satisfying both the specification‑based minimum value and having up‑to‑date IRI results therefore defines successful Ride Quality. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 11 (p. 197), Ch. 12 (pp. 203–204)</small></p>
+<p>Ride‑quality results are monitored through systematic IRI collection: the NHS is surveyed annually while non‑NHS routes are measured on a two‑year cycle, and any newly resurfaced or reconstructed segment is tested within three months after its Pavement History record is entered. District staff must enter that history information promptly—within four weeks for Department projects and six weeks for contractor work—so the central Pavement Testing and Asset Management team can retrieve, QA, store and report the data. The documented IRI values are then linked to the construction dates in the Roadway Management System, enabling analysts to evaluate initial smoothness, track trends or anomalies, assess the effectiveness of recent work, and feed those insights into future preservation and design decisions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 11 (p. 197)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

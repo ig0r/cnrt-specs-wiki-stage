@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subbase</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html" class="active" aria-current="page">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><span class="crumb-current">Subbase</span></nav>
+<article><h1>Subbase</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-structure.html">Pavement Structure</a> <span class="edge edge-taxonomic" title="Subbase is a topic under Pavement Structure.">is-subtopic-of</span></div><div class="edge-reading">Subbase is a topic under Pavement Structure.</div><div><a class="tag" href="index.html?q=subbase">subbase</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>The subbase is an aggregate layer placed directly on a prepared subgrade in rigid‑pavement systems to provide both drainage and a stable platform for the overlying base and surface courses[1]. By using highly permeable granular material and maximizing longitudinal slope, it rapidly conveys water by gravity, preventing capillary rise, frost‑heave, rutting and other moisture‑induced distresses while preserving the subgrade’s bearing capacity[1]. Structurally, the subbase contributes load‑bearing stiffness—its modulus is selected in conjunction with the base to achieve a composite effective k‑value, with thickness and loss‑of‑support factors adjusted so that its stiffness does not exceed four times the resilient modulus of the underlying soil[1]. When combined with an underdrain system or a treated permeable base (ATPB/CTPB), the subbase qualifies for an elevated drainage coefficient (C_d = 1.1) in performance predictions, reflecting its role in long‑term pavement serviceability[1].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>The primary engineering problem that the subbase is intended to resolve is the inability of the native subgrade to provide reliable support when moisture accumulates or when it is subject to erosion and pumping under traffic loads. In rigid pavement systems, water that infiltrates the pavement structure can rise by capillarity, reduce effective subgrade reaction, and generate frost‑heave distress, rutting, and premature cracking. By installing a highly permeable granular layer directly on the subgrade, the subbase creates an aggregate platform that rapidly conveys water away through gravity drainage; maximizing the slope of this layer further accelerates the flow. The resulting removal of water preserves the subgrade’s bearing capacity and increases the resistance of the overlying base to traffic‑induced deflections.</p>
+<p>In addition to moisture control, the subbase contributes essential structural support. Different subbase types possess distinct modulus values, allowing designers to select a material—such as a treated permeable base or dense asphalt base placed over unbound aggregate—that meets the required load‑bearing capacity for the intended service life and traffic demand. The effective stiffness of the pavement system is obtained by combining the k‑values of the base and subbase, with a loss‑of‑support factor applied to account for potential erosion or pumping. By varying subbase thickness—commonly a 6‑inch unbound granular layer in roller‑compacted concrete designs—engineers can achieve an economical balance between structural performance and material usage.</p>
+<p>When integrated with underdrain systems and positive drainage, the subbase improves overall drainage quality, which is reflected in a higher drainage coefficient (C_d = 1.1) used for performance prediction. Thus, the subbase addresses both the need for reliable moisture management to protect the subgrade and the need for additional structural capacity to sustain traffic loads over the pavement’s design life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 8 (pp. 160–167)</small></p>
+<p>The subbase must satisfy a set of interrelated objectives. Functionally it is required to act as a highly permeable layer that rapidly conveys water away by gravity; the design therefore calls for maximized longitudinal slope so that drainage rates are accelerated and capillary rise is prevented, because larger voids between particles inhibit wicking. Structurally the subbase must provide a stable platform capable of supporting construction equipment and the loads imposed by the overlying base and surface courses; a modest reduction in permeability may be accepted to achieve sufficient workability and load‑bearing capacity. In terms of durability, keeping the subbase dry preserves the support provided by the underlying subgrade and prevents moisture‑induced distresses such as rutting, cracking and frost heave, thereby protecting the pavement’s long‑term performance. Serviceability is maintained through this protection, ensuring a uniform ride quality throughout the design life. For high‑traffic facilities, particularly Interstates where the projected equivalent single axle loads exceed five million ESALs, the subbase may only be credited toward structural capacity if its condition and drainage capability have been verified by investigation; otherwise it is excluded from the structural evaluation of an overlay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 8 (p. 160), Ch. 10 (p. 180)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>The subbase is appropriate primarily in rigid‑pavement structures such as Jointed Plain Concrete Pavement and Roller Compacted Concrete, where an aggregate layer placed on the prepared subgrade supplies drainage and a stable platform for the overlying slab. For Interstate and Expressway concrete pavements the design calls for an Asphalt or Cement Treated Permeable Base (ATPB or CTPB) resting on a 2A subbase; this configuration is also permitted as the primary base in rehabilitation treatments such as 3R and other CPR projects when the original construction employed open‑graded subbase, ATPB or CTPB, provided that positive outlet drainage can be achieved. In new‑construction or reconstruction projects that incorporate a treated permeable base or a dense asphalt base over unbound aggregate, an underdrain system with confirmed positive drainage justifies the use of a subbase and permits the application of a drainage coefficient Cd = 1.1 in life‑cycle calculations. Low‑volume local and collector roads (average daily traffic ≤ 2 000) designed with roller‑compacted concrete commonly assume a six‑inch unbound granular subbase beneath the slab to meet structural support requirements, typically based on a 20‑year design life with a 1 % annual traffic growth rate. For flexible‑pavement overlays on non‑interstate highways, a subbase may be included in the structural analysis when the projected 18‑kip ESALs are below five million and site investigations confirm that the material is of acceptable quality and provides adequate drainage; on Interstate projects or where ESALs exceed five million without verified subbase condition, the subbase should be excluded from the overlay design. Open‑graded subbase is prohibited for new concrete pavements; only ATPB or CTPB are allowed when a drainage layer is required. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 160–167), Ch. 10 (p. 180)</small></p>
+<p>A subbase is not the preferred solution whenever project constraints or existing conditions violate several specified limits. For concrete pavements, any open‑graded material is excluded by specification, so a cement‑treated or asphalt permeable base must be used instead. Likewise, a drainage layer must be capable of providing a positive outlet; if such an outlet cannot be guaranteed, designers should replace the subbase function with a dense base equipped with longitudinal edge drains. The structural suitability of a subbase also depends on its stiffness relative to the underlying roadbed: the ratio of the subbase modulus to the roadbed resilient modulus must not exceed four, and exceeding this threshold requires an adjustment of layer composition or adoption of an alternative design. When bedrock is encountered within ten feet of the subgrade surface over a significant length, its effect on the k‑value must be considered, prompting selection of a different approach.</p>
+<p>If a project cannot provide a treated permeable base or a dense asphalt base over unbound aggregate together with an underdrain system that assures positive drainage, the subbase option is abandoned in favor of a design that relies solely on unbound aggregate. This also applies to rehabilitation projects where existing pavement has demonstrated poor drainage and no substantial drainage upgrades are planned; under those circumstances the alternative without a subbase becomes appropriate.</p>
+<p>Existing subbases that are in poor condition—particularly on Interstate highways—are omitted from structural evaluation, leading designers to depend on other layers or different design methods. On non‑Interstate routes where a subbase is absent and projected traffic exceeds five million 18‑kip equivalent single axle loads, the subbase cannot be counted unless a dedicated investigation verifies its quality and drainability; otherwise an alternative design must be employed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 161–163), Ch. 10 (p. 180)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The design of a subbase layer is controlled by several Penn York‑state and national specifications. For projects governed by PennDOT, Publication 72M requires headwalls to protect drain outlets located in mowable areas, while Publication 13M (Design Manual Part 2, Chapter 10, Section 10.3.D) prescribes the sizing of pavement‑base drains and the spacing of their outlets. The same standards also mandate that subbase material be highly permeable as demonstrated by gradation testing and that the subbase slope be maximized to enhance gravity drainage, both of which act as project constraints influencing cost and performance. At the national level, the 1993 AASHTO Pavement Design Procedures—implemented through the AASHTOWare DARWin software—govern rigid‑pavement subbases by requiring inputs such as equivalent single axle loads (ESALs), serviceability limits, concrete strength and modulus values, and drainage coefficients. The procedures define the subbase as an aggregate layer placed on a uniform, stable subgrade to provide drainage and a platform for the overlying base and surface courses.</p>
+<p>For Interstate and Expressway rigid pavements, the specification further requires that the structural base consist of an asphalt or cement‑treated permeable base (ATPB or CTPB) over a 2A subbase, explicitly prohibiting the use of open‑graded subbase. The effective modulus of the subgrade reaction must be taken from seasonal values—15 000 psi for spring thaw, 30 000 psi for normal conditions, and 50 000 psi for frozen conditions—and adjusted so that the ratio of subbase modulus to roadbed soil resilient modulus does not exceed four; loss‑of‑support factors from Table 8.1 are applied when determining the weighted k‑value.</p>
+<p>Drainage performance is expressed through the overall drainage coefficient Cₙ defined in Chapter 8. A value of 1.0 applies to pavements built directly on unbound aggregate, while a higher coefficient of 1.1 is required when a treated permeable base or dense asphalt base overlies unbound aggregate and an under‑drain system providing positive drainage is installed; rehabilitation projects that retain existing drainage revert to the standard Cₙ of 1.0.</p>
+<p>Local and collector road reinforced concrete (RCC) designs follow PennDOT’s PCC pavement design specifications and incorporate a six‑inch unbound granular subbase as shown in Table 8.3, with the thickness used by ACPA StreetPave12 software together with assumed 20‑year service life, 1 % annual traffic growth, and standard PennDOT subgrade resilient modulus values derived from CBR to satisfy performance criteria such as limiting slab cracking to fifteen percent at the end of design life.</p>
+<p>Finally, project constraints for overlay designs limit the use of existing subbase: on Interstate projects the subbase is omitted from structural evaluation because of potential poor condition, and on non‑Interstate routes it is excluded when projected 18‑kip ESALs exceed five million unless a specific investigation confirms acceptable quality and drainage. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 8 (pp. 160–167), Ch. 10 (p. 180)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The subbase is first defined by selecting a highly permeable granular material, with its particle‑size distribution used as the primary indicator of permeability; the layer is then shaped to achieve the greatest practical slope so that gravity can rapidly drain water through the aggregate, and base drains together with outlet spacing are laid out according to the procedure set forth in PennDOT Publication 13M Design Manual Part 2 Chapter 10 Section 10.3.D. For structural analysis the subbase is treated jointly with the base layer when determining the effective modulus of subgrade reaction: a weighted‑average loss‑of‑support factor is computed from the depths of each layer using the expression LS₁·D₁/(D₁+D₂)+LS₂·D₂/(D₁+D₂), after which the resulting k‑value is adjusted by selecting a base elastic modulus of 15,000 psi for spring‑thaw conditions, 30,000 psi for normal (summer/fall) conditions, or 50,000 psi for frozen winter conditions, while also ensuring that the ratio of subbase to soil resilient modulus does not exceed four. Different effective k‑values are generated for each subbase type and depth, with further modifications applied when the pavement lies close to a rigid foundation. In reinforced concrete pavement design for low‑volume roads the subbase is incorporated through the American Concrete Pavement Association’s StreetPave12 software, which assumes a 6‑inch unbound granular layer in combination with the subgrade; the program uses an empirical resilient‑modulus model that defines MRSG as 1,500 times the CBR value (per Section 6.2) to calculate the concrete slab thickness required for a twenty‑year design life under specified traffic growth and reliability targets. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 8 (pp. 161–167)</small></p>
+<p>The subbase is required to be a highly permeable granular material that rapidly conveys gravity‑drainable water, with void spaces large enough to prevent capillary rise. Its longitudinal slope should be maximized to increase the rate of drainage, and any drain outlets located in mowable areas must be protected by appropriate headwalls. Where wet subgrade conditions exist or at cut‑to‑fill transitions, lateral underdrains are encouraged to assure reliable removal of water. In structural analysis the subbase is treated together with the base course when computing an effective modulus of subgrade reaction; a weighted‑average loss‑of‑support factor reflecting each layer’s thickness and LS value is applied. Base elastic moduli are prescribed for seasonal conditions—15 000 psi for spring thaw, 30 000 psi for normal summer/fall, and 50 000 psi when frozen—but must be adjusted so that the ratio of subbase resilient modulus to the underlying soil does not exceed four. Only asphalt or cement‑treated permeable bases may serve as drainage layers; open‑graded subbases are prohibited, and interstate and expressway designs specifically call for a 2A subbase beneath an ATPB or CTPB layer. For rigid‑pavement design the overall drainage coefficient Cd is set to 1.1 when a treated permeable base or dense asphalt base is placed over unbound aggregate together with an underdrain system and positive drainage, reverting to 1.0 when such measures are absent or in rehabilitation projects lacking significant drainage improvements. A minimum six‑inch unbound granular subbase is mandated for RCC designs, which assume a twenty‑year service life, a one percent annual traffic growth, and define performance thresholds through terminal serviceability values of 2.5 for collector roads with a reliability target of ninety percent, and 2.0 for local roads with an eighty‑five percent reliability requirement. In overlay design the existing subbase on Interstate projects is assumed non‑structural and excluded from the effective structural number calculation because it may be in poor condition; on non‑Interstate routes the subbase is also omitted when projected 18‑kip ESAL traffic exceeds five million unless a specific investigation confirms adequate quality and drainage. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=0b773746 src=pub_242_change_10::tab:p167#1 -->
+<p>The table below specifies minimum subbase depths for rigid concrete pavement on local roads based on traffic and soil modulus.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-subbase-1-cap" tabindex="0"><table class="ct-table" id="ct-subbase-1" aria-describedby="ct-subbase-1-sum">
+<caption id="ct-subbase-1-cap">Minimum Depths for RCC on Local Roads (inches)</caption>
+<thead>
+<tr><td></td><th id="ct-subbase-1-h0-1" scope="col" colspan="6">Subgrade Resilient Modulus, MrsG (psi)</th></tr>
+<tr><th id="ct-subbase-1-h1-0" scope="col">Number of one-way ADTT</th><th id="ct-subbase-1-h1-1" scope="col">7,500</th><th id="ct-subbase-1-h1-2" scope="col">9,000</th><th id="ct-subbase-1-h1-3" scope="col">10,500</th><th id="ct-subbase-1-h1-4" scope="col">12,000</th><th id="ct-subbase-1-h1-5" scope="col">13,500</th><th id="ct-subbase-1-h1-6" scope="col">15,000</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-subbase-1-h2-0" scope="row">1</th><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-1 ct-subbase-1-h2-0">5.0</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-2 ct-subbase-1-h2-0">4.5*</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-3 ct-subbase-1-h2-0">4.5*</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-4 ct-subbase-1-h2-0">4.5*</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-5 ct-subbase-1-h2-0">4.5*</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-6 ct-subbase-1-h2-0">4.5*</td></tr>
+<tr><th id="ct-subbase-1-h3-0" scope="row">2</th><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-1 ct-subbase-1-h3-0">5.0</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-2 ct-subbase-1-h3-0">5.0</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-3 ct-subbase-1-h3-0">5.0</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-4 ct-subbase-1-h3-0">4.5*</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-5 ct-subbase-1-h3-0">4.5*</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-6 ct-subbase-1-h3-0">4.5*</td></tr>
+<tr><th id="ct-subbase-1-h4-0" scope="row">3</th><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-1 ct-subbase-1-h4-0">5.0*</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-2 ct-subbase-1-h4-0">5.0*</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-3 ct-subbase-1-h4-0">5.0</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-4 ct-subbase-1-h4-0">5.0</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-5 ct-subbase-1-h4-0">4.5*</td><td headers="ct-subbase-1-h0-1 ct-subbase-1-h1-6 ct-subbase-1-h4-0">4.5*</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-subbase-1-sum">Rows list the Number of one-way ADTT, columns give Subgrade Resilient Modulus values for Minimum Depths.</p>
+<p class="ct-notes">Notes: *When using a supported edge, subtract 1 inch except when marked with an *, then only subtract 0.5 inch.</p>
+
+<p><em>Source: pub_242_change_10, Table 8.5.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 8 (pp. 161–167), Ch. 10 (p. 180)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>The source specifies that a six‑inch unbound granular subbase is required for the RCC designs, and when a supported edge (such as a curb and gutter or widened lane) is provided the required RCC slab thickness is reduced by one inch; no other layer dimensions are given. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=a5a0c103 src=pub_242_change_10::tab:p166#1 -->
+<p>The table below specifies minimum concrete slab depths for rigid pavement on collector roads based on traffic and subgrade modulus.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-subbase-2-cap" tabindex="0"><table class="ct-table" id="ct-subbase-2" aria-describedby="ct-subbase-2-sum">
+<caption id="ct-subbase-2-cap">Minimum Depths for RCC on Collector Roads (inches)</caption>
+<thead>
+<tr><td></td><th id="ct-subbase-2-h0-1" scope="col" colspan="6">Subgrade Resilient Modulus, MRSG (psi)</th></tr>
+<tr><th id="ct-subbase-2-h1-0" scope="col">Number of one-way ADTT</th><th id="ct-subbase-2-h1-1" scope="col">7,500</th><th id="ct-subbase-2-h1-2" scope="col">9,000</th><th id="ct-subbase-2-h1-3" scope="col">10,500</th><th id="ct-subbase-2-h1-4" scope="col">12,000</th><th id="ct-subbase-2-h1-5" scope="col">13,500</th><th id="ct-subbase-2-h1-6" scope="col">15,000</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-subbase-2-h2-0" scope="row">30</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h2-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h2-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h2-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h2-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h2-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h2-0">5.5*</td></tr>
+<tr><th id="ct-subbase-2-h3-0" scope="row">40</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h3-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h3-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h3-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h3-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h3-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h3-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h4-0" scope="row">50</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h4-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h4-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h4-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h4-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h4-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h4-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h5-0" scope="row">60</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h5-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h5-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h5-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h5-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h5-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h5-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h6-0" scope="row">70</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h6-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h6-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h6-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h6-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h6-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h6-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h7-0" scope="row">80</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h7-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h7-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h7-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h7-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h7-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h7-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h8-0" scope="row">90</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h8-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h8-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h8-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h8-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h8-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h8-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h9-0" scope="row">100</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h9-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h9-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h9-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h9-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h9-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h9-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h10-0" scope="row">110</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h10-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h10-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h10-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h10-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h10-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h10-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h11-0" scope="row">120</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h11-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h11-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h11-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h11-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h11-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h11-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h12-0" scope="row">130</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h12-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h12-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h12-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h12-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h12-0">6.0</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h12-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h13-0" scope="row">140</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h13-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h13-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h13-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h13-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h13-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h13-0">6.0</td></tr>
+<tr><th id="ct-subbase-2-h14-0" scope="row">150</th><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-1 ct-subbase-2-h14-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-2 ct-subbase-2-h14-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-3 ct-subbase-2-h14-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-4 ct-subbase-2-h14-0">6.5</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-5 ct-subbase-2-h14-0">6.0*</td><td headers="ct-subbase-2-h0-1 ct-subbase-2-h1-6 ct-subbase-2-h14-0">6.0</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-subbase-2-sum">Rows list the Number of one-way ADTT, columns give Subgrade Resilient Modulus values for Minimum Depths for RCC on Collector Roads.</p>
+<p class="ct-notes">Notes: *When using a supported edge, subtract 1 inch except when marked with an *, then only subtract 0.5 inch.</p>
+
+<p><em>Source: pub_242_change_10, Table 8.4.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 8 (pp. 166–167)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>The subbase must be defined by its material type, thickness, loss‑of‑support factor, elastic modulus, and, where applicable, mixture proportions. Acceptable types include a 2A subbase, an asphalt‑treated permeable base (ATPB) or a cement‑treated permeable base (CTPB); each of these treated bases must be proportioned in accordance with the ATPB or CTPB specifications rather than using open‑graded mixes. The design shall state the thickness of the layer in inches; for unbound granular subbases the standard practice is a six‑inch thickness, and no additional gradation or strength requirements are imposed. For treated bases the designer must assign an appropriate loss‑of‑support factor to adjust the effective k‑value for potential erosion or pumping, and provide the elastic modulus to be used under the relevant seasonal condition. The subbase elastic modulus shall be compared with the resilient modulus of the underlying soil, and the ratio shall not exceed four. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=7ebb05ea src=pub_242_change_10::tab:p162#1 -->
+<p>The table below specifies loss of support factors for various subbase and base material types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-subbase-3-cap" tabindex="0"><table class="ct-table" id="ct-subbase-3" aria-describedby="ct-subbase-3-sum">
+<caption id="ct-subbase-3-cap">TABLE 8.1LOSS OF SUPPORT FACTORS(*) For forensic purposes only</caption>
+<thead>
+<tr><th scope="col">TYPE OF MATERIAL</th><th scope="col">LOSS OF SUPPORT FACTOR</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">OGS*</th><td>1.0</td></tr>
+<tr><th scope="row">2A Subbase</th><td>1.0</td></tr>
+<tr><th scope="row">Asphalt Base Course/Superpave Base Course</th><td>0.5</td></tr>
+<tr><th scope="row">Rubblized PCC Base Course</th><td>0.5</td></tr>
+<tr><th scope="row">Cracked and Seated PCC Base Course</th><td>0.5</td></tr>
+<tr><th scope="row">Asphalt or Cement Treated Permeable Base (ATPB or CTPB)</th><td>0.5</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-subbase-3-sum">Rows list types of pavement materials and base courses. Columns provide the corresponding loss of support factor values for each material type.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 162.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 8 (pp. 161–167)</small></p>
+<p>The selection and proportioning of sub‑base materials begins with classifying the intended sub‑base type because each type supplies a characteristic elastic modulus that contributes directly to the pavement’s effective k‑value. For rigid pavements the preferred configuration is an asphalt or cement‑treated permeable base placed over a 2A sub‑base, and the combined layer is assigned an elastic modulus of about 15 000 psi during spring thaw, 30 000 psi under normal conditions, and 50 000 psi when frozen. Designers compute an overall support factor by weighting the thicknesses of the individual layers with a loss‑of‑support (LS) factor that reflects potential erosion or pumping; this weighted average guides the choice of the most economical thickness while still satisfying structural requirements. The modulus of the selected sub‑base must be kept within a ratio of four to the resilient modulus of the underlying roadbed soil, preventing an overly stiff interface. Concurrently, drainage performance dominates the material mix design. Highly permeable granular mixes are specified so that water can move freely through the voids and be removed by gravity; the larger inter‑particle spaces also suppress capillary suction that could otherwise draw moisture upward into the pavement structure. Particle‑size gradation is used in the field as a practical proxy for permeability, with standards such as those employed by PennDOT guiding the selection. Although maximum drainability is desirable, designers may intentionally reduce it to obtain a more stable work platform for construction equipment, especially when a coarser mix provides better bearing capacity. The sub‑base is placed on the steepest feasible slope to accelerate gravity drainage, and where positive drainage cannot be achieved with an open‑graded material, dense bases equipped with edge drains are specified instead. Thus, the final mixture results from balancing high permeability for durability and performance against sufficient stiffness and stability for structural integrity and constructability, using gradation criteria, thickness optimization, LS adjustments, and modulus ratio limits to meet all design objectives. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 8 (pp. 161–162)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>In subbase design the interface with the underlying subgrade is treated as a distinct construction item that must be capable of supporting the compaction loads imposed by the overlying reinforced cement concrete (RCC) pavement during placement. The suitability of both subgrade and subbase is verified in the design phase, ensuring that each layer can sustain the required compaction without excessive deformation. When the subbase underlies a base course, the two layers are considered as a single composite for the purpose of determining the effective modulus of subgrade reaction; their individual thicknesses are summed and a weighted‑average loss‑of‑support factor is computed using the LS values and depths of each layer. The selected subbase material must be compatible with the drainage function required by the pavement: only asphalt‑treated porous base (ATPB) or cement‑treated porous base (CTPB) may serve as a drainage layer, while open graded subbase is expressly prohibited. If positive outlet drainage cannot be achieved through the subbase, a dense base equipped with longitudinal edge drains must be provided. Seasonal elastic moduli for the combined base‑subbase system are prescribed at 15 000 psi during spring thaw, 30 000 psi under normal conditions, and 50 000 psi when frozen, and the ratio of the subbase modulus to the resilient modulus of the roadbed soil must not exceed four. For shoulder sections that incorporate control joints in the RCC slab, the joint spacing and alignment are required to match those of the adjoining concrete mainline so that continuity is maintained across the interface. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 8 (pp. 161–162)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>The subbase is required to be constructed from a highly permeable granular material that permits water to flow freely by gravity, thereby avoiding capillary retention. Its surface should be sloped as steeply as practicable to accelerate drainage, and wherever the subgrade is wet or where cut‑to‑fill transitions occur, lateral underdrains must be installed. Drain outlets associated with the subbase are required to be protected against crushing or plugging so that long‑term drainage capacity is retained, which helps prevent moisture‑induced distress such as frost heave. Design of the subbase also incorporates seasonal variations in moisture and temperature by assigning elastic moduli of 15 kpsi for spring thaw conditions, 30 kpsi for normal summer/fall conditions, and 50 kpsi for frozen winter conditions. If the ratio of subbase resilient modulus to that of the underlying soil would exceed four, the modulus must be reduced accordingly, and a loss‑of‑support factor is applied to account for potential erosion or pumping caused by moisture changes. Drainage layers shall be provided with permeable bases such as asphalt‑treated porous base (ATPB) or cement‑treated porous base (CTPB); open‑graded subbase is prohibited. Where a positive outlet can be achieved, a dedicated drainage layer is used; otherwise a dense base with edge drains must be employed. For new rigid‑pavement projects the subbase shall consist of a treated permeable base or a dense asphalt base placed over unbound aggregate and must include an underdrain system that provides positive drainage. When this configuration is provided, the overall drainage coefficient used in design (C_d) is increased to 1.1 to reflect superior moisture control; projects lacking such treatment retain the default coefficient of 1.0. In overlay designs the subbase is assumed to provide adequate drainage and all drainage coefficients are set to 1.0. Consequently, the subbase is omitted from the structural evaluation on Interstates and on other high‑traffic roadways unless a specific investigation confirms that the material is sound and capable of effective drainage; for non‑Interstate facilities with design traffic exceeding 5 million 18‑kip ESALs, the subbase may be excluded unless its quality and drainability have been verified. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 8 (pp. 161–163), Ch. 10 (p. 180)</small></p>
+<p>The subbase must be built with a maximized longitudinal slope and using highly permeable granular material so that gravity‑drainable water is removed quickly, preserving support and preventing surface roughness that would degrade ride quality for users. Drainage outlets located in mowable areas are required to be protected by appropriate headwalls to ensure safe maintenance access and prevent blockage or crushing of the system. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

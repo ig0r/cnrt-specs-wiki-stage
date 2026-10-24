@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pavement Preservation</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html" class="active" aria-current="page">Pavement Preservation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><span class="crumb-current">Pavement Preservation</span></nav>
+<article><h1>Pavement Preservation</h1>
+<div class="meta"><div class="part-of">Part of: <a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a> <span class="edge edge-taxonomic" title="Pavement Preservation is a topic under PennDOT Pavement Policy Manual (Publication 242).">is-subtopic-of</span></div><div class="edge-reading">Pavement Preservation is a topic under PennDOT Pavement Policy Manual (Publication 242).</div><div><a class="tag" href="index.html?q=pavement-preservation">pavement-preservation</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Pavement preservation is a preventive‑maintenance strategy applied to structurally sound roadways that exhibit early surface‑level distresses, such as cracking, edge spalling, rutting and loss of skid resistance[1]. It works by employing coordinated, cost‑effective treatments—including crack sealing, micro‑surfacing, thin overlays, hot‑in‑place recycling and diamond grinding—to seal cracks, restore texture, fill ruts, improve friction and smoothness, thereby extending service life without substantially increasing structural capacity[1]. By addressing these deficiencies before they evolve into advanced cracking or structural failure, the program maintains safety, ride quality and accessibility while postponing costly rehabilitation or reconstruction[1].</p>
+<!-- HIER-DIAGRAM:START -->
+<p><a href="https://www.pa.gov/agencies/penndot">PennDOT</a> publications covering <strong>“Pavement Preservation”</strong> also include the following subtopics: <a href="base-repair.html">Base Repair</a>, <a href="concrete-patching.html">Concrete Patching</a>, <a href="crack-sealing.html">Crack Sealing</a>, <a href="diamond-grinding.html">Diamond Grinding</a>, and <a href="slab-stabilization.html">Slab Stabilization</a>.</p>
+<figure class="hier-diagram">
+  <svg class="hd" viewBox="0 0 886 192" width="886" height="192" role="group" aria-label="Concept map: Pavement Preservation and its subtopics" xmlns="http://www.w3.org/2000/svg">
+    <g class="hd-hub"><rect x="338" y="16" width="210" height="48" rx="6"/><text class="hd-hub-label" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="443" y="40">Pavement Preservation</tspan></text></g>
+    <path class="hd-edge" d="M443 64 V 96 H 91 V 128"/>
+    <path class="hd-edge" d="M443 64 V 96 H 267 V 128"/>
+    <path class="hd-edge" d="M443 64 V 96 H 443 V 128"/>
+    <path class="hd-edge" d="M443 64 V 96 H 619 V 128"/>
+    <path class="hd-edge" d="M443 64 V 96 H 795 V 128"/>
+    <g class="hd-child" data-slug="base-repair" data-desc="Base Repair is a pavement‑preservation treatment applied when the base layer has failed or become compromised to the point that it no longer provides adequate structural capacity or effective drainag…"><title>Base Repair is a pavement‑preservation treatment applied when the base layer has failed or become compromised to the point that it no longer provides adequate structural capacity or effective drainag…</title><a href="base-repair.html"><rect x="16" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="91" y="152">Base Repair</tspan></text></a></g>
+    <g class="hd-child" data-slug="concrete-patching" data-desc="Concrete patching is a preservation treatment applied to rigid concrete pavements to repair localized distress such as failed joints, cracks, spalls, or deteriorated patches, thereby restoring struct…"><title>Concrete patching is a preservation treatment applied to rigid concrete pavements to repair localized distress such as failed joints, cracks, spalls, or deteriorated patches, thereby restoring struct…</title><a href="concrete-patching.html"><rect x="192" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="267" y="152">Concrete Patching</tspan></text></a></g>
+    <g class="hd-child" data-slug="crack-sealing" data-desc="Crack sealing is a routine‑maintenance treatment applied to pavement surfaces where visible cracks have formed but before the distress has progressed to require more extensive rehabilitation."><title>Crack sealing is a routine‑maintenance treatment applied to pavement surfaces where visible cracks have formed but before the distress has progressed to require more extensive rehabilitation.</title><a href="crack-sealing.html"><rect x="368" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="443" y="152">Crack Sealing</tspan></text></a></g>
+    <g class="hd-child" data-slug="diamond-grinding" data-desc="Diamond grinding is a preservation treatment applied to Portland‑cement concrete pavements that remain structurally sound, in which a thin surface layer—typically at least a quarter‑inch thick—is rem…"><title>Diamond grinding is a preservation treatment applied to Portland‑cement concrete pavements that remain structurally sound, in which a thin surface layer—typically at least a quarter‑inch thick—is rem…</title><a href="diamond-grinding.html"><rect x="544" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="619" y="152">Diamond Grinding</tspan></text></a></g>
+    <g class="hd-child" data-slug="slab-stabilization" data-desc="Slab stabilization is a preservation technique applied to Portland‑cement concrete pavements that have lost uniform bearing because voids have formed beneath the slab or its base, typically from pump…"><title>Slab stabilization is a preservation technique applied to Portland‑cement concrete pavements that have lost uniform bearing because voids have formed beneath the slab or its base, typically from pump…</title><a href="slab-stabilization.html"><rect x="720" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="795" y="152">Slab Stabilization</tspan></text></a></g>
+  </svg>
+</figure>
+<!-- HIER-DIAGRAM:END -->
+
+<p><a href="crack-sealing.html">Crack sealing</a> addresses early fissures by blocking water infiltration before structural damage occurs, while <a href="concrete-patching.html">concrete patching</a> and <a href="slab-stabilization.html">slab stabilization</a> repair localized rigid pavement defects through full-depth replacement or void filling with grout. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] <a href="base-repair.html">Base Repair</a> restores compromised foundations by replacing failed sections to ensure uniform load distribution, and <a href="diamond-grinding.html">diamond grinding</a> corrects surface profile irregularities on sound concrete slabs to improve ride quality and friction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li><li><a href="#related-concepts">Related Concepts</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+<details class="subconcepts-toggle"><summary>Sub-concepts (5)</summary><div class="subconcepts-body"><a href="base-repair.html">Base Repair</a> · <a href="concrete-patching.html">Concrete Patching</a> · <a href="crack-sealing.html">Crack Sealing</a> · <a href="diamond-grinding.html">Diamond Grinding</a> · <a href="slab-stabilization.html">Slab Stabilization</a></div></details>
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Pavement preservation is directed at surface‑level deficiencies that erode the functional condition of a roadway while the underlying structure remains sound. It targets early‑stage distresses such as surface cracking—including non‑working cracks—edge spalling, corner breaks, loss of texture, rutting, loss of skid resistance, raveling or weathering, and concrete joint spalling or faulting that can admit water and accelerate failure. By applying treatments before these defects develop into advanced cracking or structural collapse, the program seeks to maintain safety, ride quality, and accessibility, restore friction and smoothness, and prevent further deterioration. Specific interventions are matched to the identified condition: hot‑in‑place recycling (heating, scarifying, mixing a recycling agent, and compacting) removes distressed layers; crack sealing is performed on a 3‑to‑5 year cycle and concrete joint sealing on a 5‑year cycle; micro‑surfacing, ultra‑thin bonded wearing courses, mill‑and‑overlay, chip sealing, diamond grinding, dowel‑bar retrofits, base repair, and thin overlays are employed to fill ruts, improve skid resistance, and restore ride quality. These cost‑effective, preventive measures are applied early in the maintenance cycle to halt progression of the listed distresses, thereby extending service life without substantially increasing structural capacity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=52fe675f src=pub_242_change_10::tab:p192#2 -->
+<p>The table below specifies maintenance frequencies for low-level asphalt roadway preservation activities.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-preservation-1-cap" tabindex="0"><table class="ct-table" id="ct-pavement-preservation-1" aria-describedby="ct-pavement-preservation-1-sum">
+<caption id="ct-pavement-preservation-1-cap">LOW-LEVEL ASPHALT ROADWAYS (RECYCLING/SEAL COAT NETWORK)TABLE 11.4</caption>
+<thead>
+<tr><th scope="col">Activity</th><th scope="col">Frequency</th><th scope="col">Notes</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Crack Sealing</th><td>3 to 5 years</td><td>Following last crack sealing, seal coat, micro-surfacing,leveling or resurfacing. (This activity shall be completed inthe calendar year prior to micro-surfacing or resurfacing.)</td></tr>
+<tr><th scope="row">Shoulder Cutting/Side Dozing</th><td>4 to 6 years</td><td>Theseactivities shall be repeated as needed at this frequency.</td></tr>
+<tr><th scope="row">Seal Coat or Micro-Surfacing</th><td>4 to 7 years</td><td>Following last resurfacing, leveling, seal coat or micro-surface</td></tr>
+<tr><th scope="row">Seal Coat or Micro-Surfacing paved shoulders (optional)</th><td>4 to 7 years</td><td>Following last resurfacing, leveling, seal coat or micro-surface</td></tr>
+<tr><th scope="row">Cold In Place Recycling withResurfacing or Leveling</th><td>12 to 15 years</td><td>Following last resurfacing or leveling</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-pavement-preservation-1-sum">Rows list pavement maintenance activities, columns provide their frequency and notes on timing relative to other treatments.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 192.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (p. 131), Ch. 6 (pp. 137–139), Ch. 11 (pp. 193–194), Ch. 12 (pp. 203–213), Ch. 13 (pp. 220–221)</small></p>
+<p>Pavement preservation is a preventive‑maintenance approach whose chief purpose is to extend the useful service life of an existing roadway. By applying coordinated, cost‑effective treatments such as hot‑in‑place recycling, micro‑surfacing, milling and leveling, diamond grinding, base repair or concrete patching, agencies aim to keep the pavement performing within its intended design period. The program works by preserving the current surface, retarding further deterioration and slowing its progression, while also restoring the functional condition of the pavement when minor distress appears. In this way the strategy both prevents new damage and restores functionality, thereby postponing costly rehabilitation or reconstruction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131), Ch. 6 (pp. 137–139), Ch. 12 (pp. 202–213), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress that pavement preservation seeks to mitigate originates from several interrelated mechanisms. Moisture entering the structure through non‑working cracks penetrates the surface layers, accelerating deterioration and promoting top‑down cracking, especially as the binder ages and becomes embrittled. This age‑related loss of flexibility makes the pavement more susceptible to repeated traffic loading, which further propagates surface fractures. In addition, insufficient support from a deficient subbase reduces the load‑bearing capacity beneath jointed concrete slabs, leading to premature mid‑slab cracking. Aggregate‑related pathologies such as Vanport Limestone susceptibility and alkali‑silica reaction generate internal stresses that manifest as cracking, spalling, and loss of cohesion. Environmental exposure compounds these effects, producing raveling, edge weathering, rutting, joint faulting, and other surface distresses identified in condition surveys. Collectively, water infiltration, structural inadequacy, material aging, reactive aggregates, and environmental loading accelerate pavement degradation, prompting the application of preservation treatments such as crack sealing, chip seals, micro‑surfacing, or thin overlays to restore near‑original performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>The HIR preservation technique is suited to existing asphalt pavements that exhibit surface distress but retain sufficient structural integrity to be scarified and mixed in‑place; the decision also depends on the pavement type and the average daily traffic (ADT) level, with higher traffic requiring careful evaluation. Because the recycled material must be protected from cold weather, an overlay is placed before winter, and any subsequent chip seal or micro‑surfacing must wait at least four weeks after recycling. Thus HIR is appropriate where the pavement condition, type, traffic volume, and seasonal climate allow for in‑place heating, scarifying to a minimum depth of 1½ in., and timely placement of an overlay before winter. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131)</small></p>
+<p>Preservation treatments are limited to pavements that remain in good condition and retain sufficient structural capacity. When a pavement has failed, become functionally obsolete, or has lost its load‑carrying ability—evidenced by extensive age‑related cracking, advanced distresses, or loss of remaining service life—the thin overlays, seal coats, and crack sealing typical of preservation cannot restore the required performance; in such cases reconstruction or a more substantial rehabilitation that adds structural depth must be selected. Likewise, if the project calls for increasing the pavement’s structural thickness, adding new travel lanes, or altering existing safety features (for example lowering guide‑rail height below minimum criteria), preservation is inappropriate and a different maintenance or rehabilitation strategy should be employed. The preservation matrix also imposes strict thickness limits: flexible‑pavement overlays greater than two inches, and concrete overlays exceeding 4½ inches when a 9.5 mm Superpave wearing course is used—or five inches with a 12.5 mm mix—are excluded from preservation and must follow the 3R criteria. Patching operations that would cover more than ten percent of the surface area are likewise disallowed unless a cost‑effectiveness justification can be demonstrated. Operational enhancements such as auxiliary or weaving lanes may be permitted only when they are no longer than three thousand feet and the adjacent travel lanes being preserved extend for at least ten thousand contiguous feet, excluding bridges; any larger addition exceeds the preservation scope. Finally, conditions that require full‑depth repair because of subbase deficiencies, aggregate problems (e.g., Vanport limestone or alkali‑silica reaction), premature mid‑slab cracking, bridge constraints, or other geometric issues also fall outside the preservation program and necessitate rehabilitation or reconstruction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 137–139), Ch. 12 (pp. 204–213), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>Determining whether pavement preservation is required begins with a full‑length walking field inspection of the segment, during which the inspector records drainage conditions, shoulder widths, cross‑slope, geometry and any crash‑cluster information. The visual survey captures surface distress such as cracking, rutting, loss of skid resistance, edge deterioration, raveling, joint spalling or faulting, and quantifies their severity. Ride quality is measured with the International Roughness Index and friction testing; when a skid‑resistance deficiency is suspected a formal skid‑friction test is performed. Structural capacity is evaluated through Falling Weight Deflectometer (FWD) testing, which supplies pavement and subgrade modulus data and also indicates the percentage of area that would require patching; preservation is generally limited to ten percent of the surface unless a cost‑effectiveness justification is provided. Core samples are extracted to verify existing layer thickness, integrity and joint condition before any milling depth is set. Traffic loading information—including average daily traffic, truck proportion and calculated ESALs—is incorporated together with the collected condition data into the Pavement Condition/Treatment matrices used for project prioritization. Existing pavement history, including prior surface treatments, and, where slab stabilization is contemplated, relevant geotechnical data are also gathered to complete the baseline that supports the selection and extent of preservation treatment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 50), Ch. 6 (pp. 134–136), Ch. 12 (pp. 204–206), Ch. 13 (pp. 220–221)</small></p>
+<p>Pavement preservation is employed when a roadway is still functionally serviceable and in generally good condition but has begun to exhibit the first signs of distress. At this early stage, minor rutting, loss of skid resistance, surface roughness, incipient cracking or edge deterioration are present, yet advanced cracking, structural failure, or extensive damage have not developed. The pavement must retain a significant amount of remaining service life and, for rigid sections, be confirmed structurally sound through falling‑weight deflectometer testing, with any patching confined to less than ten percent of the area. Under these circumstances cost‑effective treatments such as micro‑surfacing, ultra‑thin bonded wearing courses, or thin mill‑and‑overlay—typically limited to a thickness of one and a half to two inches—are applied to restore ride quality, fill ruts, improve skid resistance, and delay more costly rehabilitation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 204–213), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Pavement preservation relies on a defined inventory of surface‑treatment materials, product specifications, dimensional limits, and repair actions that together extend the service life of both flexible and rigid pavements. The core protective layer is a micro‑surfacing mix, applied as a thin coating to seal cracks and restore texture; this material falls under the product code 711‑7134‑01, which also covers slurry seals and ultrathin friction courses. Seal‑coat applications use the designated code 711‑7124‑01, while crack sealing on asphalt surfaces is performed with the material identified by 711‑7128‑01 and concrete joint sealing employs the 711‑7147‑01 product. Paver finishers are specified either as a one‑inch thick layer (code 711‑7125‑01) or thicker than one inch (code 711‑7135‑01). Ultra‑thin bonded wearing courses are limited to three‑quarters of an inch, thin overlays and mill‑and‑resurface layers are generally no more than two inches in thickness, and mill‑and‑overlay treatments range from one‑and‑a‑half to two inches.</p>
+<p>When deeper rehabilitation is required, hot‑in‑place recycling (HIR) begins by heating the pavement surface with propane‑fired firebrick heaters to approximately 300 °F, give or take 25 °F, before scarifying the existing layer to a minimum depth of one‑and‑a‑half inches. A predetermined quantity of recycling agent is blended into the reclaimed material and redistributed by a heated screed; the equipment can accommodate lane widths as narrow as ten feet and as wide as fourteen‑and‑a‑half feet. After HIR, a four‑week cure period precedes any chip seal or similar surface treatment, although hot‑mix overlays may be placed immediately. Cold in‑place recycling of the base is permitted to a maximum depth of four inches, followed by an asphalt overlay not exceeding one and a half inches and a 60 lb/yd² scratch course. For concrete decks, first‑time overlays must meet minimum depths—typically 4½ inches with a Superpave 9.5 mm mix or five inches with a 12.5 mm mix—and ultra‑thin bonded concrete overlays of two inches serve as non‑structural wearing layers.</p>
+<p>Preventive repair actions include asphalt crack sealing, chip sealing, slurry or micro‑surfacing, thin and ultrathin hot‑mix overlays, diamond grinding of concrete slabs to remove faulting, dowel‑bar retrofits, localized base repairs, and isolated, partial, or full‑depth concrete patching. Full‑depth concrete patching and joint rehabilitation are limited to no more than ten percent of the pavement area. All interventions are selected according to condition‑treatment matrices that identify early signs such as cracking, rutting, edge deterioration, raveling, joint spalling, or faulting, ensuring treatment occurs before extensive damage develops. Project documentation must detail the extent and type of patching, milling depths, joint repairs and sealing, shoulder work, subsurface drainage, and any special material provisions, supported where necessary by Falling Weight Deflectometer results and geotechnical data for slab stabilization. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131), Ch. 6 (pp. 137–139), Ch. 11 (pp. 193–194), Ch. 12 (pp. 202–213), Ch. 13 (pp. 220–221)</small></p>
+<p>The performance of any pavement preservation treatment is fundamentally linked to the condition and material characteristics of the existing surface. Field inspections must document the International Roughness Index, measured friction, and the types and severity of distresses such as cracking, rutting, or edge deterioration; these indicators together with cross‑slope data help determine whether a thin‑film seal coat, micro‑surfacing, or an overlay is appropriate. Traffic exposure—average daily traffic and the proportion of trucks—further influences selection because higher loads demand greater structural capacity. Structural soundness is verified through Falling Weight Deflectometer testing or core inspections, confirming that the pavement can support the intended treatment without premature failure. For flexible pavements, preservation overlays are limited to a maximum thickness of two inches unless milling is required to remove defective layers; any deeper overlay moves the work out of the preservation category. Rigid pavements may receive up to 4½ inches with a 9.5‑mm mix or five inches with a 12.5‑mm mix, and patching should not exceed ten percent of the surface area unless a cost‑effective justification is provided. Early intervention—before advanced distresses develop—is essential, as treatments applied while the pavement remains in good condition and retains significant remaining service life achieve the greatest bond durability. Compatibility between the preservation material and the existing constituents is also critical. Subbase deficiencies that cause premature mid‑slab cracking in jointed concrete sections reduce the effectiveness of sealants and overlays. Aggregate characteristics such as Vanport limestone or susceptibility to alkali‑silica reaction can create skid‑resistance problems, especially when processes like diamond grinding are used, and these issues must be identified even if they are not captured by standard surface distress monitoring. When slab stabilization is contemplated, geotechnical data confirming adequate subgrade support are required. In hot‑in‑place recycling, sufficient heat penetration into the underlying layer enhances interlayer bonding, which is a prerequisite for long‑term performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 50), Ch. 5 (p. 131), Ch. 12 (pp. 204–213), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>To begin a pavement preservation project the existing surface is first evaluated by coring and inspecting the cores to verify the depth and condition of the pavement. Based on that information the required milling or scarifying depth—generally between one‑and‑a‑half and two inches for flexible pavements—is established, and the material is removed either by conventional milling or by hot in‑place recycling scarification. For hot‑in‑place recycling the remaining surface is heated with propane‑fired firebrick trucks until it reaches roughly 300 °F (±25 °F) through radiant heat, after which it is scarified to at least a 1½‑inch depth. A measured quantity of recycling agent is then introduced and the rejuvenated mix is blended while being laid by a heated screed. The freshly placed layer—whether a recycled mix, a micro‑surfacing coat, an ultra‑thin bonded wearing course, a Superpave overlay, or a cold‑in‑place recycle capped with a 1½‑inch asphalt cover—is compacted to achieve the target density. When an asphalt overlay is applied over concrete, the transverse joints are sawed and sealed to preserve cross‑slope continuity, and any full‑depth joint repairs on concrete are verified by FWD testing and may be finished with diamond grinding for smoothness. After placement, standard curing practices apply, but a four‑week waiting period is required before surface treatments such as chip seal, micro‑surfacing, or slurry seal can be installed; hot‑mix asphalt overlays do not require this delay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131), Ch. 12 (pp. 204–205)</small></p>
+<p>The implementation of pavement preservation depends on a defined set of plant‑maintenance units and, when hot‑in‑place recycling is employed, on a specialized mobile heating train. The minimum inventory required by the M‑213 specification includes a seal‑coat unit (code 711‑7124‑01), a crack‑sealing unit for asphalt surfaces (code 711‑7128‑01), and a slurry‑seal/micro‑surfacing or ultrathin friction course machine (code 711‑7134‑01). Supporting equipment such as mixers, paver finishers, level and scratch machines, recycling gear, shoulder‑upgrading tools and other paving implements are also necessary to carry out the full range of preservation activities. When hot‑in‑place recycled asphalt is selected, a train of two or three propane‑heated trucks provides the core operations. The first truck radiantly heats the pavement to roughly 300 °F, allowing a tolerance of plus or minus twenty‑five degrees. Immediately thereafter the final truck scarifies the surface to at least one and a half inches, introduces a measured quantity of recycling agent, blends the material, and then lays it with a heated screed that also compacts the rejuvenated layer. This heating‑scarifying‑add‑mix‑place‑compact sequence must be followed without deviation, and the equipment can only treat lane widths between ten feet and fourteen‑and‑a‑half feet. Environmental timing constraints further shape the work plan. After the hot‑in‑place treatment a minimum four‑week interval is required before any chip seal, micro‑surfacing or slurry‑seal surface coating may be applied, and an overlay must be installed prior to the onset of winter conditions. The source material does not specify particular traffic control measures, indicating that detailed traffic restrictions are either project‑specific or not addressed in the referenced guidance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131), Ch. 11 (pp. 193–194)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>The preservation crew must first confirm that the existing pavement material is suitable by coring representative sections and evaluating each core for both its depth and structural integrity; any joint repairs are subsequently validated with Falling Weight Deflectometer testing. Prior to mixing, the surface is heated to about 300 °F, allowing a tolerance of plus or minus 25 °F, and scarified so that the cut penetrates at least one‑and‑a‑half inches. The specified quantity of recycling agent is then added and blended uniformly throughout the rejuvenated mix. When the mix is placed, compaction must be verified to meet the required density criteria, and the thicknesses of any milling, overlay, or patching operations are checked against the design limits, ensuring that the total patched area does not exceed the allowable percentage. After placement, a minimum four‑week curing period is observed before any chip seal, micro‑surfacing, or slurry seal can be applied, and an overlay must be installed before winter conditions arrive. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131), Ch. 12 (pp. 204–205)</small></p>
+<p>A satisfactory pavement preservation treatment is judged by a set of measurable limits and performance indicators that together ensure the work extends service life without compromising safety or cost‑effectiveness. The hot‑in‑place recycling process must raise the surface temperature to roughly three hundred degrees Fahrenheit, with an allowable deviation of plus or minus twenty‑five degrees, and the scarifying blade must cut at least one and a half inches into the existing material; the treated strip must also fall within the equipment’s width capability of ten to fourteen‑and‑a‑half feet. After recycling, a minimum four‑week cure period is required before any chip seal, micro‑surfacing, or slurry seal can be placed, and an overlay must be installed before winter to protect the rejuvenated layer. Timing is critical: the preservation work must be let no later than fifteen months after the Pavement Type Selection approval, and it should be initiated before extensive distress appears so that the treatment matrix limits are respected. Structural verification through coring and Falling Weight Deflectometer testing, together with a visual condition survey, provides quantitative evidence of compliance. Dimensional criteria restrict overlays on flexible pavements to two inches unless a deeper mill‑and‑overlay is justified for rut correction; base recycling may not exceed four inches in depth and must be capped with an asphalt skin no thicker than one and a half inches; ultra‑thin concrete overlays are limited to two inches, while scratch overlays on existing concrete cannot surpass four and a half inches when a 9.5 mm mix is used or five inches with a 12.5 mm mix. Concrete patching must remain below ten percent of the total pavement area unless a cost‑effectiveness justification is demonstrated. Safety considerations require that preservation activities maintain or improve current safety and accessibility, that any isolated deficiencies be evaluated and corrected when economically feasible, and that no new hazards be introduced to users. Maintenance cycles dictate crack sealing on asphalt every three to five years and joint sealing on concrete every five years, while patching should stay under the ten‑percent threshold to remain cost‑effective. When all of these temperature, depth, timing, dimensional, structural, safety, and maintenance interval criteria are satisfied, the preservation treatment is deemed acceptable. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131), Ch. 6 (pp. 134–136), Ch. 12 (pp. 203–205), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Pavement preservation is a planned, cost‑effective preventive‑maintenance strategy that treats structurally sound pavements before serious distress appears. By applying surface or near‑surface treatments—such as crack sealing, chip sealing, slurry or micro‑surfacing, thin overlays, mill‑and‑overlay, Concrete Pavement Restoration, thin bonded concrete on asphalt, diamond grinding, base repair and concrete patching—the existing function of the roadway is restored and its condition is kept sound. The use of Hot In‑Place Recycled (HIR) asphalt further rejuvenates the surface; scarifying, mixing a recycling agent and hot re‑compaction remove surface distress, improve joint compaction and allow heat to penetrate the underlying layer for better interlayer bonding. These actions produce smoother rides, enhance safety and mobility, and reduce congestion. Because preservation focuses on maintaining rather than adding structural capacity, it retards future deterioration, bolsters durability, and maintains or improves functional performance. The cumulative effect of systematic, successive preservation treatments postpones costly rehabilitation, extends the pavement’s useful life, and lengthens the expected service life until a more extensive overlay or reconstruction is required. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131), Ch. 6 (pp. 137–139), Ch. 12 (pp. 202–213), Ch. 13 (pp. 220–221)</small></p>
+<p>Typical distresses that undermine pavement preservation include rutting, a variety of cracking patterns, edge deterioration, raveling or weathering, joint spalling and faulting, transverse and longitudinal spalls, and the failure of existing asphalt or concrete patches. On jointed‑concrete sections premature mid‑slab cracking often appears when the supporting subbase is deficient, while aggregate‑related problems such as high Vanport Limestone content or alkali‑silica reaction can reduce skid resistance and become more pronounced after diamond grinding. These distresses frequently arise because the underlying material condition falls below the thresholds established for preservation work. When the existing pavement requires milling or overlay depths that exceed the prescribed limits, or when more than ten percent of a concrete surface must be patched, the treatment no longer qualifies as preservation and the likelihood of failure increases. The guidelines therefore call for early intervention—applying mill‑and‑overlay, micro‑surfacing, or ultra‑thin bonded courses before advanced distresses develop—and for verification of structural soundness, typically through Falling Weight Deflectometer testing, prior to using thin overlays or patching. Failure to repair all failed joints, to respect thickness and patch‑area limits, or to address hidden deficiencies such as subbase inadequacy or reactive aggregates can lead to rapid deterioration of the preservation treatment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After a pavement preservation treatment is completed, the area should first be inspected visually to verify proper application and to confirm that no obvious defects are present. Quantitative performance verification follows by measuring the patching percentage with Falling Weight Deflector testing; both the visual check and the FWD results are documented as part of the acceptance package. The work is then entered into the Roadway Management System, recorded in the Pavement History database, and incorporated into the district’s overall interstate/freeway program, providing the primary mechanism for tracking the treated segment over its design life. Thereafter the segment is folded into the regular condition‑monitoring cycle: each year the district conducts an Automated Pavement Condition Survey using videologging under the STAMPP system, capturing data on cracking, rutting, edge deterioration and other distress indicators such as raveling, joint spalling or faulting. This annual survey offers an early check on the effectiveness of the preservation work. If any skid‑resistance concerns arise—especially on concrete sections with known material issues—a targeted skid‑friction test is requested from BOMO and addressed in the interstate plan, while ongoing quality‑assurance checks by BOMO ensure that post‑treatment data remain reliable for future priority decisions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–136), Ch. 12 (p. 202), Ch. 13 (pp. 220–221)</small></p>
+<p>After a pavement preservation treatment the segment should be observed for both time‑based and performance‑based indicators that signal when additional work is required. If a resurfaced asphalt section has reached five years of service without having received crack sealing, or if a concrete portion has passed a five‑year interval without joint sealing, the lack of scheduled seal work suggests that further maintenance or rehabilitation may be needed; the prescribed cycles are three to five years for crack sealing on resurfacing networks and five years for joint sealing on concrete networks. Beyond these schedule checks, any isolated or obvious deficiency that compromises the current level of safety or accessibility must be evaluated and, when cost‑effective, corrected, because preservation projects must never degrade travelway safety. Condition surveys that reveal a trend of increasing distress—such as widening or propagating cracks, growing rut depth, edge deterioration, raveling or weathering of the surface, joint spalling, or faulting—indicate that the existing treatment is no longer sufficient and that additional intervention should be considered. Early warning signs such as premature mid‑slab cracking in jointed concrete, often linked to inadequate subbase material, and aggregate‑related problems like Vanport Limestone or alkali‑silica reaction, which can reduce skid resistance, also trigger the need for further maintenance before the matrix‑based treatment point is reached. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 11 (pp. 193–194), Ch. 12 (p. 203), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="related-concepts">Related Concepts</h2>
+<ul>
+<li><a href="base-repair.html">Base Repair</a></li>
+<li><a href="concrete-patching.html">Concrete Patching</a></li>
+<li><a href="crack-sealing.html">Crack Sealing</a></li>
+<li><a href="diamond-grinding.html">Diamond Grinding</a></li>
+<li><a href="slab-stabilization.html">Slab Stabilization</a></li>
+</ul>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-D.3: hierarchy concept-map diagram (md->html reverse builder; per-page inject) */
+figure.hier-diagram { overflow-x: auto; margin: 1.5rem 0; }
+svg.hd { max-width: 100%; height: auto; display: block; margin-inline: auto;
+  font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+svg.hd text { text-anchor: middle; dominant-baseline: middle; }
+svg.hd .hd-hub rect { fill: var(--accent); stroke: var(--accent); }
+svg.hd .hd-hub text { fill: var(--bg); }
+svg.hd .hd-child rect { fill: var(--chip); stroke: var(--border); stroke-width: 1; }
+svg.hd .hd-child text { fill: var(--fg); }
+svg.hd .hd-edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+svg.hd .hd-stub { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 3; }
+svg.hd .hd-child { cursor: pointer; }
+svg.hd .hd-child a rect { transition: fill .12s ease, stroke .12s ease; }
+svg.hd .hd-child:hover rect,
+svg.hd .hd-child a:focus rect,
+svg.hd .hd-child a:focus-visible rect { fill: var(--chip); stroke: var(--link); stroke-width: 2; }
+.hd-tooltip { position: fixed; z-index: 10000; max-width: 22rem; padding: .45rem .7rem;
+  background: var(--fg); color: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  font-size: .8rem; line-height: 1.4; pointer-events: none; opacity: 0; visibility: hidden;
+  transition: opacity .12s ease; box-shadow: 0 3px 12px rgba(0, 0, 0, .28); }
+.hd-tooltip.hd-tooltip-show { opacity: 1; visibility: visible; }
+</style>
+<script>
+(function () {
+  var tip = null;
+  function ensureTip() {
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "hd-tooltip";
+      tip.setAttribute("role", "tooltip");
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+  function show(node) {
+    var desc = node.getAttribute("data-desc");
+    if (!desc) return;
+    var t = ensureTip();
+    t.textContent = desc;
+    var r = node.getBoundingClientRect();
+    t.style.left = Math.max(8, Math.round(r.left)) + "px";
+    t.style.top = Math.round(r.bottom + 8) + "px";
+    t.classList.add("hd-tooltip-show");
+  }
+  function hide() { if (tip) tip.classList.remove("hd-tooltip-show"); }
+  var nodes = document.querySelectorAll(".hd-child");
+  for (var i = 0; i < nodes.length; i++) {
+    (function (node) {
+      node.addEventListener("mouseenter", function () { show(node); });
+      node.addEventListener("mouseleave", hide);
+      var focusTarget = node.querySelector("a") || node;
+      focusTarget.addEventListener("focus", function () { show(node); });
+      focusTarget.addEventListener("blur", hide);
+    })(nodes[i]);
+  }
+})();
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asphalt Overlay</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html" class="active" aria-current="page">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="rehabilitation.html">Rehabilitation</a><span class="crumb-sep">›</span><a href="overlay.html">Overlay</a><span class="crumb-sep">›</span><span class="crumb-current">Asphalt Overlay</span></nav>
+<article><h1>Asphalt Overlay</h1>
+<div class="meta"><div class="part-of">Part of: <a href="overlay.html">Overlay</a> <span class="edge edge-taxonomic" title="Asphalt Overlay is a topic under Overlay.">is-subtopic-of</span></div><div class="edge-reading">Asphalt Overlay is a topic under Overlay.</div><div><a class="tag" href="index.html?q=asphalt-overlay">asphalt-overlay</a><a class="tag" href="index.html?q=asphalt-overlays">asphalt-overlays</a><a class="tag" href="index.html?q=asphalt-overlay-s">asphalt-overlay-s</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>An asphalt overlay is a preservation treatment applied to an existing pavement that has lost adequate structural support or ride quality, targeting both underlying deficiencies (thin or weakened layers, spalled concrete, crushed joints) and surface‑level distresses such as cracking, rutting, unevenness, low friction and poor drainage. The process involves stabilizing the substrate—removing unstable material, milling or applying a scratch/leveling course, sealing joints and patching limited areas—and then placing a new flexible wearing layer whose thickness is determined through non‑destructive testing or accepted design procedures to raise load‑carrying capacity and reestablish a smooth, high‑friction surface. By adding typically one‑and‑a‑half to two inches of asphalt (or deeper when required), the overlay restores structural capacity, improves water removal, and extends the functional service life of the roadway for roughly ten years while reducing future maintenance cycles. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>An asphalt overlay is applied when the existing pavement no longer provides sufficient structural support or a satisfactory riding surface. The treatment targets a range of distress conditions that compromise load‑carrying capacity and ride quality. Structural deficiencies such as thin or weakened layers, spalled concrete sections, crushed joints, and other non‑uniform base conditions are addressed by adding a new flexible layer whose thickness is determined through non‑destructive testing or other accepted design procedures. Surface‑level problems—including longitudinal joint cracks, fatigue cracking, rutting, wheel ruts, local depressions, irregular longitudinal profiles, surface unevenness, reduced friction, shoulder drop‑off, and poor drainage or inadequate water removal—are also remedied. By milling away only the unstable portions of the deck, applying a scratch or leveling course to fill small depressions and re‑establish cross‑section, and then placing the overlay, the pavement regains structural capacity, restores a smooth, high‑friction wearing surface, and improves water removal. Routine preservation actions such as a five‑year clean‑and‑seal, sealing roughly 25 % of longitudinal joints, and applying seal coat or micro‑surface treatment to about 500 ft per mile of shoulders are incorporated to extend service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (p. 75), Ch. 4 (pp. 84–98), Ch. 5 (pp. 115–120), Ch. 6 (pp. 137–139), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221), Ch. 14 (p. 227)</small></p>
+<p>The overarching objective of an asphalt overlay is to extend the useful service life of an existing pavement by adding a new structural layer that raises load‑carrying capacity, while simultaneously restoring functional performance and repairing existing distress. By providing additional thickness, the overlay corrects structural deficiencies and surface problems such as rutting or material failures, thereby reestablishing ride quality, skid resistance, and overall support. The treatment also incorporates slab stabilization where needed to regain support in concrete bases and uses targeted patching based on field measurements to anticipate any further deterioration that may occur between design and construction. A typical design assumes a ten‑year pavement life for the overlay, supported by a maintenance regime that includes a five‑year clean and seal operation, sealing roughly twenty‑five percent of longitudinal joints and applying about five hundred lineal feet per mile of seal coat or micro‑surface treatment on shoulders. Overlay thicknesses commonly range from one and a half to two inches, with deeper milling permitted when necessary to eliminate rutting or other material problems. By addressing these deficiencies, the overlay not only restores functionality but also slows subsequent deterioration and reduces future maintenance cycles, achieving both rehabilitation and preservation goals. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 67–75), Ch. 4 (pp. 96–98), Ch. 5 (pp. 115–120), Ch. 6 (pp. 137–139), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>An asphalt overlay is prescribed when a pavement’s distress originates from several interrelated mechanisms. Chief among them is water infiltration caused by inadequate surface or subsurface drainage, which allows moisture to enter the structural layer and erode subgrade support, promote stripping, potholes, crack propagation and freeze‑thaw damage. Weak support follows when the base or subbase material is deteriorated or insufficient, reducing load‑bearing capacity and leading to premature mid‑slab cracking and an uneven bearing condition beneath the overlay. Structural deficiencies are further amplified by loss of proper load transfer at transverse joints; crushed or deteriorated joints prevent effective dowel action, allowing slab movement or faulting that undermines support. Age‑related oxidation of existing asphalt or concrete produces alligator cracking across the surface, signalling diminished structural integrity. Aggregate‑related problems such as Vanport Limestone and chemical reactions like alkali‑silica reaction degrade the pavement matrix and may lower skid resistance. Heavy traffic loads generate rutting, bleeding and additional stresses that accelerate these failure modes. To ensure the overlay performs, the existing surface must be stabilized—failed areas removed, base material repaired or replaced, load‑transfer joints restored, cracks sealed, and adequate subdrainage provided—so a uniform, stable platform can support the new asphalt layer. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 84–98), Ch. 5 (pp. 115–120), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>An asphalt overlay may be placed over any existing pavement when the objective is to correct structural deficiencies, surface deterioration, or poor rideability, as long as the underlying layer provides a stable platform. For concrete pavements, a falling‑weight deflectometer test must be conducted before design and adequate subdrainage must exist where subsurface drainage problems are present. When the existing pavement is asphalt, it should be essentially sound—no more than about two percent of the surface requiring patching—and the project should not seek a structural upgrade. The overlay thickness must meet a minimum of one‑and‑a‑half inches unless special approval is granted, and both surface and subsurface drainage must be good or be upgraded to good as part of the work. The underlying base must be stable so that a thin overlay can perform adequately, and traffic volumes must fall within the ADT limits specified in the applicable tables. No specific climate limitations are imposed beyond the requirement for proper drainage. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (pp. 115–120)</small></p>
+<p>An asphalt overlay should be rejected whenever the existing pavement cannot be brought to a condition of stability, proper leveling, sealing and adequate patching before the new surface is placed.  Obvious base failures, insufficient structural thickness, or drainage problems that cannot be corrected render an overlay inappropriate, directing the designer toward base repair, milling, scratch‑and‑leveling, heater‑planing, or a full structural overlay rather than a thin wearing course.  The overlay also becomes unsuitable when the pavement surface is not asphalt, when more than about two percent of the area requires patching, or when the existing layer exhibits material deficiencies that are confirmed by core testing; in those cases the flawed overlay must be removed and a design for an AC overlay over PCC pavement should be used instead.  Thickness limits further constrain preservation‑type overlays: on flexible pavements any design exceeding two inches is outside the preservation envelope unless a mill‑and‑overlay is undertaken to correct rutting or material problems, while on concrete decks overlays thicker than four‑and‑a‑half inches with a 9.5 mm Superpave wearing course—or five inches with a 12.5 mm mix—are not permissible as preservation treatments.  When the required patching exceeds roughly ten percent of the surface, the project is no longer cost‑effective for preservation and must shift to more extensive rehabilitation or reconstruction.  Likewise, if the distress level has progressed beyond early‑stage symptoms, routine maintenance actions such as crack sealing, joint sealing, spall repair, micro‑surfacing, diamond grinding, ultra‑thin bonded wearing courses, cold in‑place recycling, or full‑depth patching are preferred over an overlay.  Finally, when the functional life of the pavement has been exhausted and its structural capacity cannot be restored by any overlay, total reconstruction is the appropriate response. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 115–120), Ch. 10 (p. 183), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>Determining whether an asphalt overlay is warranted begins with a systematic visual and instrumented survey of the existing pavement. Engineers first review the automated pavement‑condition surveys—such as the STAMPP video‑logging system—that record surface distresses including cracking, rutting, edge deterioration and other fatigue signs for every NHS segment and a representative sample of non‑NHS roads. The distress data are entered into the RMS database and run through the treatment matrices; a recommendation for a surface treatment flags the section as a candidate for overlay. A field visual inspection follows to confirm drainage conditions, base integrity, surface roughness that may require milling or a leveling course, friction levels, and shoulder condition. The pavement must exhibit adequate subsurface drainage or be slated for improvement, and any movement of the existing surface under roller pressure must be absent. Structural capacity is quantified with non‑destructive testing, principally Falling Weight Deflectometer (FWD) measurements performed on the current concrete or flexible pavement. The FWD results provide the structural coefficient and subgrade characteristics needed to calculate the effective existing thickness using the condition‑survey method and to verify that additional structural layer thickness is required. Where visual signs suggest material problems in the existing asphalt, cores are extracted at representative locations. Laboratory analysis of these cores confirms the actual layer thickness, bond quality between the asphalt and any underlying concrete or brick base, and overall integrity; the core results also determine the milling depth needed before placing a new overlay. The overlay is limited to sections where less than two percent of the surface requires patching and where the required overlay thickness does not exceed two inches for preservation projects. If low skid resistance is identified, friction testing is performed and, when necessary, remedial measures are incorporated into the overlay design. Traffic loading information such as ADT or ESALs may be consulted to ensure that the proposed overlay thickness will satisfy future performance requirements. Only after drainage, structural capacity, surface condition, bond integrity, patching extent, friction, and traffic considerations have been verified through these inspections, measurements, and tests does the engineer conclude that an asphalt overlay is required and can delineate its exact location and design thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=6624f37d src=pub_242_change_10::tab:p184#1 -->
+<p>The table below specifies the required input data and reference sources for calculating effective existing thickness using the Condition Survey Method.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-asphalt-overlay-1-cap" tabindex="0"><table class="ct-table" id="ct-asphalt-overlay-1">
+<caption id="ct-asphalt-overlay-1-cap">TABLE 10.9 EFFECTIVE EXISTING THICKNESS, Deff CONDITION SURVEY METHOD</caption>
+<thead>
+<tr><th scope="col">REQUIRED INPUT</th><th scope="col">REFERENCE</th></tr>
+</thead>
+<tbody>
+<tr><td>Existing PCC Thickness</td><td>Pavement CoresRMS - Pavement History</td></tr>
+<tr><td>Existing AC Thickness</td><td>Pavement Cores (Preferred)RMS - Pavement History</td></tr>
+<tr><td>AC Milling Thickness</td><td>Design Information</td></tr>
+<tr><td>Rut Depth</td><td>Field MeasurementRMS - STAMPP Condition Data</td></tr>
+<tr><td>Durability Adjustment Factor</td><td>Dependent on Overlay Design Method.Use applicable table of 1993 AASHTO Guide forDesign of Pavement Structures (Table 5.8, 5.10, or5.12)</td></tr>
+<tr><td>Fatigue Damage Adjustment Factor</td><td>Dependent on Overlay Design Method.Use applicable table of 1993 AASHTO Guide forDesign of Pavement Structures (Table 5.8 or 5.12)</td></tr>
+<tr><td>AC Quality Adjustment Factor</td><td>Table 5.10 of 1993 AASHTO Guide for Design ofPavement Structures</td></tr>
+<tr><td>Number of Deteriorated Joints per mile(Medium and High Severity Joint Spalling orFaulting)*</td><td>This is the number (per mile) of medium and highseverity deteriorated joints that will not be patchedprior to overlay.</td></tr>
+<tr><td>Number of Deteriorated Cracks per mile(Medium and High Severity Cracking)*</td><td>This is the number (per mile) of medium and highseverity cracks that will not be patched prior tooverlay.</td></tr>
+<tr><td>Number of Unrepaired Punchouts per mile(CRC Pavements Only)*</td><td>This is the number (per mile) of punchouts that willnot be repaired prior to overlay.</td></tr>
+<tr><td>Number of Expansion Joints, Exceptionally WideJoints, or AC Full Depth Patches</td><td>This is the number of expansion joints, exceptionallywide joints, or full depth asphalt patches that willremain.</td></tr>
+<tr><td>Joints and Cracks Adjustment Factor</td><td>This adjustment factor will automatically be calculatedby DARWin. Note that STAMPP data and/or a projectfield view will aid in determining the number ofexisting distresses that should be patched or repairedprior to overlay. If all deteriorated joints, cracks,punchouts, and patches will be patched with PCC orrepaired prior to overlay, as required, a factor of 1.0may be used.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: * For distress and severity definitions reference Publication 336, Automated Pavement Condition Survey Field Manual. ** Provide documentation with the pavement design regarding where and how the input values for the Condition Survey Method were obtained/determined.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 184.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 96–98), Ch. 5 (pp. 115–120), Ch. 10 (p. 183), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221), Ch. 14 (p. 227)</small></p>
+<p>An asphalt overlay is indicated once the existing pavement no longer satisfies serviceability criteria but still possesses sufficient structural integrity to be preserved rather than reconstructed. The trigger occurs when observable distresses—such as rutting, fatigue cracking, loss of ride quality, inadequate friction, poor drainage, or deteriorated shoulders—have advanced to a level that surface treatment is required, as signaled by the STAMPP pavement‑management system’s surface‑treatment recommendation. For flexible pavements the existing base must be sound, with less than two percent of the area needing patching and adequate (or upgraded) surface and subsurface drainage; non‑destructive testing may be employed when structural capacity is uncertain. In composite asphalt‑over‑concrete sections a typical overlay is scheduled around the twenty‑year service point after milling the wearing course and shoulders, patching roughly eight percent of the concrete area, cleaning and sealing all joints, and then placing a 60 lb/yd² asphalt layer four to four‑and‑half inches thick, with a repeat at about thirty‑five years. For flexible pavements exhibiting rutting or material failures, milling followed by an overlay of one‑and‑a‑half to two inches (deeper if needed to correct the defect) should be applied early in the maintenance cycle before more advanced distresses appear. Overlays thicker than two inches are reserved for cases where additional structural capacity is required and are not considered preservation treatments. The overlay thickness is sized using the AASHTO design method or an equivalent non‑structural preservation approach to provide the necessary increase in structural strength while restoring ride quality. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 74–75), Ch. 4 (pp. 96–98), Ch. 5 (pp. 115–120), Ch. 10 (p. 183), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221), Ch. 14 (p. 227)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Before an asphalt overlay can be placed the existing surface must be made stable, non‑moving under rollers, fully leveled, sealed and patched; any failed sections are removed and replaced with appropriate base material to restore structural capacity and drainage. For concrete pavements this includes slab stabilization, full‑depth patching with Portland cement concrete or an approved asphalt base course, saw‑cutting and sealing all transverse joints, and providing a minimum one‑inch leveling (or scratch) course to correct cross‑slope and create a uniform platform. The leveling course, placed at about sixty pounds per square yard, may be counted as the first structural inch.</p>
+<p>Design follows the AASHTO method in Chapter 10 (or Chapter 12 for preservation). Required thickness is determined by calculating future traffic needs, evaluating effective existing thickness with a condition‑survey method, and then applying the prescribed overlay depth. For rigid pavements the overlay shall be four inches thick when a 9.5 mm wearing‑course mix is used or four‑and‑a‑half inches with a 12.5 mm mix. Flexible pavements require one‑and‑a‑half inches with a 9.5 mm mix or two inches with a 12.5 mm mix, and Interstate Superpave wearing courses may not be less than 1½ inches without prior approval. Thin overlays can be as thin as one inch using a 6.3 mm grade, while ultra‑thin bonded wearing courses are limited to two inches for non‑structural use.</p>
+<p>The wearing course may be hot‑mix, warm‑mix or Superpave restricted‑performance asphalt and may incorporate reclaimed asphalt pavement (RAP). Typical aggregate gradations include nominal sizes of 25, 19, 12.5 and 9.5 mm; the thin‑overlay grade uses a 6.3 mm aggregate with a PG 64E‑22 binder, while the fine‑grade 9.5 mm course uses its compatible binder. When additional structural capacity is required a binder course is added, its thickness being determined by non‑destructive testing or other acceptable procedures.</p>
+<p>To mitigate reflective cracking an interlayer such as geotextile fabric, fiberglass mesh grid, or composite reinforcing grid may be installed between the existing surface and the new overlay, provided it is thermally stable and placed per manufacturer instructions. Edge protection is achieved with a safety‑edge taper of approximately 30°, cut to a minimum depth of 1½ inches and not exceeding five inches; this treatment adds roughly one percent to material quantities.</p>
+<p>Shoulder improvements may include Type 6 or Type 7 paved shoulders, and surface‑friction treatments are incorporated as needed. Drainage structures, continuous base drains, guide rails and other ancillary items are adjusted or replaced in accordance with the overlay design. The overlay is placed at a rate of about sixty pounds per square yard over both mainline and shoulder sections, with saw‑cutting and sealing of all transverse joints. Routine preservation calls for a clean‑and‑seal every five years, crack sealing on roughly twenty‑five percent of longitudinal joints, and a seal coat or micro‑surface applied to shoulders at approximately 500 linear feet per mile. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 65–75), Ch. 4 (pp. 84–98), Ch. 5 (pp. 115–120), Ch. 10 (p. 183), Ch. 12 (pp. 204–205)</small></p>
+<p>The durability of an asphalt overlay is governed first and foremost by the condition of the existing pavement. The substrate must be stable – it should not move under rolling – and it must be uniformly leveled, sealed and patched before any new mix is placed. Drainage performance, shoulder integrity, surface friction and the adequacy of any underlying base are all evaluated during design; where drainage is poor or a base has failed, repair work precedes overlay placement. Structural soundness is confirmed by non‑destructive testing such as Falling Weight Deflectometer measurements, with acceptable patching limits generally set at less than two percent for flexible pavements and ten percent for concrete slabs unless a cost‑benefit justification exists. Joints in concrete pavements that have lost load transfer or are crushed must be sawed, cleaned and sealed; spalled concrete can be cleaned and filled with compatible asphalt material. Cracked or uneven concrete is cracked, seated and stabilized before a one‑inch (or greater) leveling course is applied, and any required tack coat is placed to promote bonding and control moisture intrusion.</p>
+<p>Overlay thickness must satisfy both design strength requirements and compatibility constraints. When the Superpave Restricted Performance Specification applies, wearing and binder courses must meet the minimum thicknesses listed in Table 9.5; thin overlays under 1½ inches are permitted only when the existing surface is asphalt, structurally sound (patching below two percent), and drainage is good or will be upgraded. For flexible pavements, overlay depth should not exceed two inches unless deeper milling is needed to correct rutting or other material deficiencies, with core sampling used to verify underlying layer integrity. On concrete bases, scratch‑overlay thickness is limited to 4½ inches when a Superpave 9.5 mm mix is used and to five inches with a 12.5 mm mix, the existing slab having been verified as structurally sound by FWD testing.</p>
+<p>Material compatibility also plays a critical role. The interlayer material must be thermally stable, physically durable and chemically compatible with the selected binder – for example, a PG 64E‑22 binder is appropriate for standard 6.3 mm courses – to create a strong internal adhesive or mechanical bond that mitigates reflective cracking. Matching the overlay type to the existing asphalt course depth (or removing an existing deficient overlay entirely) ensures continuity of structural performance. Aggregate considerations such as avoiding Vanport limestone or alkali‑silica reactive aggregates are essential because they can impair skid resistance and accelerate distress. Continuous base drainage, proper joint treatment, and the use of specified mix designs (Superpave or polymer‑modified emulsified systems) together provide the compatibility needed for the overlay to function effectively over its service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 67–69), Ch. 4 (pp. 84–98), Ch. 5 (pp. 115–120), Ch. 10 (p. 183), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>Prior to placing an asphalt overlay the existing pavement is first evaluated for drainage, structural capacity and surface defects. This evaluation includes field‑loaded deflection testing (FWD) on concrete pavements and coring to verify condition and determine the required milling depth. Any areas that cannot provide a stable, uniform base—such as spalled concrete, crushed joints, rutting, or other deteriorated sections—are removed; removal may be accomplished by milling, heater‑planing, or scratching to a depth of at least 1½ inches (often 1½–2 inches) while preserving a minimum of 1½ inches of sound asphalt when present. Full‑depth patches are placed with approved Portland cement concrete or an asphalt base course where needed, and slab movement or faulting is corrected by stabilization or jacking. Where subsurface drainage problems exist, adequate subdrainage is provided. After the defective material has been removed, the remaining surface is leveled and sealed. A leveling or scratch course of at least 1 inch thickness (or a minimum 1‑inch leveling course) is placed to create a uniform platform; joints that have lost load transfer are repaired, longitudinal and transverse joints are cleaned, sawed where necessary, and sealed, and any patch joints are also sealed. When the overlay will be applied over concrete, all transverse joints are sawed and sealed before the new asphalt is laid. If required by traffic conditions a non‑tracking tack coat is applied to promote bond between the existing surface and the new mix. The design of the overlay follows Chapter 10 and the AASHTO thickness criteria, typically specifying a minimum wearing‑course thickness of 1½ inches for interstates (or a two‑inch ultra‑thin bonded wearing course for non‑structural applications) with Superpave mix specifications such as a 6.3 mm wearing course using PG 64E‑22 binder. The overlay is then placed to the design thickness, compacted with rollers to meet density targets measured by the Percent Within Limits (PWL) quality measure, and any required safety‑edge tapers or reflective‑crack mitigation interlayers are installed according to manufacturer guidance. The process does not call for a separate curing period; the overlay achieves performance through proper compaction and adherence to the specified mix and thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=efdd81eb src=pub_242_change_10::tab:p114#1 -->
+<p>The table below specifies PG binders for Superpave pavement courses based on project types and traffic conditions.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-asphalt-overlay-2-cap" tabindex="0"><table class="ct-table" id="ct-asphalt-overlay-2" aria-describedby="ct-asphalt-overlay-2-sum">
+<caption id="ct-asphalt-overlay-2-cap">TABLE 5.5 SELECTING PG-BINDERS FOR SUPERPAVE PAVEMENT COURSES</caption>
+<thead>
+<tr><th scope="col">PG-BINDER</th><th scope="col">PROJECT TYPES</th><th scope="col">ELIGIBLEPAVEMENTCOURSES</th><th scope="col">COST(STANDARDORPREMIUM)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">PG 58S-28</th><td>To be used in the northern half of the State{Districts 1-0, 2-0, 3-0, 4-0, 9-0, 10-0, 11-0,12-0, and 5-0 (Monroe, Carbon, &amp;Schuylkill Counties only)} under light trafficconditions and level or rolling terrain. Donot use in heavily trafficked intersections.Do not use on steep downgrades wheretraffic is under moderate to heavy braking.Do not use on steep upgrades where trucktraffic slows considerably. Use in situationswhere PG 58-22 was specified in the past.</td><td>WearingBinderBase</td><td>Standard(but may bedifficult toacquire)</td></tr>
+<tr><th scope="row">PG 64S-22</th><td>To be used in any part of the State undermost traffic conditions. Use in situationswhere PG 64-22 was specified in the past.</td><td>WearingBinderBaseLevelingScratch</td><td>Standard</td></tr>
+<tr><th scope="row">PG 64E-22</th><td>To be used in any part of the State underheavy traffic situations, at intersections, onsteep grades, or at locations where ruttinghas occurred in the past. Use isrecommended for projects that have anestimated ESAL range ≥ 10 million ESALs.Use in situations where polymer-modifiedasphalt (PMA) was specified in the past.</td><td>WearingBinder *</td><td>Premium</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-asphalt-overlay-2-sum">Rows list specific PG-Binder types and their usage guidelines. Columns provide project type descriptions, eligible pavement courses, and cost classification for each binder.</p>
+<p class="ct-notes">Notes: *Under extremely heavy traffic situations or locations where rutting has been a problem in the past, the District should specify the PG 64E-22 in both the Wearing Course and Binder Course.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 114.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 67–69), Ch. 4 (pp. 84–98), Ch. 5 (pp. 115–120), Ch. 12 (pp. 204–205)</small></p>
+<p>The implementation of an asphalt overlay begins only after the existing pavement has been demonstrated to be stable, meaning it shows no movement when a roller passes over it. Any required base repairs are completed first, followed by surface preparation that may involve milling, heater‑planing, or applying a scratch or leveling course to correct transverse and longitudinal profile irregularities and to provide a level platform. Where an interlayer material is specified, it is placed before the final wearing course. The thickness of the overlay must comply with the pavement depth limits set out in Table 9.5, and thin overlays—those less than 1½ in on Interstate facilities—require prior approval. Placement is permitted only under the weather conditions prescribed in Publication 408, Specifications, Section 413.3(b), and adequate surface and subsurface drainage must be ensured. Equipment such as rollers, milling machines, heater‑planers, and tack‑coat applicators are used according to these constraints; a non‑tracking asphalt tack coat (NTT/CNTT) is applied in areas where traffic will stop, turn, or move slowly, following Pub. 408 Section 460. Traffic through the work zone must be managed in accordance with temporary traffic‑control guidelines. When feasible, detours are coordinated with the District Traffic Unit and any required maintenance on the detour route is performed before it is opened to traffic. The volume of traffic allowed on the overlay construction area must not exceed the average daily traffic limits specified in the applicable tables. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 115–120)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>Before an asphalt overlay is placed, the inspector must verify that the existing pavement is stable—showing no movement under a roller—and that it has been properly leveled, sealed, patched and evaluated for drainage. Full‑depth patches should be applied where needed, slab movement stabilized, subdrainage provided, and all transverse joints sawed and sealed; FWD testing must have confirmed the structural condition of any concrete pavement prior to design. The mix to be used is required to match the specified Superpave wearing‑course, including the correct binder (for example PG 64E‑22 for a 6.3 mm course) and aggregate gradation, and any approved interlayer material must be compatible and thermally stable with a tack coat applied as called for. During construction the installed thickness is checked against the values prescribed by the design—four inches with a 9.5 mm mix or 4½ inches with a 12.5 mm mix for rigid pavements, and 1½ inches with a 9.5 mm mix or two inches with a 12.5 mm mix for flexible pavements—or against the thickness calculated by the AASHTO design procedure—to ensure sufficient structural strength. Compaction and density are verified using the Percent Within Limits (PWL) methodology, typically through core testing, while continuous joint sealing and the construction of safety edges to the required depth and taper are also inspected. After placement the finished surface is examined for uniform thickness, adequate compaction, proper bond to the underlying base—confirmed by coring where necessary—and sufficient friction. The completed work must also meet design intent for shoulder support, drainage improvements, moisture‑barrier performance, and show no signs of reflective cracking or other distress that could reduce service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 65–66), Ch. 4 (pp. 96–98), Ch. 5 (pp. 115–120)</small></p>
+<p>A satisfactory asphalt overlay is defined by a set of interrelated condition limits, thickness prescriptions, material specifications, and construction tolerances that together ensure the intended structural capacity and rideability. The existing pavement must be stable—exhibiting no movement when a roller passes over it—and must be properly leveled, sealed, and patched before any new surfacing is placed. It should be structurally sound with less than two percent of its surface requiring patching, provide good surface and subsurface drainage, and not demand a structural upgrade. For overlays on concrete pavements, every underlying transverse joint and any patched joints must be sawed and sealed so that the overlay forms a uniform load‑transfer surface.</p>
+<p>The overlay thickness must satisfy both minimum design requirements and programmatic limits. Using the AASHTO design method, the calculated structural thickness must be met or exceeded. For a first overlay on rigid pavements, the layer shall be at least four inches thick when a 9.5 mm Superpave wearing‑course mix is used, or four and a half inches when a 12.5 mm mix is employed. Flexible pavements require a minimum of one and a half inches with a 9.5 mm mix or two inches with a 12.5 mm mix; on Interstate projects the Superpave wearing course may not be less than one‑and‑half inches without prior approval. Preservation projects impose upper limits: no more than two inches on existing flexible pavements, and on concrete surfaces no more than four and a half inches with a 9.5 mm mix or five inches with a 12.5 mm mix. Any leveling course used must be at least one inch thick.</p>
+<p>The hot‑mix asphalt must be placed to achieve an in‑place density within the target field range of ninety‑two percent to ninety‑eight point five percent, with contractors typically aiming for values near the middle of this band to avoid reduced payment factors. The mix itself must conform to the specified Superpave design—such as a 6.3 mm wearing course using a PG‑64E‑22 binder—and any safety edge incorporated into the overlay must be built with a taper between twenty‑six and forty degrees, centered on thirty degrees, and a total depth limited to one‑and‑half through five inches.</p>
+<p>Finally, verification procedures require core inspection of milling depths to confirm removal of rutting or defective material, and concrete patching areas must remain at or below ten percent of the total pavement surface unless a cost‑effectiveness justification is provided. Meeting all of these criteria—stable existing pavement, prescribed minimum and maximum thicknesses, AASHTO‑derived structural adequacy, proper joint preparation, targeted density, compliant mix design, safety‑edge tolerances, and documented verification—constitutes an acceptable asphalt overlay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 65–66), Ch. 4 (pp. 96–98), Ch. 5 (pp. 115–120), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>An asphalt overlay is applied after a corrective scratch or leveling course (or milling) that levels the existing pavement and creates a stable base for the new wearing surface. By placing a binder course of appropriate thickness, determined through non‑destructive testing or other design procedures, the overlay adds structural capacity that raises durability and allows the pavement to better resist future loads. The treatment also incorporates drainage improvements, base repairs, enhanced surface friction, and shoulder rehabilitation, which together improve functional performance and safety. The new surface restores condition by eliminating cracking, rutting, edge deterioration and other distresses, while the use of Superpave thin‑asphalt mixes—such as 6.3 mm or 9.5 mm fine grades—provides a smoother ride, better drainage, and superior skid resistance compared with emulsified‑asphalt alternatives. When an interlayer such as geotextile fabric or reinforcing grid is included, reflective cracking is mitigated and moisture intrusion is reduced, further extending the overlay’s durability. Because the overlay adds only about 1½ to 2 inches of material, it can be employed as a cost‑effective preservation activity early in the maintenance cycle, before advanced distresses develop. To preserve the restored condition and functionality, a clean‑and‑seal operation is recommended at five years, crack sealing on roughly one‑quarter of the longitudinal joints, and a seal coat or micro‑surface treatment along shoulders at a rate of 500 ft per mile for specified pavement types. These maintenance actions address surface wear and cracking throughout the design period. Taken together, these structural enhancements and periodic upkeep provide an expected service life of approximately ten years, extending the functional lifespan of the roadway beyond that achievable with the original surface and delaying the need for full reconstruction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (p. 75), Ch. 5 (pp. 115–120), Ch. 6 (pp. 137–139), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221)</small></p>
+<p>Reflective cracking is the most frequently observed distress in asphalt overlays, especially when the overlay is placed over existing concrete slabs that exhibit movement, faulting, or inadequately treated transverse joints. The cracks propagate from the underlying slab and become more severe if the subgrade is unstable, drainage is poor, or the new asphalt does not achieve a sound bond with a competent base. To limit this distress, all transverse joints should be saw‑and‑sealed and any deteriorated joint patched; when the concrete condition warrants it, crack‑and‑seat or rubblizing of the slab is required to create uniform support and reduce differential movement. Alligator cracking that originates from age‑related oxidation in the existing pavement can also transmit through the overlay, while other common distresses such as rutting, bleeding, raveling, stripping, potholes, localized failures, and freeze‑thaw induced deterioration often appear when moisture infiltrates the structure or subgrade support is compromised. The likelihood and severity of these failures are governed by the condition and type of pre‑existing distress, the thickness of the overlay, climatic factors—particularly freeze‑thaw cycles—traffic loading, the quality of drainage, and whether moisture‑resistant interlayers or adequate surface preparation have been provided. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (pp. 115–120)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After the overlay is placed, the treated segment should enter a ten‑year service plan that includes specific inspections and maintenance actions. At five years the pavement receives a clean‑and‑seal operation, during which roughly one‑quarter of the longitudinal joints are crack‑sealed and the shoulders are treated with a seal coat or micro‑surface applied at about 500 linear feet per mile for the applicable pavement types. In addition, the segment becomes part of the routine annual pavement‑condition assessments conducted through Automated Pavement Condition Surveys (videologging) as required by the STAMPP program; if needed, Falling Weight Deflectometer testing may be performed to verify structural response and confirm that the overlay meets its design objectives. Throughout this period the Bureau of Maintenance Operations continuously performs quality‑assurance checks on the condition data to maintain reliability and accuracy. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (p. 75), Ch. 13 (pp. 220–221)</small></p>
+<p>After an asphalt overlay the pavement must be monitored for a range of distress indicators that signal the overlay has become insufficient and that further maintenance, repair or rehabilitation is required. When five years have passed a clean‑and‑seal operation should be performed, and if about one quarter of the longitudinal joints are cracked a crack‑sealing treatment is called for; similarly shoulders on the specified pavement types (Type 1, 1S, 3, 4, 6 or 6S) should receive seal coat or micro‑surfacing at roughly five hundred linear feet per mile. The appearance of reflective cracking that propagates through the new surface, widespread alligator cracking not confined to wheel paths, rutting, bleeding, raveling, active pumping, joint spalling, edge deterioration, faulting, or any sign of water intrusion such as stripping, potholes, loss of subgrade support and freeze‑thaw damage also indicate that the overlay no longer provides adequate performance. Annual automated condition surveys that show recurring or worsening distress—cracking, rutting, edge deterioration, raveling/weathering, joint spalling or faulting—beyond established matrix thresholds further confirm the need for additional work. When patching or base repair on the overlaid section approaches or exceeds ten percent of the pavement area, the treatment shifts from preservation to rehabilitation and a more extensive intervention such as another overlay is typically required. Persistent skid‑resistance problems identified by friction testing also trigger corrective actions beyond the original overlay. In cases where the existing overlay rests on a concrete base and visual inspection or core analysis reveals material deficiencies, or when the Condition Survey Method calculates an effective existing thickness that indicates insufficient residual capacity, the remaining asphalt must be removed before any new overlay can be placed. Finally, if the STAMPP system flags the segment for surface treatment because observed distresses such as shoulder drop‑off, rutting or fatigue cracking have exceeded condition thresholds, this recommendation likewise signals that additional maintenance, repair or rehabilitation is needed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (p. 75), Ch. 5 (pp. 115–120), Ch. 10 (p. 183), Ch. 13 (pp. 220–221), Ch. 14 (p. 227)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

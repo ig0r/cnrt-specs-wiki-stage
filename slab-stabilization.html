@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slab Stabilization</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html" class="active" aria-current="page">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-preservation.html">Pavement Preservation</a><span class="crumb-sep">›</span><span class="crumb-current">Slab Stabilization</span></nav>
+<article><h1>Slab Stabilization</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-preservation.html">Pavement Preservation</a> <span class="edge edge-taxonomic" title="Slab Stabilization is a topic under Pavement Preservation.">is-subtopic-of</span></div><div class="edge-reading">Slab Stabilization is a topic under Pavement Preservation.</div><div><a class="tag" href="index.html?q=slab-stabilization">slab-stabilization</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Slab stabilization is a preservation technique applied to Portland‑cement concrete pavements that have lost uniform bearing because voids have formed beneath the slab or its base, typically from pumping action, subgrade consolidation, settlement, or water infiltration at joints, cracks, and slab corners. The treatment restores full, even support by drilling access holes and injecting a grout material—such as cement‑based slurry, hot asphalt, or high‑density polyurethane—to fill those voids, often followed by a one‑inch (6.3 mm) thin‑asphalt overlay that enhances skid resistance and ride quality. By eliminating movement symptoms such as rocking, pumping, faulting, and excessive deflection, slab stabilization improves structural integrity and functional performance without increasing the original design capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Slab stabilization is employed when a Portland‑cement concrete pavement shows loss or uneven bearing caused by subsurface voids that develop beneath the slab or its underlying base. These voids can result from pumping action, subgrade consolidation, settlement, or damage near transverse joints, cracks and slab corners, and they manifest as rocking, pumping, faulting, transverse‑joint faulting, corner breaks, diagonal cracking, small depressions (blow‑holes), excessive deflection and differential settlement that degrade ride quality and skid resistance. The treatment restores uniform, full support to the rigid pavement by drilling access holes and injecting a grout material—such as cement slurry, hot asphalt, or high‑density polyurethane—to fill the voids around patches and throughout the slab area, eliminating movement before an overlay. When combined with a 1.0 inch (6.3 mm) thin‑asphalt overlay, the stabilized slab provides a smoother riding surface and improves tire‑pavement interaction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 67–70), Ch. 4 (pp. 91–98), Ch. 12 (pp. 204–205)</small></p>
+<p>Slab stabilization is employed when voids exist beneath a rigid‑base or concrete pavement. The treatment fills those voids—often using a thin asphalt overlay about one inch (approximately 6.3 mm) thick—to re‑establish full and uniform support at the slab/subbase interface. By repairing the loss of underlying support, the slab’s structural integrity and load‑bearing capacity are restored, which returns the pavement to its intended functional performance, including improved skid resistance, ride quality, and reduced deflection. Consequently, the objective of slab stabilization is to restore functionality by repairing damage; any extension of service life or slowing of deterioration follows from that primary goal. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 67–70), Ch. 4 (pp. 91–92), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress that slab stabilization targets consists of small voids that form beneath concrete pavement, most often at transverse joints, cracks and the outer corners of slabs, sometimes appearing as blow‑hole depressions in the shoulder. These voids cause loss of subgrade support, producing excessive slab deflection and stress that manifest as joint faulting, corner breaks, diagonal cracking and can progress to complete slab breakup if untreated. The condition therefore degrades structural integrity, reduces ride quality and creates safety and operational concerns such as increased faulting and potential for further pumping or collapse. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92)</small></p>
+<p>Slab stabilization is required when concrete pavements exhibit movement such as rocking, pumping or faulting, which signals that the slab no longer rests on uniform support. The distress originates from a combination of inadequate drainage of surface and subsurface water and insufficient structural capacity in the underlying base or sub‑base. Water infiltrating through joints or cracks initiates a pumping action; together with subgrade consolidation and settlement this creates voids beneath the slab, removing bearing support. The loss of support produces excessive deflection that manifests as transverse joint faulting, corner breaks, diagonal cracking and ultimately slab breakup. Heavy traffic loads can further stress the slab when the underlying support is weak, while climate‑related durability problems—particularly drainage failures—accelerate water‑induced deterioration. Effective remediation therefore incorporates filling voids, improving subgrade structural capacity, sealing joints and cracks, and maintaining functional subsurface drains to prevent recurrence of the distress. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 82–98)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Slab stabilization is appropriate for Portland‑cement concrete pavements that exhibit clear signs of lost subgrade support, such as transverse joint faulting, accumulation of fines at joints or cracks, small blow‑hole depressions near joints, corner breaks, and overall slab settlement. These symptoms indicate voids beneath the slab caused by pumping action, subgrade consolidation, or water infiltration, and filling those voids restores structural integrity even though it does not increase design capacity. The treatment is applied when joint and crack sealing can be performed concurrently and subsurface drainage is functional. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92)</small></p>
+<p>Slab stabilization is limited to pavements that are structurally sound, as confirmed by Falling Weight Deflectometer testing, and where the required patching does not exceed roughly ten percent of the slab area, excluding any existing patches already in good condition. When either the patch‑area threshold is surpassed or a cost‑effectiveness analysis shows that exceeding this limit would be uneconomical, an alternative such as full‑depth patching, overlay, or replacement should be considered. The technique is appropriate only when the distress originates from voids beneath the slab that cause loss of support and excessive deflection. It does not correct surface depressions, blow‑holes, corner breaks, diagonal cracking, faulted joints, or increase the design structural capacity of the pavement. Consequently, if visible surface defects, faulting, or a need for additional structural strength are present, another maintenance, preservation, rehabilitation, or reconstruction method must be selected. Moreover, when the underlying cause of failure is dominated by climate‑or material‑related durability problems—such as frost damage or aggregate polishing—or by load‑related structural deficiencies that require dowel retrofits or other structural improvements, slab stabilization alone is inappropriate and a more extensive repair approach should be employed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–92), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>To determine whether slab stabilization is required and to locate the areas that need treatment, a systematic condition assessment begins with a thorough visual inspection of the concrete pavement. The inspector quantifies all visible distress—such as transverse joint faulting, accumulation of fines at joints or cracks on the traffic lane or shoulder, small blow‑hole depressions in the shoulder adjacent to a joint or crack, corner breaks, and any general slab settlement—and records the amounts observed. Following this visual survey, core samples are extracted both near deteriorated joints and at randomly selected locations so that subbase or subgrade soil conditions can be evaluated and hidden deterioration beneath the surface can be identified. Structural testing is then performed; a Falling Weight Deflectometer test is run on the existing pavement to assess its overall structural capacity before any overlay design, and deflection measurements together with faulting measurements are taken. Additional non‑destructive techniques such as ground‑penetrating radar may be employed to pinpoint joints that require replacement and to delineate zones where voids exist beneath the slab. Finally, a field inspection for movement signs—rocking, pumping, or faulted slabs—is conducted; the presence of any of these conditions confirms the need for slab stabilization (or jacking) at those locations. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–98)</small></p>
+<p>Slab stabilization is indicated whenever the concrete slab has lost its uniform support, a condition that can be identified by voids or instability beneath the slab, movement such as rocking, pumping or faulting, transverse‑joint faulting, accumulation of fines near joints or cracks, small depressions (blow‑holes) at joints or cracks, corner breaks, or overall settlement. The presence of these signs is typically confirmed through diagnostic testing—deflection tests, faulting measurements, Falling Weight Deflectometer results, or other non‑destructive methods—that reveal excessive movement or voids under specific joints. When such loss of support is observed, especially if it is localized around patches or affects less than about ten percent of the pavement surface on a structurally sound slab (as verified by FWD), slab stabilization should be performed before any overlay, patching, or further rehabilitation to re‑establish full, even support for the slab. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 67–70), Ch. 4 (pp. 82–98), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Slab stabilization restores support beneath concrete pavements by filling voids with one of three grout systems: a cement‑based fluid grout, hot asphalt undersealing, or a high‑density polyurethane foam. The cement grout is prepared from cement, water, supplementary cementitious material and optional admixtures, pumped into each drilled hole at roughly one cubic foot per hole (about a quarter bag of cement) and requires about 12 hours to cure before traffic can resume. Hot asphalt undersealing involves pumping between 30 and 50 gallons of liquid asphalt into each hole and allowing it to cool for at least 30 minutes. The polyurethane option is a two‑component low‑viscosity foam that expands to fill voids, using approximately 0.4 lb per square foot and hardening in roughly half an hour.</p>
+<p>The work follows Publication 72M RC‑26M and Specification 679. Holes are drilled according to the joint or crack pattern; full‑depth patches typically employ a two‑hole layout, while when no testing is performed at least 25 % of transverse joints must be treated. After grout placement, all joints and cracks are sealed and proper drainage maintenance is ensured.</p>
+<p>In addition to void filling, slab stabilization may be combined with a thin asphalt overlay that serves as a non‑structural wearing course. The overlay is limited to one inch in thickness and uses a 6.3 mm mix design; it can be applied together with slab jacking or patching to improve skid resistance and ride quality. Consequently, the required materials include cement‑based grout, hot asphalt, high‑density polyurethane foam, joint sealants, drainage provisions, and optionally a one‑inch, 6.3 mm thin asphalt overlay, all applied in the quantities and configurations specified above. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92), Ch. 12 (pp. 204–205)</small></p>
+<p>The effectiveness of slab stabilization is governed primarily by the condition of the existing concrete and its supporting structure, the properties of the fill material selected for the voids, and the degree to which the treatment can be made compatible with the surrounding pavement system. A structurally sound slab—verified through Falling Weight Deflectometer testing—and one whose compressive strength and air content meet standard specifications provides a reliable base for any stabilization effort. The amount of existing patchwork must remain below roughly ten percent of the total surface; projects that would require more than this threshold trigger an additional cost‑effectiveness analysis before proceeding. Surface characteristics such as adequate friction, acceptable ride quality, and the absence of polishing‑susceptible aggregate further influence performance.</p>
+<p>Accurate identification of the underlying distress—typically voids that develop near transverse joints, cracks, or at outside slab corners manifesting as joint faulting, fines, blow‑holes, corner breaks, or settlement—is essential because it dictates the choice of fill material. Cement grout must retain sufficient fluidity to infiltrate the voids and then cure, generally for about twelve hours, before traffic can be restored. Hot asphalt injected into the voids requires an appropriate cooling period after pumping to avoid premature loading. High‑density polyurethane, delivered as a low‑viscosity two‑component system, penetrates deeply and expands into a closed‑cell foam that is lightweight yet rigid, offering resistance to water ingress and chemical attack while maintaining long‑term durability.</p>
+<p>Compatibility with the existing pavement is achieved through comprehensive joint and crack sealing, which limits water entry that could reactivate pumping, and by ensuring that subsurface drainage remains functional. The selected fill material must also be compatible with any accompanying preservation layers—such as micro‑surfacing or ultra‑thin bonded wearing courses—so that the one‑inch (6.3 mm) thin asphalt overlay typically applied in slab stabilization can bond effectively without compromising ride quality. Timing of each step is critical: the grout must fully cure, the hot asphalt must cool sufficiently, and the polyurethane foam must complete its expansion before the lane is reopened to traffic.</p>
+<p>Finally, a stable supporting structure underpins success. The subgrade or subbase should be sound, and drainage systems must operate properly; when these conditions are met, bonded jointed plain concrete pavement (JPCP) overlays can be employed. In cases where the underlying support is compromised or drainage is deficient, unbonded solutions may be required, but stabilization performance will inevitably be limited if slab movement—rocking, pumping, or faulting—is not addressed before overlay placement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–98), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>Before stabilizing a concrete slab, all joints and cracks should be sealed and subsurface drains kept functional to limit water ingress; the pavement is then drilled at the locations and patterns prescribed in the construction standards, typically just before the grout is placed so that traffic control can protect both drilling and stabilization crews. The selected grout—cement‑based mix, hot asphalt, or high‑density polyurethane—is pumped into each hole, filling the voids beneath the slab, after which the material is allowed to cure: cement grout requires up to twelve hours, while asphalt and polyurethane need at least thirty minutes before traffic can be reopened. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92)</small></p>
+<p>Slab stabilization requires drilling equipment to create access holes and pumping units for cement grout, hot asphalt, or high‑density polyurethane, with safety gear especially when handling hot asphalt. The work is sequenced so that joint and crack sealing and the drilling are done immediately before the grout is pumped, allowing both crews to share a single set of Maintenance and Protection of Traffic (MPT) devices and limiting operations to one lane at a time. Traffic may not be reopened until the injected material has cured or cooled—up to about 12 hours for cement grout or at least 30 minutes for asphalt or polyurethane—and appropriate traffic control must remain in place during that period. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>Inspection of slab stabilization should first verify the presence of loss‑of‑support symptoms such as transverse joint faulting, fines or debris at joints and cracks, small blow‑hole depressions near shoulders, corner breaks, and overall slab settlement. The preparation phase must include proper sealing of all joints and cracks and ensure subsurface drains are functional before any grout is placed. During installation the selected grout material—cement‑based mix, hot asphalt, or high‑density polyurethane—must be pumped according to the prescribed hole pattern and volume, and the crew must observe the required curing or cooling period (approximately 12 hours for cement, at least 30 minutes for asphalt or polyurethane) before reopening traffic. After completion the restored support is confirmed by confirming that voids are filled, no new surface depressions exist, and the slab can carry load without excessive deflection. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92)</small></p>
+<p>Slab stabilization is considered satisfactory when the treatment has eliminated all observable signs of lost slab support—no transverse joint faulting, no fines accumulating at joints or cracks, no small depressions (blow‑holes) in shoulders, no corner breaks, and no measurable settlement—and full subgrade support under the concrete is restored. The goal is to fill the voids beneath the slab sufficiently so that deflections are reduced and further pumping, faulting, or cracking are unlikely. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Slab stabilization is employed wherever the concrete slab lacks uniform bearing, such as around patches or in areas where voids have formed beneath the slab due to pumping action, subgrade consolidation, or settlement. By drilling holes and injecting a suitable fill material—commonly cement grout, hot asphalt, or high‑density polyurethane—the voids are eliminated and full support is re‑established. This restoration of bearing reduces slab deflection, curtails transverse joint faulting, corner breaks, and further cracking, thereby improving the pavement’s structural integrity and ride quality. When the stabilization is incorporated into a thin‑asphalt preservation overlay—typically a 1.0‑inch (6.3 mm) layer—the surface condition is enhanced through better skid resistance and smoother riding characteristics. Although the treatment does not increase the original design capacity or remove existing surface depressions, it nonetheless upgrades functional performance, prolongs durability, and extends the expected service life of the repaired section without requiring a full structural redesign. Because PennDOT classifies slab stabilization among its cost‑effective preservation measures, it is recognized as a practical means to maintain pavement condition and longevity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 91–92), Ch. 12 (pp. 204–205)</small></p>
+<p>Slab stabilization can still be plagued by recurring distresses such as transverse joint faulting, corner breaks, slab settlement, blow‑hole depressions and the accumulation of fines near joints or cracks, which are all signs that the underlying voids have not been fully eliminated. These failures originate from pumping action, subgrade consolidation and water infiltration that create voids beneath the concrete, and they are aggravated when joint and crack sealing or subsurface drainage are inadequate. Because the treatment does not correct surface depressions or completely eliminate faulting, any remaining moisture or insufficient support can cause the same deflection‑induced cracking to reappear after the grout has cured. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>When a slab‑stabilized area continues to show transverse joint faulting, the buildup of fines at joints or cracks on either the traffic lane or shoulder, small blow‑hole depressions in the shoulder adjacent to those joints or cracks, corner breaks, overall settlement of the slab, or any ongoing slab movement such as rocking, pumping, or further faulting, these distress signs reveal that the underlying voids have not been fully mitigated. The persistence of such symptoms indicates that the stabilization effort was insufficient and that additional maintenance, repair, or rehabilitation is required before any subsequent work—such as an overlay—can be undertaken. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–98)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

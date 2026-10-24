@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pavement Structure</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html" class="active" aria-current="page">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Pavement Structure</span></nav>
+<article><h1>Pavement Structure</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Pavement Structure is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Pavement Structure is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=pavement-structure">pavement-structure</a><a class="tag" href="index.html?q=pavement-structures">pavement-structures</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Pavement structure is an engineered layered system that provides the strength and stability needed for a roadway to safely support its anticipated traffic while shielding the subgrade from moisture‑related distress, frost‑induced heaving, differential settlement and other premature failures [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The design translates these performance requirements into a Design Structural Number that must be met or exceeded by the calculated SN derived from selected thicknesses of surface, base and subbase layers, each constructed with highly permeable aggregates, appropriate slopes and continuous drainage features—including edge drains, lateral underdrains and geosynthetic aids—to rapidly expel water and minimize capillary action [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By balancing per‑inch material costs, adhering to prescribed lift limits, and employing optional reinforcement or separation fabrics where needed, the resulting structure aims for a cost‑effective, durable pavement that resists rutting, cracking and frost heave, thereby extending service life, reducing maintenance, and preserving safety [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<!-- HIER-DIAGRAM:START -->
+<p><a href="https://www.pa.gov/agencies/penndot">PennDOT</a> publications covering <strong>“Pavement Structure”</strong> also include the following subtopics: <a href="base-course.html">Base Course</a>, <a href="shoulder.html">Shoulder</a>, <a href="subbase.html">Subbase</a>, and <a href="subgrade.html">Subgrade</a>.</p>
+<figure class="hier-diagram">
+  <svg class="hd" viewBox="0 0 710 192" width="710" height="192" role="group" aria-label="Concept map: Pavement Structure and its subtopics" xmlns="http://www.w3.org/2000/svg">
+    <g class="hd-hub"><rect x="250" y="16" width="210" height="48" rx="6"/><text class="hd-hub-label" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="355" y="40">Pavement Structure</tspan></text></g>
+    <path class="hd-edge" d="M355 64 V 96 H 91 V 128"/>
+    <path class="hd-edge" d="M355 64 V 96 H 267 V 128"/>
+    <path class="hd-edge" d="M355 64 V 96 H 443 V 128"/>
+    <path class="hd-edge" d="M355 64 V 96 H 619 V 128"/>
+    <g class="hd-child" data-slug="base-course" data-desc="The base course is the structural layer placed directly beneath the surface course when an existing pavement lacks sufficient capacity or cannot adequately manage moisture, serving to restore a unifo…"><title>The base course is the structural layer placed directly beneath the surface course when an existing pavement lacks sufficient capacity or cannot adequately manage moisture, serving to restore a unifo…</title><a href="base-course.html"><rect x="16" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="91" y="152">Base Course</tspan></text></a></g>
+    <g class="hd-child" data-slug="shoulder" data-desc="The shoulder is the paved edge of a roadway that provides lateral structural support to the main carriageway while serving as a low‑maintenance area for emergency stopping, drainage and auxiliary mov…"><title>The shoulder is the paved edge of a roadway that provides lateral structural support to the main carriageway while serving as a low‑maintenance area for emergency stopping, drainage and auxiliary mov…</title><a href="shoulder.html"><rect x="192" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="267" y="152">Shoulder</tspan></text></a></g>
+    <g class="hd-child" data-slug="subbase" data-desc="The subbase is an aggregate layer placed directly on a prepared subgrade in rigid‑pavement systems to provide both drainage and a stable platform for the overlying base and surface courses."><title>The subbase is an aggregate layer placed directly on a prepared subgrade in rigid‑pavement systems to provide both drainage and a stable platform for the overlying base and surface courses.</title><a href="subbase.html"><rect x="368" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="443" y="152">Subbase</tspan></text></a></g>
+    <g class="hd-child" data-slug="subgrade" data-desc="The subgrade is the prepared earth foundation that underlies a pavement and supplies the necessary bearing capacity and stiffness to transfer traffic loads to the ground without excessive deflection."><title>The subgrade is the prepared earth foundation that underlies a pavement and supplies the necessary bearing capacity and stiffness to transfer traffic loads to the ground without excessive deflection.</title><a href="subgrade.html"><rect x="544" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="619" y="152">Subgrade</tspan></text></a></g>
+  </svg>
+</figure>
+<!-- HIER-DIAGRAM:END -->
+
+<p>The <a href="subgrade.html">Subgrade</a> supplies the foundational bearing capacity and stiffness that dictate the required Design Structural Number for the layered system. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The <a href="base-course.html">Base Course</a> and <a href="subbase.html">Subbase</a> act as permeable structural layers that distribute vehicle stresses while rapidly conveying water by gravity to prevent moisture-related distresses in the foundation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The <a href="shoulder.html">Shoulder</a> provides lateral support to the main carriageway, reducing edge stresses through specific widening or joint spacing requirements that match the primary pavement materials. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li><li><a href="#related-concepts">Related Concepts</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+<details class="subconcepts-toggle"><summary>Sub-concepts (4)</summary><div class="subconcepts-body"><a href="base-course.html">Base Course</a> · <a href="shoulder.html">Shoulder</a> · <a href="subbase.html">Subbase</a> · <a href="subgrade.html">Subgrade</a></div></details>
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Pavement structure is engineered to supply the strength and stability a roadway needs to safely carry its expected traffic while protecting the system from moisture‑related distress, frost‑induced heaving, differential settlement and other premature failures. The design translates these performance requirements into a Design Structural Number that must be met or exceeded by the calculated SN derived from the selected layer thicknesses. Determining those thicknesses involves balancing per‑inch material costs for surface, base and subbase layers, observing prescribed minimum and maximum lift depths, applying appropriate structural coefficients and using unit drainage factors—set to 1.0 for all layers—to ensure adequate water removal. Highly permeable base and subbase materials, proper drainage slopes, lateral and edge drains, and continuous drainage throughout the cross‑section are required so that excess water is rapidly expelled and capillary action minimized, because excessive water in any layer or the subgrade is detrimental to pavement performance. Geosynthetics play a supporting role: geotextiles provide drainage, layer separation, erosion and sediment control; geogrids reinforce soft subgrades and aggregate layers; stress‑absorbing membranes (SAMs) and interlayers are permitted only on flexible pavements with flexible bases, require a surface free of excessive cracking, must be spaced no more than fifteen feet between thermal cracks, and need at least two courses of material over them per manufacturer recommendations. In lane‑widening projects the new pavement must match existing layer depths for partial widenings under ten feet, and for full‑width extensions of ten feet or more the same principle applies unless traffic loads differ, with drainage continuity verified throughout. The overall aim is a cost‑effective, structurally sufficient pavement that avoids premature rutting, cracking, frost‑induced differential heaving, edge stresses and other distress mechanisms, thereby extending service life, reducing maintenance, and maintaining safety. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–63), Ch. 5 (pp. 115–126), Ch. 6 (pp. 134–150), Ch. 8 (pp. 160–166), Ch. 9 (pp. 172–173)</small></p>
+<p>A pavement structure must first satisfy a functional requirement for effective drainage at the surface and beneath each layer. By removing ponded runoff and subsurface moisture, the design preserves subgrade support, limits aggregate‑base deflection, mitigates frost‑heave, and prevents moisture‑related distress, thereby extending service life while maintaining a uniform ride quality for safe travel. Structurally, the system must provide a stable, well‑drained subgrade, a subbase that supplies drainage and a solid platform for the overlying layers, and a base capable of supporting the concrete or asphalt surface. Layer thicknesses are selected to meet the structural requirement derived from anticipated traffic loads and environmental conditions; reclaimed materials may be incorporated when appropriate. Load transfer across transverse joints is achieved through fully bonded dowel bars anchored along their entire embedded length, with joint spacing limited to 30 ft for JRCP or 15 ft for JPCP and seals as prescribed. Tie bars are required only on patches longer than 65 ft, and high‑early‑strength concrete that tends to shrink is avoided. When rapid reopening is needed, accelerated concrete may be used provided it meets minimum compressive‑strength criteria and work‑zone safety provisions. For correcting existing deficiencies, a leveling course of at least one inch thickness is included in the structural calculations, and overlays no thinner than 1½ inches are placed when the underlying pavement is sound and drainage adequate. A Safety Edge with a 30° taper must be installed on the outer edge of wearing or binder courses to a minimum depth of 1½ inches and not exceeding five inches total, enhancing edge safety and rideability. Durability is addressed by using interlayer systems that are thermally stable, compatible with the asphalt matrix, and act as moisture barriers to prevent water‑induced distress and reflective cracking; frost‑mitigation measures such as a stronger base course protect against differential heave in freeze‑thaw cycles. Subgrade strength is represented by CBR values limited to an approved range—no value greater than 20 may be used, and any value above 10 requires chief geotechnical approval—and the design specifies a minimum resilient modulus for the roadbed soil to ensure that assumed subgrade conditions are met throughout the pavement’s life. Safety objectives are further satisfied by reducing maintenance needs through durable material selection, providing full‑depth concrete shoulders with dowelled transverse joints on high‑volume corridors, and employing edge treatments that lower edge stresses and prevent settlement or horizontal separation. Finally, serviceability is achieved by delivering a uniform supporting platform for overlays, improving ride quality with thin Superpave overlays within prescribed thickness limits, and meeting initial and terminal serviceability levels together with the required reliability, load‑transfer, and drainage coefficients. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 84–89), Ch. 5 (pp. 115–126), Ch. 6 (pp. 143–150), Ch. 8 (pp. 160–166)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>The Pavement Structure design approach is appropriate for both flexible and rigid full‑depth pavements, including composite systems, when the project involves new construction, reconstruction, rehabilitation, or widening that meets certain length or functional criteria. For flexible pavements with a flexible base, experimental membrane systems such as stress‑absorbing membranes (SAM/SAMI) may be employed provided the existing surface is sound, free of excessive alligator cracking and thermal cracks are spaced no more than fifteen feet apart; in those cases at least two overlay courses must be placed over the membrane. Geosynthetics may also be incorporated for drainage, layer separation, erosion or sediment control, and reinforcement of soft subgrade soils or aggregate layers, while other uses are treated as experimental. When a flexible pavement is widened, any partial lane addition less than ten feet must replicate the existing structure with an equal depth of asphalt (or concrete where applicable) and preserve the established drainage layers; full‑width lane additions of ten feet or more follow the same matching principle unless the anticipated traffic loading differs, in which case the design should reflect the actual load while maintaining adequate drainage. Rigid pavement projects are designed as a layered system consisting of subgrade, subbase, base and surface, with the surface typically jointed plain concrete (JPCP) or roller‑compacted concrete (RCC) and the base constructed from an asphalt‑treated permeable base (ATPB) or cement‑treated permeable base (CTPB). The 1993 AASHTO rigid‑pavement procedures are applied, assuming a functional drainage system. Tied concrete shoulders are required for jointed plain cement‑concrete pavements on Long‑Life Concrete Pavement (LLCP) routes and urban interstates; rural interstates may use tied shoulders with undowelled joints when work‑zone traffic is not anticipated, and corridors with an average daily traffic below ten thousand may consider widened slabs with asphalt or RCC shoulders. All new construction, reconstruction, and rehabilitation projects exceeding 500 ft of continuous paving on divided highways, 1 000 ft on undivided highways, or 1 000 ft of total bridge‑approach paving must be analyzed with the AASHTOWare DARWin software, which evaluates both rigid and flexible alternatives; short sections that contain unusually thick composite pavements or elements that cannot be realistically replicated also require DARWin analysis as directed by the District Pavement Management Engineer, while other short sections must at least meet minimum thickness criteria. For flexible pavements whose base course consists of aggregate‑cement or aggregate‑lime‑pozzolan material, design may use either the Specified Thickness Design or Optimized Thickness Design method (the Layered Analysis method is not permitted), with layer drainage coefficients set to 1.0 and thicknesses constrained by the minimum and maximum values prescribed in the standard tables. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 5 (p. 115), Ch. 6 (pp. 134–136), Ch. 8 (pp. 160–166), Ch. 9 (pp. 172–173)</small></p>
+<p>When the existing pavement does not satisfy the prerequisites for stress‑absorbing membrane systems—specifically it is not a flexible pavement with a flexible base, shows excessive or alligator cracking, has thermal cracks spaced more than fifteen feet apart, or cannot accommodate the required overlay thickness and two courses of material—a conventional seal coat becomes the preferred alternative. If a lane is being widened by less than ten feet, the new asphalt layers must replicate the existing pavement structure in type, thickness, and drainage. For widening projects of ten feet or greater, copying the old structure remains the default unless the anticipated traffic on the added lane differs markedly from that of the existing roadway; in such cases the design should be based on actual traffic loads, prompting a different structural approach. When the pavement base is unstable or removal of material would degrade performance, a thin overlay alone is inadequate and more extensive treatments such as milling, heater‑planing, or full reconstruction are required; thin overlays are only acceptable if the surface is already asphalt, the pavement is structurally sound with less than two percent patching needed, drainage is satisfactory, and no structural upgrade is called for. For projects whose continuous length is under five hundred feet on divided highways or one thousand feet on undivided roads, the design may simply match the existing structure provided minimum thickness tables are met, but if the existing composite pavement greatly exceeds those minima or contains elements that are impractical to duplicate—such as crack‑and‑seat sections—the District Pavement Management Engineer can mandate a full DARWin analysis and an alternative structural design. PennDOT oversight projects further require evaluation of both rigid and flexible alternatives rather than reliance on a single conventional structure. When the subgrade exhibits isolated low‑CBR spots or extensive zones with markedly different soil types, a uniform pavement thickness is no longer optimal; designers should improve weak sections to bring their CBR up to project‑average values or divide the corridor into a limited number of subsections each designed with its own thickness. Significant uncertainty in laboratory CBR results also triggers additional field testing before committing to one structural solution. In frost‑prone areas where soils are highly susceptible to heave, removal and replacement of those soils—or provision of an insulating granular base—supersedes simply increasing pavement depth. Moreover, if the subgrade CBR is five or less and the project area exceeds roughly twenty‑five thousand square yards, subgrade strengthening methods such as cement or lime stabilization, rock capping, geogrids, or geotextiles become more cost‑effective than a conventional pavement structure. On urban interstates or expressways where incident‑management activities are likely, the design must employ full‑depth plain cement concrete shoulders with dowelled transverse joints and tied concrete shoulders; this requirement makes the standard flexible pavement approach unsuitable for the shoulder. For rural interstates without such demands, tied concrete shoulders with undowelled joints—or, when average daily traffic is below ten thousand, widened slabs with asphalt or roller‑compacted concrete shoulders—may be considered as alternatives. Finally, when designing a full‑depth flexible pavement, the choice of thickness design method is constrained by allowable lift depths and cost objectives; consequently only the Specified Thickness Design or Optimized Thickness Design procedures may be used, while the Layered Analysis method is prohibited. The design must also remain within the minimum and maximum course depths specified in the reference tables, which can force a switch to one of the approved methods if those limits are reached. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 5 (pp. 115–120), Ch. 6 (pp. 134–150), Ch. 8 (pp. 165–166), Ch. 9 (pp. 172–173)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>Designing a pavement structure begins with a detailed site characterization that confirms the type and condition of the existing surface; when the surface is asphalt it must be essentially intact, with patching limited to less than two percent of the area, and both surface and subsurface drainage either already satisfactory or slated for improvement. A recent pavement‑condition survey documenting current distress provides the baseline for assessing whether the existing layers can support the new structure. Traffic inputs require both present and projected loads: average daily traffic is taken from the appropriate ADT tables (e.g., Table 10.1/10.2), a reliable forecast of future loading is developed, and for rigid pavements the design traffic may be expressed as 18‑kip equivalent single axle loads (ESALs) over the initial performance period. Material information includes selecting the correct layer thicknesses and binder grades—such as Superpave mix thicknesses with a PG 64E‑22 binder for asphalt overlays—or, for Portland cement concrete slabs, specifying the 28‑day mean modulus of rupture, the 28‑day mean elastic modulus of the slab, and the effective k‑value of the subgrade. Representative sampling defines the number, size, depth, and handling requirements of each layer. Geotechnical data are obtained through in‑situ testing—Falling Weight Deflectometer, dynamic cone penetrometer, or lightweight deflectometer—to quantify subgrade stiffness and to calculate the effective k‑value used in structural analysis; reliability considerations are incorporated by assigning a reliability level and an overall standard deviation that capture uncertainty in traffic, material, and subgrade properties. Environmental and drainage factors are evaluated to identify wet subgrades or other water problems before construction, with the design incorporating a load‑transfer coefficient for structural continuity and an overall drainage coefficient that reflects the system’s capacity to shed water under local climate conditions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–126), Ch. 8 (p. 160)</small></p>
+<p>The design of any pavement structure for PennDOT projects is governed by the 1993 AASHTO Pavement Design Procedures, both flexible and rigid versions, as amended by the department. All analyses must be performed with the department‑mandated AASHTOWare DARWin 3.01 software. A full DARWin analysis becomes mandatory whenever the continuous paved length exceeds 500 feet on divided roadways, 1,000 feet on undivided roadways, or when bridge approaches are longer than 1,000 feet; if the design year used differs by more than three years from the approved version a new analysis is required before final approval. The software requires input of key performance parameters—projected 18‑kip equivalent single axle loads, initial and terminal serviceability levels, 28‑day mean modulus of rupture and elastic modulus for concrete slabs, mean effective subgrade k‑value, chosen reliability level, overall standard deviation, load‑transfer coefficient (J) and drainage factor (Cd). These inputs drive the selection of materials for each course from subgrade through subbase, base (which may be asphalt‑treated permeable or cement‑treated permeable), and surface layer (jointed plain concrete, roller‑compacted concrete, or Superpave asphalt). The calculated Structural Number must exceed the prescribed design SN; layer thicknesses are obtained by either the Specified Thickness or Optimized Thickness method in DARWin, while layered‑analysis designs are expressly prohibited. Structural coefficients for each course are taken from Table 9.3, drainage coefficients are fixed at 1.0, and permissible lift depths are limited to the minimum and maximum values listed in Tables 9.4 and 9.5.</p>
+<p>Material specifications are set out in Publication 408. Concrete patches must conform to RC‑26M and Sections 516 or 519 of Spec 408; when reconstructing lanes longer than 500 feet with Portland cement concrete the project must follow RC‑21M for jointed reinforced concrete (30‑foot perpendicular joints, coated dowel bars, proper seals) or RC‑27M for jointed plain concrete (15‑foot perpendicular joints, same reinforcement and sealing). Minimum compressive strength and cure time are defined in Section 501, and standard PCC mix designs follow Section 704 with optimized aggregate gradations; accelerated high‑early‑strength mixes are discouraged. Asphalt widening projects must replicate the existing layer thicknesses—partial lane widenings under ten feet match the existing asphalt or concrete depth, and full‑width additions of ten feet or more also match unless traffic loading dictates a different design—and drainage throughout the cross‑section must be verified. Overlay designs require a leveling course of at least one inch, a Superpave wearing‑course thickness of no less than 1½ inches on Interstates without PDAU approval, use of PG 64E‑22 binder for 6.3 mm wearing courses, and compliance with the dimensional limits in Tables 9.5 and 10.1/10.2. Safety edges are required on all pavement edges with a depth between 1½ inches and five inches.</p>
+<p>Drainage design follows Publication 72M Roadway Construction Standards and Publication 13M Design Manual Part 2; outlets located within mowable areas must be protected by headwalls, base‑drain sizing and outlet spacing are prescribed in Chapter 10 Section 10.3.D of Publication 13M, and continuous edge drains are shown on RC‑30M. Base and subbase materials shall be highly permeable to permit rapid gravity drainage, and subbase slopes should be maximized. Subgrade stiffness is verified by Falling Weight Deflectometer testing, while moisture conditions are confirmed with dynamic cone penetrometer and lightweight deflectometer tests as detailed in Appendix J. Geotechnical controls require that any California Bearing Ratio value above ten receive approval from the Chief Geotechnical Engineer, and values exceeding twenty are prohibited for use in the Heukelom‑Klomp correlation; the resilient modulus of the roadbed soil must meet the minimum level documented on the plans, and frost‑susceptible subgrades are treated according to the 1993 AASHTO guide and departmental frost design procedures. When geosynthetics are employed, design parameters follow Publication 408, FHWA Geosynthetic Design and Construction Guidelines, NTPEP data, and manufacturer product data; geogrids and geotextiles are specified in Sections 221, 738 and 210.3(b), 212, 735 respectively, with additional reference to Publication 35.</p>
+<p>Experimental pavement systems such as SAM or SAMI must be processed through the BOCM Materials Division New Products and Innovations Section and obtain FHWA sign‑off for federally overseen projects; they may only be used on flexible pavements with flexible bases, thermal cracks in the existing surface must be spaced no more than fifteen feet apart, and at least two courses over the membrane must satisfy manufacturer depth recommendations. Project constraints include cost‑benefit considerations that balance drainage provision against long‑term maintenance, timing windows that require design approval before final design meetings or contract award, and the length thresholds that trigger mandatory DARWin analyses. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–63), Ch. 4 (pp. 84–89), Ch. 5 (pp. 115–126), Ch. 6 (pp. 134–150), Ch. 8 (pp. 160–166), Ch. 9 (pp. 172–173)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The design of a pavement structure proceeds through a series of interrelated procedures that begin with an assessment of existing conditions and end with the selection of layer thicknesses that satisfy structural, drainage, and economic criteria. A condition survey conducted in accordance with PennDOT manuals is followed by in‑situ stiffness testing—such as Falling Weight Deflectometer (FWD), dynamic cone penetrometer (DCP) or lightweight deflectometer (LWD)—to obtain resilient modulus values for the subgrade and existing base layers. Where geotechnical data are not yet available, a preliminary design may be generated by assuming reasonable resilient‑modulus values for the subgrade and base; however, any project whose continuous pavement length exceeds 500 ft on divided highways or 1,000 ft on undivided routes (or bridge approaches over 1,000 ft) must be analyzed with the AASHTOWare DARWin® 3.01 software in accordance with the 1993 AASHTO Pavement Design Procedures. The DARWin analysis can employ either the Specified Thickness or Optimized Thickness design methods—excluding the Layered Analysis option—to convert a required Design Structural Number (SN) into individual layer thicknesses using the equation SN = Σ aᵢ dᵢ mᵢ, where the structural coefficients aᵢ are taken from Table 9.3 and all drainage coefficients mᵢ are set to 1.0. Minimum and maximum course depths are observed as prescribed in Tables 9.4 and 9.5, and per‑inch material costs are incorporated so that the configuration with the lowest total pavement cost is selected.</p>
+<p>Subgrade strength is expressed through California Bearing Ratio (CBR) values that feed the Heukelom‑Klomp correlation for resilient modulus; a factor of 1,500 is used unless low in‑situ density warrants a reduced factor of 1,000, and CBR inputs are limited to a maximum of twenty. Resilient modulus may also be back‑calculated from FWD data, applying a correction factor of 0.25 to align with laboratory values and halving the dynamic modulus to obtain a static value. For frost‑susceptible soils, the AASHTO frost‑heave procedure (Appendix G) and the online Frost Heave Calculator are employed, while subgrade strengthening options such as rock capping or lime/cement stabilization are modeled with a structural coefficient of 0.12 and a CBR of 20.</p>
+<p>Drainage design follows basic principles that emphasize gravity removal of free water, control of capillary moisture, lowering intersecting water tables, intercepting seepage from cuts, protecting drain outlets, and installing lateral underdrains in wet subgrade or cut‑to‑fill transitions. Permeability is evaluated empirically using material gradation as an indicator, recognizing that similar gradations can produce different permeabilities. Base drain sizing and outlet spacing are determined according to the method outlined in Publication 13M, Design Manual Part 2, Chapter 10, Section 10.3.D, while overall edge and lateral drain layout must comply with Publication 72M.</p>
+<p>For overlay projects, a pre‑overlay surface preparation may include a scratch or a minimum one‑inch leveling course to provide a uniform working platform and correct profile irregularities; the structural contribution of any leveling course is incorporated into the pavement calculations. Design thicknesses and required structural coefficients are obtained from Tables 9.3, 9.5, 10.4, and 10.5, which also define allowable placement depths for Superpave mix sizes, and traffic‑volume limits are checked against Tables 10.1/10.2. The Safety Edge detail is specified as a standard edge treatment on wearing or binder courses of at least 1½ inches depth, and interlayer system selection follows the criteria in Publication 408.</p>
+<p>Concrete shoulder design adheres to procedural rules tied to corridor type and traffic volume. Urban interstates and expressways require full‑depth plain cement concrete shoulders with dowelled transverse joints per Publication 72M; rural routes without anticipated work‑zone or incident‑management use may employ tied shoulders with undowelled joints, and when the two‑way average daily traffic is below 10,000, widened slabs with asphalt or RCC shoulders are permissible. All full‑depth concrete shoulders must match the material gradation of the mainline pavement from subgrade to surface and conform to Publication 408 sections governing plain or reinforced concrete or non‑dowelled/RCC shoulders.</p>
+<p>Finally, once structural layer thicknesses have been established, a life‑cycle cost analysis is performed to select the most economical configuration. This comprehensive sequence—spanning condition assessment, stiffness testing, subgrade strength correlation, drainage design, overlay preparation, shoulder specification, and cost optimization—constitutes the procedural framework for pavement structure design. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 115–126), Ch. 6 (pp. 134–150), Ch. 8 (pp. 160–166), Ch. 9 (pp. 172–173)</small></p>
+<p>The pavement structure must be designed in accordance with the 1993 AASHTO Pavement Design Procedures as amended by PennDOT, employing the mandated AASHTOWare DARWin 3.01 software. Any new construction, reconstruction or rehabilitation project whose continuous paved length exceeds 500 ft on divided roadways or 1,000 ft on undivided roadways requires a full DARWin analysis, and if the design year used for approval differs from the actual construction year by more than three years a new design and life‑cycle cost analysis must be performed. The design assumes a uniform, stable subgrade; CBR values above ten must receive approval from the Chief Geotechnical Engineer, no CBR may exceed twenty in the Heukelom‑Klomp correlation (limiting the allowable resilient modulus to 30 000 psi), and back‑calculated resilient moduli greater than 15 000 psi must be confirmed by additional testing. Frost‑susceptible soils must be removed or insulated, and subgrade strengthening is required when CBR falls below five.</p>
+<p>A well‑drained aggregate subbase is placed on the prepared subgrade to provide drainage and a supportive platform for overlying layers. Base and subbase materials shall be highly permeable so that gravity can rapidly remove free water; the slope of subbase layers should be maximized, and base drains sized and spaced per Publication 13M with outlets protected from crushing or plugging. Lateral underdrains are mandated at wet subgrade areas, cut‑to‑fill transitions, and where intersecting water tables occur, with side seepage intercepted to create sufficient safety margins against moisture‑induced distress.</p>
+<p>For flexible pavements, stress‑absorbing membranes (SAM) or membrane interlayers (SAMI) may be incorporated only when the existing surface is free of excessive cracking or extensive alligator cracking and when thermal cracks are spaced no more than fifteen feet apart. The SAMI must be placed directly on the pavement and covered by at least two overlay courses that satisfy the manufacturer’s depth recommendations. When geosynthetics are used for structural reinforcement, their design parameters are developed individually in accordance with FHWA guidelines, NTPEP data and the manufacturer’s specifications.</p>
+<p>Rigid concrete pavements are governed by joint spacing and load‑transfer requirements: reinforced slabs shall employ thirty‑foot transverse joints with coated dowel bars fully bonded along their embedded length, while plain concrete may use fifteen‑foot spacing. Longitudinal tie bars are required for patches longer than sixty‑five feet, slab thickness may not be reduced below eight inches even when prestressed, and any reconstruction exceeding roughly five hundred feet obliges a complete pavement design analysis to verify adequate slab depth. Accelerated concrete must achieve the minimum compressive strength within four to seven hours before traffic is permitted; high‑early‑strength mixes are prohibited because of shrinkage‑cracking risk.</p>
+<p>When widening an existing asphalt pavement, partial lane additions narrower than ten feet must replicate the existing layer depths and concrete thicknesses while preserving drainage continuity; full‑width additions of ten feet or more follow the same matching principle unless the new lane is expected to carry significantly different traffic loads, in which case design shall be based on the anticipated traffic. Any alteration of layer thicknesses must be checked to ensure adequate cross‑sectional drainage.</p>
+<p>Overlay design imposes minimum thickness limits: Superpave Wearing Course overlays shall not be placed thinner than one and a half inches unless special approval is obtained. Thin overlays are permissible only when the existing surface is asphalt, the underlying pavement is structurally sound (no more than about two percent requires patching), and both surface and subsurface drainage are adequate or will be upgraded; all overlays must conform to the depth limits in the design tables.</p>
+<p>Jointed plain concrete pavements require tied concrete shoulders; on high‑volume urban interstates and expressways full‑depth cement concrete shoulders with dowelled transverse joints, as shown in Publication 72M, are mandatory. On rural routes with two‑way ADT below ten thousand, tied shoulders may be undowelled or widened slabs supported by asphalt or reinforced cement concrete shoulders. Wherever a full‑depth concrete shoulder is used, the material composition from subgrade through surface must match that of the mainline pavement and conform to Publication 408.</p>
+<p>Structural adequacy is quantified by the Structural Number; the calculated SN derived from the chosen layer thicknesses must exceed the required Design SN, providing an inherent factor of safety. Thickness selection may be performed using either the Specified Thickness or Optimized Thickness method available in DARWin, applying the structural coefficients listed in Table 9.3 and assigning a drainage coefficient of 1.0 to every layer. All proposed layer depths are constrained by the minimum and maximum lift limits set out in Tables 9.4 and 9.5. Cost factors for surface, base and sub‑base materials are evaluated so that total pavement cost is minimized while still meeting these structural, material and reliability constraints, thereby ensuring a reliable and economical pavement system. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–63), Ch. 4 (pp. 84–89), Ch. 5 (pp. 115–120), Ch. 6 (pp. 134–150), Ch. 8 (pp. 160–166), Ch. 9 (pp. 172–173)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>The guidelines specify that joint spacing for reconstructed PCC lanes must follow the standards in Publication 72M – either 30 ft spacing for jointed reinforced concrete pavement or 15 ft spacing for jointed plain concrete pavement, with an intermediate joint required if existing spacing exceeds about 20 ft. For precast slab repairs the slab width may not exceed a single lane and the length must be at least 6 ft but no more than 15 ft (up to 20 ft for prestressed units), with a minimum structural thickness of 8 in and an as‑delivered elevation set about ¼ in higher than surrounding pavement. Tie bars or tie bolts are only called for on patches longer than 65 ft, while any patch – including flexible‑base substitution – must be at least 6 ft long. The source does not provide explicit dimensional requirements for the base, subbase, treated‑soil, shoulder, edge‑support, or reinforcement beyond noting that reinforcement details appear on shop drawings. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–89)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>The pavement structure specification must identify every constituent layer and the exact material that will form it. The subgrade shall be a uniform, stable earth; above it an aggregate subbase providing drainage; the base is normally constructed of either Asphalt‑Treated Permeable Base (ATPB) or Cement‑Treated Permeable Base (CTPB); the surface may be a rigid concrete slab such as Jointed Plain Concrete Pavement (JPCP) or Roller Compacted Concrete (RCC), or a flexible asphalt overlay. For concrete surfaces the type and performance criteria are prescribed: standard Portland‑cement concrete must comply with Publication 408 §704 using an optimized aggregate gradation, while accelerated concrete must meet the minimum compressive strength and time‑to‑strength limits set in Publication 408 §501; high‑early‑strength mixes are prohibited because of excessive shrinkage. Where load transfer is required, dowels shall be bonded along their full embedded length with epoxy, polyester or vinylester binders, and precast units must conform to the Class AA cement concrete mix that exceeds normal PCC requirements.
+When a flexible overlay is used, the specification must name the Superpave mix design, including the permitted nominal aggregate sizes of 25.0 mm, 19.0 mm, 12.5 mm and 9.5 mm, the required binder grade PG 64E‑22 for standard 6.3 mm wearing courses (and the prohibition of that binder for 9.5 mm fine‑graded courses), and the minimum thicknesses—at least a one‑inch leveling course and a wearing course no thinner than 1½ inches. Any interlayer material placed beneath the asphalt must be compatible with the matrix.
+If stress‑absorbing membranes or membrane interlayers (SAMI) are incorporated, they may be used only on flexible pavements that have flexible bases; the existing surface must not exhibit excessive cracking and thermal crack spacing shall not exceed fifteen feet. The SAMI is to be placed directly on the pavement and covered by a minimum of two overlying courses whose combined depth satisfies the manufacturer’s recommendation.
+Geotextiles, when specified, require design parameters for drainage, separation or reinforcement that are defined on a project‑by‑project basis using Publication 408, FHWA Geosynthetic Design Guidelines, NTPEP data, and the manufacturer’s product information.
+When reclaimed material is stabilized, the specification must state the chosen mechanism—pulverization, mechanical stabilization with added aggregate or RAP to achieve a target gradation, or chemical stabilization with cement, lime, fly ash or similar additives. For mechanical stabilization the mix shall contain sufficient imported granular material to meet the desired gradation and structural capacity; for chemical stabilization the type and dosage of each additive must be established by laboratory‑based mix designs that balance strength gain against brittleness, and the reclaimed material’s strength potential, aggregate gradation and stiffness must be documented.
+In widening projects the new asphalt layers shall be placed at the same depth as the existing asphalt, and any new concrete layers shall match the thickness of the existing concrete; drainage layers must remain consistent with those already in place unless traffic loading justifies a different design.
+For each layer the designer assigns a structural coefficient (a_i) taken from Table 9.3 and sets the drainage coefficient (m_i) to 1.0, while ensuring that layer thicknesses fall within the minimum and maximum lift depths prescribed in Tables 9.4 and 9.5. Flexible pavements must include both aggregate‑cement and aggregate‑lime‑pozzolan options as alternative base courses in the bid.
+Finally, key material properties required for the concrete slab under the 1993 AASHTO rigid‑pavement design procedure are the 28‑day mean modulus of rupture, the 28‑day elastic modulus, the effective subgrade k‑value, and performance coefficients such as the load‑transfer coefficient J and drainage coefficient Cd. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 4 (pp. 84–89), Ch. 5 (pp. 115–126), Ch. 8 (p. 160), Ch. 9 (pp. 172–173)</small></p>
+<p>The selection and proportioning of materials for a pavement structure begin with a comprehensive assessment of traffic loads, existing pavement condition, subgrade strength, and drainage capability. That assessment defines the required layer thicknesses and indicates whether mechanical or chemical stabilization is needed; laboratory‑tested mix designs then determine the exact type and amount of additives to achieve sufficient strength while avoiding excessive brittleness. For the base and sub‑base layers, high permeability is essential so that water can drain by gravity, which also prevents capillary rise; designers use particle‑size gradation as a practical indicator of this property, yet they may intentionally reduce permeability in limited zones to provide a more stable work platform during construction.</p>
+<p>When concrete pavements are specified, the standard Portland cement concrete mix prescribed in Publication 408 Section 704 with an optimized aggregate gradation is employed for most projects, delivering traffic‑opening strength within twenty‑four to forty‑eight hours. High‑early‑strength mixes are avoided because they tend to shrink and crack, while accelerated concrete—capable of reaching opening strength in four to seven hours—is reserved for situations where rapid traffic restoration is critical. In cases where work‑zone safety or minimal disruption is paramount, precast concrete paving systems using high‑strength, durable mixtures that exceed the standard specifications may be selected despite higher cost and logistical complexity; all load‑transfer devices such as dowel bars must be fully bonded to ensure long‑term performance.</p>
+<p>For asphalt overlays, the choice of a thin Superpave wearing course depends on the soundness of the existing surface, adequate drainage, and the absence of a need for structural reinforcement. On interstate facilities the overlay thickness cannot be less than one‑and‑a‑half inches without special approval, and the appropriate aggregate size is taken from prescribed tables to satisfy the required structural coefficient. A PG 64E‑22 binder is mandated for the 6.3 mm mix but prohibited for the 9.5 mm fine‑grade version. Where reflective cracking, moisture intrusion, or other distress mechanisms are anticipated, an interlayer such as geotextile fabric or fiberglass grid is incorporated based on the type of distress, cost considerations, and expected life extension. A minimum one‑inch leveling or scratch course may be placed to provide a uniform platform and can count toward structural thickness.</p>
+<p>When widening existing pavements, the new sections are required to mirror the original structure: partial widenings under ten feet must use identical layer depths for asphalt or concrete, and drainage layers should remain consistent. For full‑width additions of ten feet or more, the same rule applies unless traffic conditions differ significantly; in those instances the design adopts thicknesses appropriate to the actual loads while still ensuring adequate drainage throughout the cross‑section.</p>
+<p>Concrete shoulders are designed to meet edge‑stress reduction, durability, constructability, and performance goals. Urban interstate projects must employ full‑depth tied concrete shoulders with dowelled transverse joints, whereas rural interstates may use non‑dowelled ties unless traffic volumes or incident‑management needs dictate otherwise. Corridors with a two‑way average daily traffic below ten thousand may be served by widened slabs with asphalt or roller‑compacted concrete shoulders. Wherever a full‑depth cement concrete shoulder is used, all material layers from subgrade to surface must match those of the mainline pavement, and the relevant sections of Publication 408 are applied to assure proper constructability and long‑term performance. By balancing drainage efficiency, structural capacity, durability against cracking, construction practicality, and anticipated traffic impacts, the selected materials and mixture proportions satisfy the overall performance objectives of the pavement system. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 84–89), Ch. 5 (pp. 115–126), Ch. 8 (pp. 165–166)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>A pavement structure must incorporate a range of joints, reinforcement measures, load‑transfer systems, transitions and other structural details to ensure performance. For flexible pavements that include experimental items, stress‑absorbing membranes are placed over full‑width sections across both transverse and longitudinal joints as well as random cracks; the spacing between thermal cracks may not exceed fifteen feet and the existing surface must be free of excessive cracking. Such membranes are limited to flexible bases and require at least two overlay courses installed to the depths recommended by the manufacturer, with coordination through the Materials Division.</p>
+<p>When full‑depth concrete patches are placed, every transverse joint must contain a load‑transfer device, most commonly coated dowel bars that are bonded along their entire embedded length with epoxy, polyester or vinylester binders. Joint spacing is governed by pavement type: jointed reinforced concrete pavement calls for thirty‑foot perpendicular joints, while jointed plain concrete pavement uses fifteen‑foot spacing; both require appropriate seals and standard or skewed basket details. If a patch exceeds sixty‑five feet in length, longitudinal tie bars or tie bolts are required, and when reconstructing a single lane longer than five hundred feet the new joints must align with existing ones, inserting an intermediate joint if the existing spacing is greater than twenty feet.</p>
+<p>Rigid pavements such as Jointed Plain Concrete Pavement (JPCP) or Roller Compacted Concrete (RCC) also contain surface joints whose effectiveness is expressed by a load‑transfer coefficient (J). Reinforcement is generally unnecessary for modern designs, appearing only in older types such as Jointed Reinforced Concrete Pavement (JRCP) or Continuously Reinforced Concrete Pavement (CRCP), which are now seldom specified.</p>
+<p>Reinforcement of the pavement layers can be achieved with geogrids placed at the subgrade‑aggregate interface to stabilize weak subgrades, and Class 4 geotextiles used to separate the subgrade from the subbase, provide drainage, erosion control, or sediment control. In overlay applications, reinforcement may consist of a needle‑punched geotextile fabric that becomes saturated in the asphalt matrix, high‑strength fiberglass mesh grids that embed into the new overlay to supply tensile and torsional strength, or composite reinforcing grids that combine moisture‑barrier fabric with embedded glass filaments.</p>
+<p>Transition details include granular transition material where a new pavement abuts an existing section of different total depth, providing a smooth change in support. A safety edge—a thirty‑degree tapered treatment applied to the outside of the wearing or binder course—serves as an edge transition; it must be at least one and a half inches deep but shall not exceed five inches. Where surface depressions exist before an overlay, a scratch or leveling course may be placed to create a uniform working platform.</p>
+<p>In areas with low California Bearing Ratio values, subgrade strengthening through cement or lime stabilization or rock capping is specified to achieve adequate bearing capacity. Full‑depth concrete shoulders must match the mainline pavement from subgrade to surface and are detailed according to Publication 408: urban interstates require dowelled transverse joints for full‑depth PCC shoulders, while rural interstates with two‑way traffic under ten thousand vehicles may use tied shoulders with undowelled transverse joints; high‑volume corridors that must support work‑zone traffic also demand dowelled shoulder joints. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 4 (pp. 84–89), Ch. 5 (pp. 115–120), Ch. 6 (pp. 143–150), Ch. 8 (pp. 160–166)</small></p>
+<p>Design of the interfaces within a pavement structure follows a systematic sequence that begins with preparation of a uniform working platform. A dedicated scratch or leveling course at least one inch thick is placed before any overlay, and it may be counted as part of the structural calculation. When an existing asphalt layer overlies a cement‑concrete or brick base, a minimum of 1½ inches of that asphalt should be retained to preserve its structural integrity and to ensure adequate bonding; coring can be used to verify bond quality. For stress‑absorbing membranes (SAM) or interlayers (SAMI), the membrane is installed directly on a qualifying flexible pavement surface that shows no excessive cracking or alligator cracking, and where thermal‑crack spacing does not exceed 15 feet. The design must provide at least two overlying material courses of sufficient depth to satisfy the manufacturer’s recommendations, with any leveling or grade‑adjustment courses placed above the membrane. When geosynthetic fabrics are employed for separation, reinforcement, or load distribution, their properties are defined on a project‑by‑project basis using FHWA guidelines, NTPEP data and manufacturer specifications. At the subgrade‑aggregate boundary a geogrid may be placed to reinforce weak subgrades, while a Class 4 Type A geotextile is required across the full lane width to separate subgrade from subbase; if the subgrade CBR falls below three, a Class 4 Type C geotextile can also provide lateral restraint. All treatments must respect minimum resilient‑modulus values and any CBR thresholds that trigger subgrade strengthening. The interface between new concrete patches or precast slabs and the existing pavement is achieved by providing continuous load transfer through dowelled transverse joints. Every joint is anchored with epoxy, polyester or vinylester binders along its full embedded length, and coated dowel bars are used together with appropriate seals. Joint spacing follows the applicable standards: reinforced‑concrete pavements require 30‑foot perpendicular joints, while plain concrete uses 15‑foot perpendicular joints. New transverse joints are aligned with existing joints of adjacent lanes to maintain consistent spacing, and a prepared bedding course under precast units supplies a uniform foundation that can be adjusted before final diamond grinding. When a pavement is widened, the new portion is tied to the existing structure by using the same material type and comparable thickness for each layer. For partial widenings less than ten feet, asphalt layers are duplicated in depth and concrete layers in thickness, and drainage layers follow the original layout. Full‑width additions of ten feet or more follow the same rule unless the added lane is expected to carry a different traffic loading; in that case heavier or lighter layer thicknesses may be used, but continuity of drainage across the cross‑section must still be verified. Concrete shoulders are tied directly to the main pavement so that material continuity extends from subgrade to surface. In urban interstates and high‑volume work zones full‑depth cement‑concrete shoulders employ dowelled transverse joints; in lower‑traffic rural settings undowelled joints may be acceptable. Matching the same concrete mix and aggregate gradation across the shoulder‑pavement interface eliminates differential heaving, settlement and horizontal separation, thereby reducing edge stresses. Where a new pavement abuts an existing section of different total depth, a gradual granular transition—using embankment fill or non‑frost‑susceptible subbase material—is specified to avoid abrupt changes in support. All layer transitions are designed to be smooth, and any change in thickness or material is accompanied by appropriate separation or reinforcement fabrics. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 4 (pp. 84–89), Ch. 5 (pp. 115–120), Ch. 6 (pp. 143–150), Ch. 8 (pp. 165–166)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>The pavement structure must be conceived as a drainage‑controlled system because water is the dominant cause of deterioration. Design therefore begins with verification that both surface and subsurface drainage meet acceptable standards; if they do not, upgrades are incorporated before any new layers are placed. The base and subbase are specified as highly permeable granular materials so that gravity‑drainable water can escape rapidly, and their slopes are maximized to increase the rate of drainage within the layers. Edge drains, lateral underdrains, and continuous edge drains are shown on the typical section drawing for all projects—interstate and non‑interstate alike—and are spaced especially at cut‑to‑fill transitions and on the low side of superelevated sections; outlets are protected against crushing or plugging. Positive longitudinal slopes are maintained beneath each pavement segment, including where thickness varies, to shed water toward these drains.</p>
+<p>Where moisture infiltration threatens the subgrade, wet locations are identified in the geotechnical investigation and effective drainage measures—such as base drains or other suitable underdrains—are installed before reclamation or placement of a new layer. Frost‑susceptible soils are either removed or insulated with a sufficiently thick non‑frost‑susceptible layer, and frost‑heave probability data together with CBR and Falling Weight Deflectometer results are used in the DARWin analysis to size layers that can tolerate freeze‑thaw cycles.</p>
+<p>For thin asphalt overlays the overlay thickness is limited to at least one‑and‑a‑half inches; in harsher climates a thicker overlay or an interlayer such as geotextile fabric is prescribed to act as a moisture barrier. Selection of any interlayer follows consideration of existing distresses, anticipated traffic, climate conditions, and the potential for water damage, ensuring that moisture intrusion is mitigated while structural requirements are satisfied. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 115–126), Ch. 6 (pp. 134–150), Ch. 8 (p. 160)</small></p>
+<p>The pavement structure must be designed to satisfy a set of accessibility, safety, geometric and user requirements. Effective surface and subsurface drainage is paramount; high‑permeability base and subbase materials are used together with maximized subbase slopes so that gravity rapidly removes water, while continuous edge drains are placed along the outer pavement edge, on the low side of superelevated sections and in median areas where water accumulation occurs. Lateral underdrains are installed at all cut‑to‑fill transitions and drain outlets located in mowable zones are protected from crushing or plugging. Geometrically, concrete slabs must incorporate prescribed joint spacing—30 ft for reinforced concrete and 15 ft for plain concrete—with perpendicular joints, coated dowel bars and proper seals to ensure load transfer. Slab widths are limited to a single lane and slab lengths range from six to fifteen feet, extending to twenty feet only for prestressed units; accelerated‑setting or precast systems permit traffic reopening as early as four to seven hours after placement, with liquidated damages applied if the lane is not reopened on schedule. When pavement widening is required, partial widenings under ten feet must match the existing layer thicknesses, and full‑width additions of ten feet or more must be checked to provide adequate drainage throughout the cross‑section while maintaining continuity of drainage layers between new and existing portions. A minimum one‑inch leveling course is provided to establish the required cross‑slope, and thin asphalt overlays on sound pavements are limited to a minimum thickness of 1½ inches unless a special approval is obtained. The outer edge of wearing or binder courses incorporates a Safety Edge with a 30° taper (tolerance 26°–40°) extending at least 1½ inches but not more than five inches, allowing vehicles that drift off the roadway to return safely. Concrete shoulders are tied to the main pavement to reduce edge stresses; full‑depth cement concrete shoulders are required on high‑volume corridors where incident‑management or work‑zone traffic is likely, with dowelled transverse joints for urban interstates and for rural routes that need shoulder support, while tied shoulders with undowelled joints or widened slabs of asphalt/RCC may be used on lower‑traffic rural routes. When full‑depth concrete shoulders are employed, the material composition from subgrade to surface must be continuous with that of the mainline pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 84–89), Ch. 5 (pp. 115–120), Ch. 8 (pp. 165–166)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed pavement structure is subjected to a series of verification steps that together confirm compliance with design standards, constructability, anticipated performance, and alignment with project requirements. First, the design is run through DARWin using the 1993 AASHTO procedures; the resulting analysis must satisfy the minimum thickness tables for surface, base, and subgrade layers and produce a Design Structural Number (SN) that exceeds the required SN. Thicknesses are generated only by the Specified Thickness Design or Optimized Thickness Design methods, with each layer assigned its structural coefficient from Table 9.3 and a drainage coefficient of 1.0; layered‑analysis techniques are expressly prohibited. All course depths are checked against the minimum and maximum limits in Tables 9.4 and 9.5 to ensure that the pavement can be built as designed. The DARWin output is then compared with the Central Office’s Pavement ME model, providing a benchmark for compliance with agency standards. The design package must include all required documentation—cover letter, calculations, traffic and geotechnical data, life‑cycle cost analysis, and any other specified items—and receive formal approval from the Pavement Design and Analysis Unit. Field verification of estimated rehabilitation quantities during the final design phase further confirms that the proposed layers are constructible within the project schedule. Performance considerations are incorporated by using traffic load inputs, resilient modulus values, and frost‑heave probability in the analysis, ensuring that the pavement will meet durability expectations under projected service conditions. Cost is addressed by balancing unit costs of surface, base, and sub‑base materials while selecting required base material alternatives to satisfy project specifications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–136), Ch. 9 (pp. 172–173)</small></p>
+<p>The pavement structure is anticipated to deliver an extended service life, heightened resistance to moisture‑induced distresses such as rutting, loss of support and cracking, and superior ride quality characterized by uniform performance. For rigid pavements the performance is quantified through initial serviceability—reflecting ride quality at opening—and terminal serviceability—representing condition at the end of design life. These indices are generated by the 1993 AASHTO rigid‑pavement design procedure implemented in DARWin, which incorporates projected ESALs for the early period, concrete modulus of rupture, slab elastic modulus, load‑transfer coefficient, drainage coefficient, reliability level and overall standard deviation to produce numerical estimates of service life and distress resistance. In addition, concrete shoulders that are tied to a cement‑concrete pavement contribute to delayed first maintenance by lowering edge stresses, reducing deflection, differential heaving, settlement and horizontal separation; the time until the initial maintenance intervention serves as a direct measure of this benefit. Performance will be monitored in the field by tracking the occurrence and severity of identified distress types—transverse cracks in concrete slabs, surface ruts and roughness in asphalt layers, and other surface undulations—and by observing consistency of ride quality over time. The effectiveness of drainage is evaluated through its impact on reducing rut formation and surface roughness caused by a fluid‑saturated base, while the stiffness‑related reduction in deflection is verified against predicted serviceability values. Maintenance records documenting the timing of the first corrective action and observations of heave, settlement or joint separation provide additional quantitative evidence of distress resistance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 8 (pp. 160–166)</small></p>
+<h2 id="related-concepts">Related Concepts</h2>
+<ul>
+<li><a href="base-course.html">Base Course</a></li>
+<li><a href="shoulder.html">Shoulder</a></li>
+<li><a href="subbase.html">Subbase</a></li>
+<li><a href="subgrade.html">Subgrade</a></li>
+</ul>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-D.3: hierarchy concept-map diagram (md->html reverse builder; per-page inject) */
+figure.hier-diagram { overflow-x: auto; margin: 1.5rem 0; }
+svg.hd { max-width: 100%; height: auto; display: block; margin-inline: auto;
+  font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+svg.hd text { text-anchor: middle; dominant-baseline: middle; }
+svg.hd .hd-hub rect { fill: var(--accent); stroke: var(--accent); }
+svg.hd .hd-hub text { fill: var(--bg); }
+svg.hd .hd-child rect { fill: var(--chip); stroke: var(--border); stroke-width: 1; }
+svg.hd .hd-child text { fill: var(--fg); }
+svg.hd .hd-edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+svg.hd .hd-stub { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 3; }
+svg.hd .hd-child { cursor: pointer; }
+svg.hd .hd-child a rect { transition: fill .12s ease, stroke .12s ease; }
+svg.hd .hd-child:hover rect,
+svg.hd .hd-child a:focus rect,
+svg.hd .hd-child a:focus-visible rect { fill: var(--chip); stroke: var(--link); stroke-width: 2; }
+.hd-tooltip { position: fixed; z-index: 10000; max-width: 22rem; padding: .45rem .7rem;
+  background: var(--fg); color: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  font-size: .8rem; line-height: 1.4; pointer-events: none; opacity: 0; visibility: hidden;
+  transition: opacity .12s ease; box-shadow: 0 3px 12px rgba(0, 0, 0, .28); }
+.hd-tooltip.hd-tooltip-show { opacity: 1; visibility: visible; }
+</style>
+<script>
+(function () {
+  var tip = null;
+  function ensureTip() {
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "hd-tooltip";
+      tip.setAttribute("role", "tooltip");
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+  function show(node) {
+    var desc = node.getAttribute("data-desc");
+    if (!desc) return;
+    var t = ensureTip();
+    t.textContent = desc;
+    var r = node.getBoundingClientRect();
+    t.style.left = Math.max(8, Math.round(r.left)) + "px";
+    t.style.top = Math.round(r.bottom + 8) + "px";
+    t.classList.add("hd-tooltip-show");
+  }
+  function hide() { if (tip) tip.classList.remove("hd-tooltip-show"); }
+  var nodes = document.querySelectorAll(".hd-child");
+  for (var i = 0; i < nodes.length; i++) {
+    (function (node) {
+      node.addEventListener("mouseenter", function () { show(node); });
+      node.addEventListener("mouseleave", hide);
+      var focusTarget = node.querySelector("a") || node;
+      focusTarget.addEventListener("focus", function () { show(node); });
+      focusTarget.addEventListener("blur", hide);
+    })(nodes[i]);
+  }
+})();
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

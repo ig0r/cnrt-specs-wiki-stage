@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pavement Condition Assessment</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html" class="active" aria-current="page">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><span class="crumb-current">Pavement Condition Assessment</span></nav>
+<article><h1>Pavement Condition Assessment</h1>
+<div class="meta"><div class="part-of">Part of: <a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a> <span class="edge edge-taxonomic" title="Pavement Condition Assessment is a topic under PennDOT Pavement Policy Manual (Publication 242).">is-subtopic-of</span></div><div class="edge-reading">Pavement Condition Assessment is a topic under PennDOT Pavement Policy Manual (Publication 242).</div><div><a class="tag" href="index.html?q=pavement-condition">pavement-condition</a><a class="tag" href="index.html?q=condition-survey">condition-survey</a><a class="tag" href="index.html?q=distress-survey">distress-survey</a><a class="tag" href="index.html?q=stampp">stampp</a><a class="tag" href="index.html?q=international-roughness-index">international-roughness-index</a><a class="tag" href="index.html?q=pavement-performance">pavement-performance</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Pavement Condition Assessment is a systematic evaluation of the physical state of existing roadway surfaces—flexible asphalt layers, jointed Portland cement concrete slabs, and specialized overlays such as polymer‑modified concrete—as well as their supporting base, sub‑base and subgrade soils [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The process combines automated STAMPP video‑logging surveys and detailed visual inspection to inventory surface distresses (cracking, rutting, raveling, potholes, joint spalling, faulting, drainage deficiencies), measures crack width, depth and length against defined repair thresholds (e.g., cracks deeper than 1/8 in. or wider than 0.007–0.016 in.) and quantifies ride quality through the International Roughness Index, while in‑situ tests such as Falling Weight Deflectometer, dynamic cone penetrometer and targeted coring verify layer thicknesses, material properties and subgrade stiffness [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. These quantified observations are compiled into serviceability indices and treatment matrices that guide engineering decisions between routine maintenance, preservation, rehabilitation or full reconstruction, ensuring that any new or repaired surface meets the smoothness criteria of Publication 408 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- HIER-DIAGRAM:START -->
+<p><a href="https://www.pa.gov/agencies/penndot">PennDOT</a> publications covering <strong>“Pavement Condition Assessment”</strong> also include the following subtopics: <a href="distress.html">Distress</a> and <a href="ride-quality.html">Ride Quality</a>.</p>
+<figure class="hier-diagram">
+  <svg class="hd" viewBox="0 0 358 210" width="358" height="210" role="group" aria-label="Concept map: Pavement Condition Assessment and its subtopics" xmlns="http://www.w3.org/2000/svg">
+    <g class="hd-hub"><rect x="74" y="16" width="210" height="48" rx="6"/><text class="hd-hub-label" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="179" y="32">Pavement Condition</tspan><tspan x="179" y="48">Assessment</tspan></text></g>
+    <path class="hd-edge" d="M179 64 V 96 H 91 V 128"/>
+    <path class="hd-edge" d="M179 64 V 96 H 267 V 128"/>
+    <g class="hd-child" data-slug="distress" data-desc="Distress is any observable deterioration—whether on the surface or within the pavement structure—that compromises support, ride quality, durability, or serviceability."><title>Distress is any observable deterioration—whether on the surface or within the pavement structure—that compromises support, ride quality, durability, or serviceability.</title><a href="distress.html"><rect x="16" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="91" y="152">Distress</tspan></text></a></g>
+    <g class="hd-child" data-slug="ride-quality" data-desc="Ride Quality, most often quantified by the International Roughness Index (IRI), is a performance metric that captures the smoothness of a concrete pavement surface and directly influences occupant co…"><title>Ride Quality, most often quantified by the International Roughness Index (IRI), is a performance metric that captures the smoothness of a concrete pavement surface and directly influences occupant co…</title><a href="ride-quality.html"><rect x="192" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="267" y="152">Ride Quality</tspan></text></a></g>
+    <path class="hd-stub" d="M91 176 V 194"/>
+  </svg>
+</figure>
+<!-- HIER-DIAGRAM:END -->
+
+<p>Pavement Condition Assessment incorporates <a href="distress.html">Distress</a> as its primary input for identifying surface-oriented failures and structural deterioration that compromise serviceability. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The process utilizes <a href="ride-quality.html">Ride Quality</a> metrics, specifically the International Roughness Index, to quantify smoothness and verify compliance with Publication 408 standards for occupant comfort and safety. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-investigation-objectives">Purpose and investigation objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#existing-information-and-records">Existing information and records</a></li><li><a href="#visual-inspection-and-condition-assessment">Visual inspection and condition assessment</a></li><li><a href="#field-measurements-and-testing">Field measurements and testing</a></li><li><a href="#sampling-and-laboratory-investigation">Sampling and laboratory investigation</a></li><li><a href="#structural-and-functional-performance">Structural and functional performance</a></li><li><a href="#data-interpretation-and-diagnosis">Data interpretation and diagnosis</a></li><li><a href="#findings-confidence-and-next-actions">Findings, confidence, and next actions</a></li><li><a href="#reference-tables">Reference tables</a></li><li><a href="#related-concepts">Related Concepts</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Publication 408/2020 Specifications (2025)</a>, <a href="#ref-2">Pavement Policy Manual (2025)</a></div></details>
+<details class="subconcepts-toggle"><summary>Sub-concepts (2)</summary><div class="subconcepts-body"><a href="distress.html">Distress</a> · <a href="ride-quality.html">Ride Quality</a></div></details>
+<h2 id="purpose-and-investigation-objectives">Purpose and investigation objectives</h2>
+<p>The Pavement Condition Assessment examines the physical state of existing roadway surfaces, including flexible asphalt layers, jointed Portland cement concrete slabs, and specialized overlays such as Portland polymer concrete, together with the supporting base, sub‑base and subgrade soils [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. It records observable surface distresses through automated STAMPP surveys and visual inspection, quantifying transverse, longitudinal and miscellaneous cracking, surface tears, rutting, raveling or weathering, potholes, edge deterioration, shoving, slippage, bleeding, minor corrugation, joint spalling, faulting, and drainage deficiencies [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For cracks the investigation determines type, source and extent, measures width, depth and length, locates end points relative to permanent reference marks, and uses coring when mechanical probes cannot establish depth; repair thresholds are applied such that cracks deeper than 1/8 in. or wider than 0.007–0.016 in. trigger further action [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Severity thresholds are also applied to other distresses: rut depth shall be less than 1½ in., transverse and miscellaneous crack depth less than 1.0 in. with average width not exceeding the medium rating of ≤ ½ in., raveling/weathering limited to the medium rating, and each distress classified according to the established rating system [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The assessment measures ride‑quality by determining the International Roughness Index for existing, resurfaced or newly constructed sections and compares those values with the smoothness criteria set forth in Publication 408 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For concrete pavements material characteristics such as percent patching, compressive strength, air content, and visual signs of durability problems—including aggregate deficiencies, frost damage, Vanport Limestone concerns or alkali‑silica reaction—are evaluated, and core samples are taken near deteriorated joints and at random locations to ascertain subgrade or subbase condition [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The investigation must answer a series of questions: which distress types are present and how severe they are relative to the prescribed thresholds; whether the observed severity activates treatment options in preservation‑rehabilitation matrices; what the dominant causative mechanisms are—load related, drainage related, or material related; whether any prohibited materials exist in the surface layers; whether pavement thickness satisfies minimum requirements after accounting for milling depth; whether the base, subbase and subgrade are sound, adequately drained and possess sufficient in‑situ stiffness to support construction equipment and traffic; what the projected future traffic loading will be; how the segment ranks in overall condition as expressed by the Overall Pavement Index and the percentage of mileage in excellent or good condition; whether two or more structural components exceed FHWA poor‑condition limits; and how the Present Serviceability Index derived from roughness, crack, patch and rut measurements compares with the Terminal Serviceability Index for the road’s functional classification [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The answers to these questions guide the preliminary engineering decision between routine maintenance, preservation, rehabilitation or full reconstruction, and they also verify that any new or rehabilitated surface satisfies the IRI smoothness criteria required by Publication 408 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110); [2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 121–133), Ch. 6 (pp. 150–151), Ch. 11 (p. 197), Ch. 13 (pp. 216–221), App. J (pp. 267–272)</small></p>
+<p>The detailed condition assessment of a PPC overlay—identifying cracking or surface tears, measuring each crack’s width, depth and length, and confirming structural significance through coring and laboratory analysis—directly informs the engineering decision‑making process. When measurements exceed the defined repair thresholds (greater than one‑eighth inch deep and between 0.007 and 0.016 inch wide), the findings trigger removal and replacement of structural cracks or prescribe surface sealing with HMWM resin for non‑structural distress, ensuring that corrective actions are targeted, cost‑effective, and meet performance criteria. Consequently, these quantified observations shape planning, design, maintenance, and rehabilitation strategies by establishing clear criteria for when to preserve existing pavement versus undertake more extensive rehabilitation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Pavement Condition Assessment is appropriate for any existing roadway constructed of asphalt‑concrete, jointed Portland cement concrete (plain or continuously reinforced) or unpaved surfacing that is part of the state highway network, including both National Highway System routes and representative non‑NHS sections. The assessment relies on the STAMPP automated surveys together with visual inspection to record surface‑layer distresses such as cracking (including fatigue, transverse thermal and reflection cracks), rutting, edge deterioration, raveling or weathering, joint spalling, faulting, potholes, shoulder drop‑off and drainage problems. Ride quality is quantified by the International Roughness Index, while condition ratings for asphalt sections are based on IRI, surface‑crack percentage and rut depth, and for concrete sections on IRI, crack percentage and joint faulting. In addition to the visual survey, in‑situ testing of all structural layers—surface, base, subbase and subgrade—is performed using tools such as falling weight deflectometers, dynamic cone penetrometers or light‑weight deflectometers, and targeted coring is used to verify layer thicknesses, material composition and moisture conditions. The methodology works best when a minimum wearing course exists and the underlying base or subgrade is structurally sound and well‑drained; these site conditions are essential for treatment options such as cold recycling, which is limited to pavements carrying less than roughly 200 equivalent single axle loads per day. Conditions that limit applicability include ramp sections (which are not captured by STAMPP), pavements with poor drainage, overly coarse underlying material, or those exhibiting premature mid‑slab cracking caused by inadequate subbase material or problematic aggregates such as Vanport Limestone or alkali‑silica reaction. When these pavement types, materials, layers, observable distresses and favorable site conditions are present, the assessment provides the data needed to select between preservation and rehabilitation strategies and to verify that new or rehabilitated surfaces meet the smoothness criteria of Publication 408. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=25c41528 src=pub_242_change_10::tab:p270#1 -->
+<p>The table below presents a selection matrix for Full Depth Reclamation based on specific pavement distress types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-condition-assessment-1-cap" tabindex="0"><table class="ct-table" id="ct-pavement-condition-assessment-1" aria-describedby="ct-pavement-condition-assessment-1-sum">
+<caption id="ct-pavement-condition-assessment-1-cap">TABLE J.1 SELECTION OF FULL DEPTH RECLAMATION (FDR)</caption>
+<thead>
+<tr><th scope="col">PAVEMENT DISTRESS</th><th scope="col">FDR</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Surface DefectsRavelingFlushingLow skid resistance</th><td></td></tr>
+<tr><th scope="row">DeformationCorrugationsRuts-shallowRutting Deep</th><td>X2,3</td></tr>
+<tr><th scope="row">Cracking (Load Associated)AlligatorLongitudinalWheel PathPavement EdgeSlippage</th><td>XXX</td></tr>
+<tr><th scope="row">Cracking (Non-Load Associated)Block (Shrinkage)Longitudinal (Joint)Transverse (Thermal)Reflection</th><td>XXX</td></tr>
+<tr><th scope="row">Maintenance PatchingSpraySkinPotholeDeep Asphalt</th><td>X4X4X</td></tr>
+<tr><th scope="row">Weak Base or Subgrade</th><td>X</td></tr>
+<tr><th scope="row">Ride Quality/RoughnessGeneral UnevennessDepressions (Settlement)High Spots (Heaving)</th><td>X5X6</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-pavement-condition-assessment-1-sum">Rows list pavement distress types categorized by defect class, columns indicate FDR applicability with footnotes.</p>
+<p class="ct-notes">Notes: 1 Rutting originating from the lower portion of the pavement (below surface course and including base and subgrade). 2 The addition of new aggregate may be required for unstable mixes. 3 The chemical stabilization of the subgrade may be required if the soil is soft, or wet. 4 In some instances, spray and skin patches may be removed by cold planing prior to these treatments (considered if very asphalt rich, bleeding). 5 Used if depressions are due to a poor subgrade condition. 6 Used if high spots caused by frost heave or swelling of an expansive subgrade soil exist.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 270.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 121–126), Ch. 13 (pp. 216–221), Ch. 14 (p. 227), App. J (pp. 267–272)</small></p>
+<p>The pavement‑condition assessment framework described in Publication 242, which relies on the STAMPP automated distress surveys and visual inspections to record cracking, rutting, raveling, potholes, joint spalling, faulting and drainage problems against severity thresholds, provides a valuable snapshot of surface performance but it has several inherent limitations. Because the data are essentially surface‑level indicators, they can overlook critical sub‑surface conditions such as inadequate subbase material that leads to premature mid‑slab cracking in jointed concrete pavements, or aggregate‑related pathologies like Vanport Limestone concerns and alkali‑silica reaction, which are not detectable by STAMPP alone. Ramp pavements are also excluded from the automated inventory, leaving a gap for those sections. Moreover, the Overall Pavement Index and other matrix‑driven treatment recommendations do not capture underlying structural deficiencies; interim maintenance or prior preservation work may improve only the riding surface, causing the matrix to trigger a lower‑level treatment while the deeper condition that drives future performance remains unaddressed. The International Roughness Index component further depends on complete and timely Pavement History data – without accurate construction, reconstruction or resurfacing dates, IRI trends cannot be meaningfully interpreted, and measurements taken before a project reopens to traffic or on routes not scheduled for annual testing fail to reflect the true post‑construction condition.</p>
+<p>Consequently, whenever any of these hidden issues are suspected, a complementary investigation should be undertaken before finalizing preservation versus rehabilitation decisions. Structural capacity and uniformity assessments such as Falling Weight Deflectometer (FWD) testing, dynamic cone penetrometer or lightweight deflectometer measurements provide rapid insight into in‑situ stiffness and support conditions across the pavement cross‑section. Core sampling near deteriorated joints and at random locations is required to evaluate subbase or subgrade soil properties, especially when full‑depth reclamation, high traffic loads, or drainage problems are central to the design. Deflection tests, faulting measurements and other nondestructive techniques help identify which joints need replacement or slab stabilization. When the percentage of pavement that would require patching exceeds ten percent – excluding existing concrete patches in good condition – a more detailed analysis, including cost‑effectiveness assessment and possibly alternative treatment strategies, becomes necessary. In cases where prior surface‑only preservation has been performed, or when ancillary surveys (e.g., guide‑rail condition) have been collected by non‑professional staff, the data should be verified by qualified personnel before being used for critical decisions. Finally, if IRI values cannot be linked to a reliable Pavement History or are obtained under construction traffic controls, supplemental investigations such as post‑construction roughness testing after reopening to traffic must be employed to achieve an accurate condition evaluation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 124–126), Ch. 11 (p. 197), Ch. 13 (pp. 219–221), Ch. 14 (p. 227), App. J (pp. 267–272)</small></p>
+<h2 id="existing-information-and-records">Existing information and records</h2>
+<p>The reviewer begins by extracting the most recent pavement‑condition records from PennDOT’s Roadway Management System. These include the Present Serviceability Rating (PSR) or Present Serviceability Index numbers together with each segment’s Maintenance Functional Classification, and they are supplemented by the automated STAMPP surveys that capture roughness, cracking, rut depth, edge deterioration, raveling, joint spalling, faulting, potholes and drainage deficiencies. The condition data are compared to the severity thresholds set out in Publication 242, and the Overall Pavement Index percentages are examined to confirm whether more than 85 % of the mileage is classified as Excellent or Good. International Roughness Index values from the annual NHS inventory and the biennial non‑NHS sample are retrieved, along with post‑construction IRI measurements taken within three months of reopening, to verify compliance with the smoothness criteria of Publication 408. Non‑destructive testing results—single‑locked‑wheel skid‑friction values, high‑speed profiler ride‑quality readings, and structural capacity indicators from Falling Weight Deflectometer or lightweight deflectometer tests—are incorporated to describe the current functional state of the surface and subgrade stiffness. Historical maintenance information stored in the RMS is reviewed for every construction, reconstruction, resurfacing, crack sealing, joint sealing, spall repair, patching and other preservation actions. The dates, pavement‑surface age, structure age and any mileage that is out‑of‑cycle according to Interstate treatment cycles are noted because they trigger preservation or rehabilitation decisions. Laboratory sampling reports for the surface, base, subbase and subgrade provide material properties, layer thicknesses and drainage conditions, while in‑situ strength data from FWD, dynamic cone penetrometer or lightweight deflectometer tests supply subgrade uniformity information prior to any rehabilitation. Traffic loading records are compiled, including average daily traffic counts and Equivalent Single Axle Load (ESAL) figures. Segments that experience 200 or more ESALs per day receive special attention because heavy truck traffic influences treatment selection and may preclude certain recycling methods. Projected future traffic for the design life is also considered. Ancillary inventories such as guide‑rail, drainage and shoulder drop‑off reports generated by Access tools are examined to assess features that affect overall pavement performance. All of these records feed the treatment matrices that determine whether preservation or rehabilitation is appropriate and ensure that any new or rehabilitated surface meets the required ride‑quality standards. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — Ch. 5 (pp. 121–133), Ch. 6 (pp. 150–151), Ch. 10 (pp. 177–179), Ch. 11 (p. 197), Ch. 13 (pp. 219–221), Ch. 14 (p. 227), App. J (pp. 267–272)</small></p>
+<p>Field investigation must address the inability of existing records to provide exact crack geometry, because surveys often lack permanent reference points for width, depth, and length, and mechanical probes cannot always determine whether a crack is structural or merely surface‑related, necessitating measurement and possibly coring. The STAMPP automated surveys also omit several distress types that are critical to treatment selection, such as premature mid‑slab cracking in jointed concrete which may indicate subbase deficiencies, aggregate‑related pathologies like Vanport limestone concerns and alkali‑silica reaction, and the condition of ramp pavements. Coverage of non‑NHS segments is only biennial, leaving up to a year where distress can develop without documentation, while NHS segments receive annual systematic surveys. Records frequently fail to capture the original underlying distress that justified previous surface treatments, leading treatment matrices to misclassify needs, and interim maintenance actions recorded in the Roadway Management System are not consistently reflected in the District Interstate plan, compromising accurate OPI percentages and poor‑condition mileage calculations. Pavement history entries are often delayed—four weeks for Department‑force projects and six weeks for contractor projects—or omitted entirely, which means International Roughness Index measurements may be taken before construction, missed because of traffic‑control constraints, or absent on non‑NHS routes that fall outside the annual testing cycle. Because the Present Serviceability Rating ceased incorporating STAMPP condition data after 1995 and the Maintenance Functional Classification required for the Terminal Serviceability Index is sometimes missing from the RMS, current serviceability values may not reflect actual cracking, rutting, or other distress. Forecasts of future traffic loading are frequently insufficient, and there is a lack of recent in‑situ stiffness measurements for pavement layers and subgrade, making it difficult to predict deterioration rates needed to choose between preservation and rehabilitation. Sampling practices often do not provide representative data on material properties, layer thicknesses, drainage conditions, or the presence of wet or water‑damaged subgrade; the drainage inventory excludes features larger than eight feet clear span, and guide‑rail condition records rely on nonprofessional temporary staff, further reducing confidence in ancillary information that influences pavement performance. Consequently, field investigations must include quantitative visual surveys of all visible distress, core sampling near deteriorated joints and at random locations to verify subbase or subgrade conditions, and non‑destructive testing such as deflection and faulting measurements to identify joints requiring replacement or slab stabilization. For concrete pavements, investigations should also assess percent patching, compressive strength, air content, and friction adequacy, while ride‑quality indices must be measured against Publication 408 smoothness criteria to confirm that new or rehabilitated surfaces meet required IRI thresholds. Finally, verification of functional classifications and the presence of polishing‑susceptible aggregates is needed to ensure that treatment matrices are populated with reliable data. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=4b8ab4f9 src=pub_242_change_10::tab:p151#1 -->
+<p>Table 6.4 specifies the terminal serviceability levels for different maintenance functional codes.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-condition-assessment-2-cap" tabindex="0"><table class="ct-table" id="ct-pavement-condition-assessment-2" aria-describedby="ct-pavement-condition-assessment-2-sum">
+<caption id="ct-pavement-condition-assessment-2-cap">TABLE 6.4TSI VALUES FOR EACH MFC</caption>
+<thead>
+<tr><th id="ct-pavement-condition-assessment-2-h0-0" scope="col" rowspan="2">MAINTENANCEFUNCTIONALCODE</th><th id="ct-pavement-condition-assessment-2-h0-1" scope="col" rowspan="2">DESCRIPTION</th><th id="ct-pavement-condition-assessment-2-h0-2" scope="col" colspan="3">INITIAL SERVICEABILITY LEVEL</th><th id="ct-pavement-condition-assessment-2-h0-5" scope="col" rowspan="2">TERMINALSERVICEABILITYLEVEL</th></tr>
+<tr><th id="ct-pavement-condition-assessment-2-h1-2" scope="col">RIGID</th><th id="ct-pavement-condition-assessment-2-h1-3" scope="col">COMPOSITE</th><th id="ct-pavement-condition-assessment-2-h1-4" scope="col">FLEXIBLE</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-pavement-condition-assessment-2-h2-0" scope="row">A</th><th id="ct-pavement-condition-assessment-2-h2-1" scope="row">Interstate highways</th><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-2 ct-pavement-condition-assessment-2-h2-0 ct-pavement-condition-assessment-2-h2-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-3 ct-pavement-condition-assessment-2-h2-0 ct-pavement-condition-assessment-2-h2-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-4 ct-pavement-condition-assessment-2-h2-0 ct-pavement-condition-assessment-2-h2-1">4.2</td><td headers="ct-pavement-condition-assessment-2-h0-5 ct-pavement-condition-assessment-2-h2-0 ct-pavement-condition-assessment-2-h2-1">3.0</td></tr>
+<tr><th id="ct-pavement-condition-assessment-2-h3-0" scope="row">B</th><th id="ct-pavement-condition-assessment-2-h3-1" scope="row">Limited Access and Major Arterial highways</th><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-2 ct-pavement-condition-assessment-2-h3-0 ct-pavement-condition-assessment-2-h3-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-3 ct-pavement-condition-assessment-2-h3-0 ct-pavement-condition-assessment-2-h3-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-4 ct-pavement-condition-assessment-2-h3-0 ct-pavement-condition-assessment-2-h3-1">4.2</td><td headers="ct-pavement-condition-assessment-2-h0-5 ct-pavement-condition-assessment-2-h3-0 ct-pavement-condition-assessment-2-h3-1">3.0</td></tr>
+<tr><th id="ct-pavement-condition-assessment-2-h4-0" scope="row">C</th><th id="ct-pavement-condition-assessment-2-h4-1" scope="row">Minor Arterial highways</th><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-2 ct-pavement-condition-assessment-2-h4-0 ct-pavement-condition-assessment-2-h4-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-3 ct-pavement-condition-assessment-2-h4-0 ct-pavement-condition-assessment-2-h4-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-4 ct-pavement-condition-assessment-2-h4-0 ct-pavement-condition-assessment-2-h4-1">4.2</td><td headers="ct-pavement-condition-assessment-2-h0-5 ct-pavement-condition-assessment-2-h4-0 ct-pavement-condition-assessment-2-h4-1">2.5</td></tr>
+<tr><th id="ct-pavement-condition-assessment-2-h5-0" scope="row">D</th><th id="ct-pavement-condition-assessment-2-h5-1" scope="row">Collector highways</th><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-2 ct-pavement-condition-assessment-2-h5-0 ct-pavement-condition-assessment-2-h5-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-3 ct-pavement-condition-assessment-2-h5-0 ct-pavement-condition-assessment-2-h5-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-4 ct-pavement-condition-assessment-2-h5-0 ct-pavement-condition-assessment-2-h5-1">4.2</td><td headers="ct-pavement-condition-assessment-2-h0-5 ct-pavement-condition-assessment-2-h5-0 ct-pavement-condition-assessment-2-h5-1">2.5</td></tr>
+<tr><th id="ct-pavement-condition-assessment-2-h6-0" scope="row">E</th><th id="ct-pavement-condition-assessment-2-h6-1" scope="row">Local Access highways</th><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-2 ct-pavement-condition-assessment-2-h6-0 ct-pavement-condition-assessment-2-h6-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-3 ct-pavement-condition-assessment-2-h6-0 ct-pavement-condition-assessment-2-h6-1">4.5</td><td headers="ct-pavement-condition-assessment-2-h0-2 ct-pavement-condition-assessment-2-h1-4 ct-pavement-condition-assessment-2-h6-0 ct-pavement-condition-assessment-2-h6-1">4.2</td><td headers="ct-pavement-condition-assessment-2-h0-5 ct-pavement-condition-assessment-2-h6-0 ct-pavement-condition-assessment-2-h6-1">2.0</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-pavement-condition-assessment-2-sum">Rows list maintenance functional codes and highway types. Columns provide initial serviceability levels for different pavement types and terminal serviceability levels.</p>
+<p class="ct-notes">Notes: *Note: The terminal serviceability level to be used in flexible pavement design is the value listed in Table 6.4 PLUS the estimated loss of serviceability due to frost heave. Frost Heave is to be considered in Asphalt Overlays of fractured PCC and full depth asphalt pavements; see Section 9.3 for further details.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 151.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110); [2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 124–126), Ch. 6 (pp. 150–151), Ch. 11 (p. 197), Ch. 13 (pp. 219–221), Ch. 14 (p. 227)</small></p>
+<h2 id="visual-inspection-and-condition-assessment">Visual inspection and condition assessment</h2>
+<p>Pavement condition assessment requires a systematic inventory of every observable surface defect that can be captured by automated surveys such as STAMPP or by visual inspection. The inventory begins with all forms of cracking—including longitudinal, transverse, fatigue, thermal, reflection and plastic‑shrinkage cracks—as well as any surface tears that may appear on the overlay. Cracks are classified according to their origin (plastic shrinkage, drying shrinkage, temperature‑related or finish‑induced) and measured for depth and width; structural cracks deeper than roughly one‑eighth inch with widths between about .007 in and .016 in must be recorded, while larger non‑structural cracks exceeding a quarter‑inch in depth and wider than .016 in also require documentation. Across all crack types the maximum allowable depth is limited to one inch and the average width should not exceed a medium rating of half an inch or less. Joint spalling and faulting at concrete joints are documented, with faulting expressed as the elevation difference across transverse joints in inches. Rutting is measured as the depth of surface depressions; a general tolerance of up to one‑and‑a‑half inches is accepted, but any rut deeper than a quarter‑inch triggers the need for surface preparation before high‑friction surface treatment. Edge deterioration, shoulder drop‑off and other signs of lateral failure are noted as part of the visible distress set. Surface weathering, raveling and pitting are recorded, with raveling limited to a medium‑rating rough, pitted texture that includes loose particles. Minor corrugation, shoving, slippage or isolated bleeding may be present provided their average depth does not exceed about one‑and‑a‑half inches. Potholes and any drainage deficiencies or other water‑related problems are identified because poor drainage accelerates deterioration and influences recycling eligibility. Roughness, expressed through the International Roughness Index, is treated as an observable defect that feeds into serviceability calculations and later verification against smoothness criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110); [2] — Ch. 5 (pp. 121–126), Ch. 6 (pp. 150–151), Ch. 13 (pp. 216–221), Ch. 14 (p. 227), App. I (p. 264), App. J (pp. 267–272)</small></p>
+<p>The assessment starts with a field distress survey that identifies each observable defect and classifies it by type, such as cracking, rutting, raveling, potholes, joint spalling, faulting, drainage‑related problems, or surface tears [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For cracks the classification further distinguishes structural origins from non‑structural causes including plastic shrinkage, drying shrinkage, temperature effects, and finishing‑related tears, while all other distresses are grouped by load‑related versus climate/materials‑related mechanisms [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Once a distress is identified its dimensions are measured: width, depth (or faulting for joints), length, and for cracks the end points are recorded relative to permanent reference markers; when depth cannot be obtained with a mechanical probe two cores are extracted for laboratory analysis [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Measured values are compared against predefined severity thresholds—cracks deeper than 1/8 in or wider than 0.007–0.016 in, rutting and raveling depths exceeding the limits set in the treatment matrices, pothole diameters and depths, and faulting amounts that trigger joint replacement—to assign a severity rating for each occurrence [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The spatial extent of each distress is quantified along the pavement segment, noting whether it lies within the wheel‑path or off‑wheel‑path, and its longitudinal and transverse position is entered into tabular form to support treatment matrices and preliminary engineering decisions between preservation and rehabilitation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Core samples are taken at deteriorated joints and at random locations to verify subbase or subgrade conditions underlying the observed surface distress, while non‑destructive methods such as deflection testing and faulting measurements supplement the visual data for joint evaluation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All recorded information—distress type, origin, measured severity, quantified extent, precise location, supporting core results, and relevant material or environmental data—is compiled into a summary report that serves as the quantitative basis for treatment selection and for verifying new or rehabilitated surfaces against smoothness criteria [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110); [2] — Ch. 4 (pp. 82–84), App. J (pp. 267–272)</small></p>
+<h2 id="field-measurements-and-testing">Field measurements and testing</h2>
+<p>Pavement condition assessment integrates a suite of field and nondestructive evaluation techniques that together quantify surface distress, structural capacity, ride quality and safety [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Visual surveys record each crack’s width, depth and length relative to permanent reference points; depth is first obtained with a mechanical probe and, when the probe cannot reach the base, a core is extracted for laboratory analysis to distinguish structural from non‑structural cracking [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same visual distress survey follows the procedures of Publication 336, Publication 343 or comparable methods such as MicroPaver, documenting type and severity of cracking, rutting, raveling, potholes and drainage problems, with crack depth limited to less than one inch, average crack width not exceeding a medium rating of half an inch, and rut or corrugation depth required to stay under one‑and‑a‑half inches [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. These observations are entered into the STAMPP automated video‑log system, which automatically captures cracking, joint spalling, faulting, rutting, raveling and potholes on both asphalt and jointed concrete surfaces; the recorded distresses are then compared against predefined severity thresholds to feed treatment matrices and guide preservation versus rehabilitation decisions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. To evaluate structural capacity, a Falling Weight Deflectometer is deployed; it generates vertical pavement‑deflection responses that quantify in‑situ stiffness of surface layers and subgrade, indicate joint efficiency in concrete pavements, and provide data for estimating required patching volumes [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Complementary nondestructive tests for unbound base and subgrade include the dynamic cone penetrometer, whose blows‑per‑inch rate is correlated with California Bearing Ratio or resilient modulus values, and the lightweight deflectometer, which supplies shallow elastic response measurements that can also be related to CBR [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Ground‑penetrating radar surveys are used to locate and describe subbase or subgrade conditions without excavation, adding a geophysical dimension to the assessment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Ride quality is quantified by measuring the International Roughness Index with high‑speed laser profilers; the IRI value expressed in inches per mile verifies whether newly constructed or rehabilitated surfaces satisfy the smoothness criteria of Publication 408 when measured within three months of pavement entry [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The Present Serviceability Index combines the IRI‑derived roughness with observed crack density, patch area and rut depth to produce a single numeric expression of overall serviceability for use in treatment matrices [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Safety related measurements include skid resistance testing on segments identified as having inadequate friction; a Single Locked Wheel Skid Tester provides friction values that reflect surface safety [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Additional diagnostic tools employed are the MIRA system, which evaluates both the condition of the existing surface and the underlying subsurface; MIT‑Scan 2, which verifies dowel bar alignment within concrete joints; MIT‑Scan T2, which determines concrete slab thickness; and a tensile bond tester, which measures the bond strength of repaired concrete sections [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Together these field tests, measurements and nondestructive evaluation methods furnish a comprehensive picture of current pavement condition, structural integrity, ride quality and safety, thereby supporting informed decisions between preservation actions and full rehabilitation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p>The relationship between dynamic cone penetrometer measurements and California Bearing Ratio values is illustrated in the following figure.</p>
+<!-- concept-compliance:begin fig=2a356ef0 n=1 -->
+<figure class="cmp-figure" id="cmp-pavement-condition-assessment-1">
+<img src="assets/pavement-condition-assessment/2a356ef00d335348fdb7092c5836f8112e9c95eb197a6811d37644d2e4ff60e5.jpg" alt="Line chart showing estimated CBR decreasing as measured DCP penetration rate increases." aria-describedby="cmp-pavement-condition-assessment-1-ld">
+<figcaption>Correlation between measured Dynamic Cone Penetrometer (DCP) penetration rates and estimated California Bearing Ratio (CBR). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</figcaption>
+</figure>
+<div id="cmp-pavement-condition-assessment-1-ld" hidden>
+<p>A line graph plots Estimated CBR (%) on the vertical axis against Measured DCP (mm/blow) on the horizontal axis. The vertical axis ranges from 0 to 50, and the horizontal axis ranges from 0 to 160.</p>
+<p>The curve demonstrates an inverse relationship: as the measured DCP penetration rate increases, the estimated CBR decreases sharply at first and then levels off.</p>
+</div>
+<details class="cmp-longdesc">
+<summary>Text description of this figure</summary>
+<p>A line graph plots Estimated CBR (%) on the vertical axis against Measured DCP (mm/blow) on the horizontal axis. The vertical axis ranges from 0 to 50, and the horizontal axis ranges from 0 to 160.</p>
+<p>The curve demonstrates an inverse relationship: as the measured DCP penetration rate increases, the estimated CBR decreases sharply at first and then levels off.</p>
+</details>
+<!-- concept-compliance:end -->
+
+<p>The figure displays a non-linear curve plotting the relationship between the measured DCP rate in millimeters per blow on the horizontal axis and the estimated CBR percentage on the vertical axis.</p>
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110); [2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 124–126), Ch. 6 (pp. 150–151), Ch. 10 (pp. 177–179), Ch. 11 (p. 197), Ch. 13 (pp. 216–221), Ch. 14 (p. 227), App. J (pp. 267–272)</small></p>
+<p>Pavement condition assessment under Publication 242 is governed by a coordinated set of equipment and procedures that capture surface distress, structural capacity, and ride quality. The cornerstone of the program is a contracted video‑logging system described in Publication 336; it conducts semi‑automated surveys each year on the entire National Highway System and on half of the non‑NHS network, with the remaining non‑NHS sections completed on a two‑year cycle. These automated surveys record cracking, rutting, spalling, joint faulting and other observable distresses. When skid‑resistance deficiencies are identified, additional friction testing is performed by BOMO using standard skid‑friction equipment.</p>
+<p>Structural evaluation relies on in‑situ devices such as the Falling Weight Deflectometer, Dynamic Cone Penetrometer and Light Weight Deflectometer. The DCP uses a 17.6 lb hammer dropped 22.6 in onto a 0.75‑in cone, while the LWD employs a drop weight ranging from 22 to 66 lb applied through load plates of roughly 4 or 12 in diameter with a maximum drop height of 33.5 in. The FWD can be operated as a moving test, which requires traffic control but minimizes disruption to travel.</p>
+<p>Sampling for these point‑load tests follows a spacing rule of approximately 500 ft between locations within each lane, and no fewer than three samples per lane are permitted; on long uniform sections the minimum may be reduced to one sample per mile. Testing must consider site conditions: active traffic is managed through appropriate control measures, drainage problems are avoided, and subgrade moisture is monitored so that wet or saturated soils do not compromise measurements. The overall testing regime repeats annually for the video‑logging surveys, while structural tests are performed as needed in conjunction with project design cycles; routine crack sealing on asphalt pavements is scheduled every three to five years and joint sealing on concrete pavements every five years. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — Ch. 13 (pp. 220–221), Ch. 14 (p. 227), App. J (pp. 267–272)</small></p>
+<h2 id="sampling-and-laboratory-investigation">Sampling and laboratory investigation</h2>
+<p>Pavement condition assessment requires sampling of every pavement layer that could be reclaimed, which for flexible pavements includes the asphalt wearing course, the underlying base course and, where relevant, the subgrade, while for rigid pavements cores are taken from the concrete slab itself—especially at joints showing visible distress—and from the subbase or subgrade soils beneath the slab [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When observable cracking appears in a Portland‑polymer concrete overlay, the surface layer at each crack location must also be sampled, with the sampling points fixed by measuring the ends of each crack relative to permanent reference points [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Sampling locations for general pavement layers are established on a regular grid of approximately one sample every 500 ft per lane, selected randomly to avoid bias and never fewer than three samples per lane; in sections that are uniform and extend more than a mile this interval may be relaxed to about one sample per mile, while crack‑specific cores are placed at the measured crack ends [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For concrete joints, cores are obtained both adjacent to deteriorated joints and at randomly chosen points so that hidden deterioration can be detected throughout the slab thickness, ensuring coverage of the full slab depth [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The depth of each boring or test pit is set to 1.5 times the estimated pulverization depth in order to capture the entire affected layer, and concrete cores are extracted through the whole slab to expose underlying material [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Where depth cannot be reliably gauged with a probe—such as at crack locations—corings are performed, and two cores are taken per site: one submitted to an independent laboratory and one to the LTS to evaluate the full thickness of the cracking and to classify it as structural or non‑structural [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. At every sampling station a quantity sufficient for laboratory testing is required; the guideline calls for retrieving at least 100 lb of material from flexible‑pavement samples, and core specimens must be large enough to permit the prescribed tests on both slab and subsoil [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The total number of samples depends on project length, lane count, and observed variability in subgrade or subbase conditions, with sampling frequency finalized during preliminary engineering and revisited whenever nondestructive‑test results—such as deflection, faulting, or ground‑penetrating radar—indicate a change in performance, or when distress metrics such as percent patching approach decision thresholds (for example, 10 % patching of concrete) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Additional sampling beyond the baseline is driven by the frequency and severity of observed cracks; higher crack density or greater severity may trigger more intensive coring at those locations [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110); [2] — Ch. 4 (pp. 82–84), App. J (pp. 267–272)</small></p>
+<p>Pavement Condition Assessment requires extraction of core samples from suspect or distressed areas and from representative locations in each pavement layer, with at least one core submitted to an independent laboratory and a second to the LTS for detailed analysis [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The laboratories determine crack geometry—width, depth, length—and classify whether observed cracking is structural or non‑structural, providing essential input for treatment selection [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For granular and soil layers, the labs conduct combined gradation (particle‑size) analysis, measure moisture content at testing time, and perform moisture‑density tests to establish relative density of coarse‑grained materials, thereby characterizing composition, stiffness, strength potential, and susceptibility to moisture‑induced deterioration [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Textural classification and Atterberg limits—liquid, plastic, and shrinkage—are determined, allowing assignment to an AASHTO soil class that informs mix design and stabilization decisions for full‑depth reclamation projects [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Concrete cores are subjected to compressive‑strength testing, entrapped air content measurement, and a visual durability inspection that identifies aggregate deficiencies or frost‑related damage, which together evaluate structural capacity and long‑term performance of the slab [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Subbase and subgrade material recovered with the cores is evaluated to reveal underlying soil conditions and any concealed deterioration beneath the surface, supporting decisions between preservation and rehabilitation treatments [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In addition, the assessment reviews the high‑modulus water‑based membrane (HMWM) penetrating crack‑sealer data sheet to verify that ambient temperature, substrate temperature, and moisture conditions meet manufacturer requirements before sealant application, ensuring compatibility of corrective actions with existing pavement condition [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<!-- concept-tabular:begin key=c56633c4 src=pub_242_change_10::tab:p271#1 -->
+<p>The table below lists minimum soil testing methods and their corresponding standard designations.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-condition-assessment-3-cap" tabindex="0"><table class="ct-table" id="ct-pavement-condition-assessment-3">
+<caption id="ct-pavement-condition-assessment-3-cap">TABLE J.2MINIMUM SOIL TESTING METHODS</caption>
+<tbody>
+<tr><th scope="row">Moisture Content</th><td>AASHTO T 265</td></tr>
+<tr><th scope="row">Sieve Analysis</th><td>PTM No. 616</td></tr>
+<tr><th scope="row">Mechanical and Hydrometer Particle Size Analysis of Soils</th><td>AASHTO T 88</td></tr>
+<tr><th scope="row">Liquid Limit</th><td>AASHTO T 89</td></tr>
+<tr><th scope="row">Plastic Limit</th><td>AASHTO T 90</td></tr>
+<tr><th scope="row">Moisture-Density Relationship</th><td>PTM No. 106</td></tr>
+<tr><th scope="row">Unconfined Compressive Strength</th><td>AASHTO T 208</td></tr>
+<tr><th scope="row">Materials Finer Than No. 200 Sieve</th><td>PTM No. 100</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 271.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110); [2] — Ch. 4 (pp. 82–84), App. J (pp. 267–272)</small></p>
+<h2 id="structural-and-functional-performance">Structural and functional performance</h2>
+<p>A comprehensive pavement condition assessment begins with an up‑to‑date distress survey that quantifies the severity of surface cracking, rut depth, raveling, potholes, spalling and joint faulting, each expressed as a percentage or inch measurement so that ride‑quality indices such as the International Roughness Index (IRI) can be calculated. Core samples are taken to determine existing layer thicknesses, which together with in‑situ stiffness measurements provide the quantitative basis for evaluating remaining structural capacity. Deflection testing with a Falling Weight Deflectometer supplies pavement and subgrade deflection values that are interpreted as overall load‑carrying strength and bearing modulus; complementary subgrade tests such as Dynamic Cone Penetrometer or Light Weight Deflectometer give CBR‑or‑resilient‑modulus equivalents. Joint efficiency and load‑transfer are assessed through faulting measurements and, for concrete slabs, joint efficiency derived from FWD data. Surface friction is measured with a single locked‑wheel skid tester to verify skid resistance, while high‑speed laser profiling provides the IRI that verifies ride quality against smoothness criteria. Traffic exposure is represented by ESAL figures, and the combined distress, thickness, stiffness, friction and roughness data feed the treatment matrices used to select preservation or rehabilitation strategies. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 124–126), Ch. 6 (pp. 150–151), Ch. 10 (pp. 177–179), Ch. 13 (pp. 216–221), App. J (pp. 267–272)</small></p>
+<p>Annual STAMPP automated surveys record the observable distresses—cracking, rutting, edge deterioration, raveling, joint spalling and faulting—that are then processed through the treatment matrices and cycle charts embodying the original design assumptions about structural capacity. These measured conditions are directly compared with the traffic‑loading forecasts expressed in ESAL values and with the explicit performance thresholds that govern preservation versus rehabilitation decisions. For example, a patching requirement exceeding ten percent of the pavement area signals that preservation is no longer cost‑effective, while rut depths greater than 1½ in., transverse cracks deeper than 1 in. or wider than ½ in., and raveling beyond a medium rating are the Pub. 336 limits that indicate the structure is approaching or exceeding its design‑based capacity. In the case of high‑intensity‑rubber (HIR) overlays, meeting those same thresholds confirms that the existing pavement aligns with expected traffic loading and retains sufficient residual service life to justify an interim HIR wearing course; any exceedance would deem the pavement over‑stressed relative to its design assumptions. Similarly, rut depths greater than ¼ in. preclude direct placement of a high‑friction surface treatment (HFST) because they reflect structural inadequacy and violate the guideline that HFST be applied only when no major repairs are anticipated for at least six years. For concrete pavements, core testing, deflection surveys, faulting measurements and ride‑quality checks are compared against design load assumptions; when distress quantities approach or surpass the ten‑percent patching limit, actual traffic loads are outpacing the original structural design, prompting a recommendation for structural improvement in the rehabilitation plan. Finally, the present serviceability index (PSI), derived from roughness, cracking, patching and rut depth, is evaluated against the initial serviceability assumed in AASHTO‑93 design and the terminal serviceability index (TSI) for the road’s functional class. If the current PSI remains above the TSI, the remaining service life is considered adequate; a PSI below the TSI signals that rehabilitation or preservation actions are required to meet the expected traffic demands and design performance criteria. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 124–133), Ch. 6 (pp. 150–151), Ch. 13 (pp. 220–221), App. I (p. 264)</small></p>
+<h2 id="data-interpretation-and-diagnosis">Data interpretation and diagnosis</h2>
+<p>Pavement condition assessment begins with a systematic visual survey that records every observable distress—including cracking, rutting, raveling, potholes, joint spalling, faulting and drainage problems—and immediately relates each defect to its likely cause. The observed defects are measured against the severity limits defined in Publication 242, such as a rut depth not exceeding one‑and‑a‑half inches, crack depths under one inch, average crack widths limited to half an inch, and concrete patching kept below ten percent of the surface area. In addition, specific repair thresholds are applied to surface cracks that exceed a depth of one‑eighth inch and have widths between 0.007 inch and 0.016 inch, prompting decisions for sealing or replacement. For each recorded crack the inspector quantifies width, depth and length relative to permanent reference points, establishing the end locations to enable later comparison with prescribed thresholds. When a mechanical probe cannot reliably capture crack depth, two cores are extracted at the location; one is submitted to an independent laboratory and the other to the state laboratory system so that laboratory analysis can determine whether the cracking is structural or non‑structural. Representative cores taken from deteriorated joints as well as random locations are also sent to accredited laboratories where classification, moisture‑density, CBR or resilient modulus, compressive strength, air content and percent patching are determined, providing a definitive assessment of sub‑surface condition. Field measurements supplement the visual inventory by employing non‑destructive tests such as Falling Weight Deflectometer testing before and after construction to quantify pavement stiffness, dynamic cone penetrometer or lightweight deflectometer readings to evaluate layer uniformity, skid‑resistance tests for safety, and direct measurements of pavement thickness, deflection and faulting. The quantitative results from these instruments are cross‑checked with the visual dimensions; for example measured rut depths and crack widths are compared to the severity thresholds to confirm whether the observed distress is superficial or indicative of deeper structural deficiencies. Annual automated surveys conducted under the STAMPP program capture the same distress types on a network scale, providing a consistent dataset that can be merged with the manually collected visual and field data. Performance data—including historical ESAL traffic loading, construction and maintenance histories, and ride‑quality expressed as the International Roughness Index—are layered onto the combined visual‑measurement‑lab results to generate a Present Serviceability Index that reflects overall pavement performance. The resulting serviceability index is then compared with terminal serviceability thresholds defined in Publication 242; if the index falls below the threshold, treatment matrices direct either preservation actions such as hot‑in‑place recycling or full rehabilitation. After any preservation or rehabilitation activity, IRI measurements are taken and evaluated against the smoothness criteria of Publication 408 to verify that the new or repaired surface meets the required ride quality. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=25e7a77c src=408_2020_11::tab:p358#1 -->
+<p>The table below specifies repair procedures for deficiencies in new concrete pavement based on crack and spall dimensions.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-condition-assessment-4-cap" tabindex="0"><table class="ct-table" id="ct-pavement-condition-assessment-4">
+<caption id="ct-pavement-condition-assessment-4-cap">Table A Repair Procedures for Deficiency in New Concrete Pavement: Table ARepair Procedures for Deficiency in New Concrete Pavement</caption>
+<thead>
+<tr><th scope="col">Item</th><th scope="col">Deficiency</th><th scope="col">Location</th><th scope="col">Description</th><th scope="col">Contractor RepairOptions</th></tr>
+</thead>
+<tbody>
+<tr><td rowspan="3">1</td><td rowspan="3">Partial DepthCrack</td><td rowspan="3">Anywhere</td><td>≤ 0.007 inches wide</td><td>Do nothing</td></tr>
+<tr><td>&gt;0.007 inches wide AND ≤ D/3deep</td><td>Epoxy inject crack asspecified in Section 1091</td></tr>
+<tr><td>&gt; 0.007 inches wide AND &gt; D/3deep</td><td>Repair as specified inSection 516 Partial PanelFull Depth Patcha, b, c</td></tr>
+<tr><td rowspan="3">2</td><td rowspan="3">Spall</td><td rowspan="3">Mainline orshoulder panel</td><td>Minimal spalling d ≤ 2 incheswideAND ≤ D/3 deep</td><td>Do nothing</td></tr>
+<tr><td>Significant spalling &gt; 2 incheswide (measured perpendicular tojoint)AND ≤ D/3 deep or &gt; 12 incheswide (not at a joint) AND ≤ D/3deep</td><td>Spall Repair as specifiedin Section 525 (Repairmust performsatisfactorily for 1 yearor replace with PartialPanel Full Depth Patchas specified in Section516)a, b,c</td></tr>
+<tr><td>Significant spallinge &gt; 2 incheswide (measured perpendicular tojoint)AND &gt; D/3 deep or &gt; 12 incheswide (not at a joint)AND ≤ D/3 deep</td><td>Repair as specified inSection 516, PartialPanel Full Depth Patchab, c</td></tr>
+<tr><td></td><td></td><td></td><td>Significant spalling® &gt; 2 incheswide (measured perpendicular tojoint)AND &gt; D/3 deep or &gt; 12 incheswide (at a joint)</td><td>Repair as specified inSection 516, PartialPanel Full Depth Patchab, cOR as specified inSection 516, Full DepthCorner RepairOR as specified inSection 519, Full DepthLongitudinal JointRepair</td></tr>
+<tr><td rowspan="3">3</td><td rowspan="3">Single FullDepth Crack(any orientation)</td><td rowspan="3">Shoulder</td><td>Non-working crack with minimalspallingd</td><td>Epoxy inject crack asspecified in Section 1091</td></tr>
+<tr><td>Working crack with minimalspallingd</td><td>Seal crack as specified inSection 590</td></tr>
+<tr><td>Crack with significant spallinge</td><td>Repair as specified inSection 516 Partial PanelFull Depth Patcha, b, cOR Full PanelReplacement</td></tr>
+<tr><td></td><td></td><td>Mainline orShoulder panelis affected byirregulargeometry(construction</td><td>Crack with minimal spallingd</td><td>Seal crack as specified inSection 590</td></tr>
+<tr><td rowspan="4"></td><td rowspan="4"></td><td>joints do notline up)</td><td></td><td></td></tr>
+<tr><td>Mainline</td><td>Entire length of crack ≤ 9 inchesfrom longitudinal jointAND crack is parallel tolongitudinal joint ± 1 inch</td><td>Seal crack as specified inSection 590</td></tr>
+<tr><td>Mainline crackis in center one-third ofdowelled panel.</td><td>Crack ≤ 1/8 inch wide ANDspalling ≤ 1/4 inch from edge ofcrack.</td><td>Dowel Retrofit asspecified in Section 527:three dowels per wheelpath (panels ≤ 10 inchesthick); four dowels perwheel path (panels &gt; 10inches thick)OR Partial Panel FullDepth Patcha, b, c repairedas specified in Section516 OR Full PanelReplacement</td></tr>
+<tr><td>Mainline</td><td>All other conditions</td><td>Partial Panel Full DepthPatcha, b, cOR Full PanelReplacement</td></tr>
+<tr><td>4</td><td>Multiple Cracks&gt; D/3 deep(any orientation)</td><td>Mainline orShoulder</td><td>Panel has more than 1 crack &gt;D/3 deep</td><td>Partial Panel Full DepthPatcha, b, cOR Full PanelReplacement</td></tr>
+<tr><td colspan="5">Notes:</td></tr>
+<tr><td colspan="5">a Minimum patch length is 6 foot for Plain Cement Concrete (PCC) or 10 foot for ReinforcedConcrete Pavement (RCP).b Minimum amount of panel left in place is 6 feet.c All patches (partial panel and full panel replacements) must be full width and depth.d Minimal spalling is defined as ≤ 2 inches total width AND ≤ 12 inches (combined length) alongcrack.e Significant spalling is defined as &gt; 2 inches total width OR &gt; 12 inches (combined length) alongcrack.D Design pavement depth.</td></tr>
+<tr><td colspan="5">Payment for new pavement where the crack has been removed is at the Contract Unit Price (CUP) with NOadditional cost to the Department for the repair.Payment for new pavement where the crack has not been removed but sealed as specified in Section 590 isat five percent CUP for the slab with NO additional cost to the Department for the repair.Payment for slabs with Partial depth Crack or Spall is at the UP with NO additional cost to the Deparmentfor the repairCrack depth is to be determined by coring at no cost to the Department</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 358.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110); [2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 121–133), Ch. 6 (pp. 150–151), Ch. 13 (pp. 220–221), App. J (pp. 267–272)</small></p>
+<p>The observed distress on existing pavements is most often traced to a combination of inadequate drainage, weak structural support, material deterioration, construction shortcomings, traffic overloading, and environmental exposure, with aging acting as an amplifying factor [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Drainage deficiencies allow excess moisture to infiltrate the pavement structure, eroding the integrity of the base and subgrade, reducing capacity and accelerating both cracking and rutting [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Weak support layers are identified through deflection testing such as falling‑weight deflectometer surveys, which reveal non‑uniform or soft foundations that predispose jointed concrete to mid‑slab cracking and surface rut depths that approach the 1½‑inch limit [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Traffic loads exceeding design levels—particularly heavy truck volumes of 200 ESALs per day or higher—impose fatigue stresses that manifest as cracking, raveling and rutting, especially when observed rut depth is near the allowable threshold [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Material deterioration encompasses plastic or drying shrinkage and temperature‑induced movement in polymer‑modified concrete overlays, as well as aggregate issues such as Vanport limestone susceptibility, alkali‑silica reaction, frost damage, high void content and low abrasion resistance of cold‑recycled mixes; these factors contribute to surface cracking, raveling and a rough, pitted texture that exceeds medium ratings for weathering [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Construction defects amplify these mechanisms: improper finishing, texturing, curing, rain damage or honeycombing generate surface tears, while excessive Portland cement in the base can cause shrinkage cracking and insufficient curing time or inadequate thickness leaves cold‑recycled layers with low early strength [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The assessment protocol requires measuring each crack’s width, depth and length, sealing any visible cracks deeper than 1/8 inch and between 0.007 and 0.016 inch wide with the prescribed high‑modulus resin, and extracting two cores per location when probe measurements cannot reliably determine depth, thereby distinguishing structural from non‑structural distress [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Because surface treatments such as high‑friction surfacing are ineffective over soft or unsound bases, the presence of underlying support or drainage weakness directs cause attribution away from simple aging toward these more fundamental deficiencies [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110); [2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 121–133), Ch. 13 (pp. 220–221), App. I (p. 264), App. J (pp. 267–272)</small></p>
+<h2 id="findings-confidence-and-next-actions">Findings, confidence, and next actions</h2>
+<p>The Pavement Condition Assessment generated through the STAMPP program provides a quantitative, network‑wide picture of present serviceability and structural health. By systematically recording surface‑visible distresses such as cracking, rutting, edge deterioration, raveling, joint spalling and faulting, and by measuring those items against FHWA severity thresholds, analysts can assign each segment to a good, fair or poor category. A segment is deemed poor when at least two of its three component scores—International Roughness Index, crack percentage, and either rut depth for asphalt or faulting for concrete—are rated poor. This classification supports the treatment‑matrix process that ranges from routine preservation to full rehabilitation, and it also enables planners to calculate the share of the Interstate system in excellent or good condition (greater than 85 % rating) versus poor condition (less than 75 % rating). The resulting mileage percentages can be compared with the FHWA requirement that no more than five percent of a state’s interstate lane‑miles be in poor condition, and out‑of‑cycle segments can be flagged for priority action. In‑situ investigations such as falling weight deflectometer profiles, dynamic cone penetrometer blows, targeted core sampling near deteriorated joints, and other non‑destructive techniques provide insight into subgrade uniformity and the feasibility of full‑depth reclamation. Sampling protocols require at least three samples per lane spaced at 500‑foot intervals, which together with the distress inventory feed the development of recommended treatments for each segment. Although these treatment recommendations are not intended as final design solutions, they give a consistent basis for evaluating the magnitude of required preservation or rehabilitation work and for estimating construction effectiveness. Post‑construction ride quality is verified by measuring IRI after reopening to traffic; compliance with Publication 408 smoothness criteria offers an objective check on whether the new surface meets prescribed roughness limits. Serviceability can also be expressed through the Present Serviceability Index, which combines measured roughness, crack density, patch area and rut depth into a 0‑to‑5 scale. When a segment’s PSI falls below the terminal serviceability level defined for its functional classification, engineers infer that preservation actions are no longer sufficient and rehabilitation should be considered. Nevertheless, several uncertainties constrain the conclusions that can be drawn. The automated surveys capture only surface‑visible distress; underlying mechanisms such as premature mid‑slab cracking caused by inadequate subbase material or aggregate reactions remain hidden unless supplemental investigations are performed. The sampling density may not fully represent spatial variability, and point‑based test results are relative rather than absolute, leaving ambiguity about unobserved damage and future traffic loads. Treatment matrices derived from the condition data are intentionally less extensive than detailed engineering designs, creating uncertainty about the true scope of rehabilitation required. Reliable use of IRI trends also depends on timely and complete Pavement History records; missing or delayed entries—particularly for non‑NHS routes—can cause pre‑opening IRI values to misrepresent current conditions. Finally, the classification scheme relies on only four distress metrics (IRI, cracking, rutting/faulting, occasionally spalling) and omits other defects such as potholes, while the PSI/PSR models are regression‑based and, since 1995, PSR has been reduced to a function of roughness alone, reducing the amount of condition information incorporated into serviceability estimates. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 124–126), Ch. 6 (pp. 150–151), Ch. 11 (p. 197), Ch. 13 (pp. 216–221), Ch. 14 (p. 227), App. J (pp. 267–272)</small></p>
+<p>When the condition assessment identifies cracking in a PPC overlay, the next steps are to quantify each distress by measuring its width, depth and length relative to permanent reference points and, if probe measurements are insufficient, obtain cores for laboratory evaluation of crack depth and structural significance. The cores are split between an independent lab and the LTS to confirm whether cracks are structural or merely surface‑related. Structural cracks must be removed and replaced, while non‑structural cracks exceeding the specified size thresholds are sealed with the manufacturer’s HMWM penetrating crack sealer, followed by a sand finish, after a Corrective Action Plan—detailing material data sheets and environmental conditions—is approved; all cracks should remain clean, covered and dry until sealing is performed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 1000 STRUCTURES (p. 1110)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=93ed36f7 src=408_2020_11::tab:p347#1 -->
+<p>The table below specifies distress limits and corresponding remedial actions for various pavement conditions. It relates to the section <a href="#data-interpretation-and-diagnosis">Data interpretation and diagnosis</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-condition-assessment-5-cap" tabindex="0"><table class="ct-table" id="ct-pavement-condition-assessment-5" aria-describedby="ct-pavement-condition-assessment-5-sum">
+<caption id="ct-pavement-condition-assessment-5-cap">TABLE APerformance Criteria Distress Limits</caption>
+<thead>
+<tr><th id="ct-pavement-condition-assessment-5-h0-0" scope="col">PERFORMANCECRITERION</th><th id="ct-pavement-condition-assessment-5-h0-1" scope="col">THRESHOLDLEVEL</th><th id="ct-pavement-condition-assessment-5-h0-2" scope="col">REMEDIAL ACTION</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-pavement-condition-assessment-5-h1-0" scope="row">FATIGUECRACKING</th><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h1-0">All medium orgreater severity*</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h1-0">Remove and replace distressed layers full lane width to adepth necessary to correct observed distress but not toexceed warranted pavement and length not less than 10 feetbeyond the distressed area.</td></tr>
+<tr><th id="ct-pavement-condition-assessment-5-h2-0" scope="row" rowspan="2">CRACKING(TransverseCracking &amp;MiscellaneousCracking)RAVELING /WEATHERING</th><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h2-0">All low to mediumseverity*</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h2-0">Crack seal as specified in Section 469.</td></tr>
+<tr><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h2-0">All high severity*All medium orgreater severity*</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h2-0">Remove and replace distressed layers full lane width to adepth necessary to correct observed distress but not toexceed warranted pavement and length not less than 10 feetbeyond the distressed area.Remove and replace distressed layers full lane width to adepth necessary to correct observed distress but not toexceed warranted pavement and length not less than 10 feetbeyond the distressed area.</td></tr>
+<tr><th id="ct-pavement-condition-assessment-5-h4-0" scope="row">RUTTING</th><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h4-0">&gt; 3/8 inch</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h4-0">Remove and replace distressed layers full lane width to adepth necessary to correct observed distress but not toexceed warranted pavement and length not less than 10 feetbeyond the distressed area.</td></tr>
+<tr><th id="ct-pavement-condition-assessment-5-h5-0" scope="row">FLUSHING</th><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h5-0">ALL</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h5-0">Remove and replace distressed layer full depth and full orhalf lane width (longitudinal joint at center of lane for halflane width) and a minimum of 24 inches beyond distressedpavement in all longitudinal directions.</td></tr>
+<tr><th id="ct-pavement-condition-assessment-5-h6-0" scope="row">POTHOLES(INCLUDINGSLIPPAGEAREAS)</th><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h6-0">ALL</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h6-0">Remove and replace distressed layers full lane width to adepth necessary to correct observed distress but not toexceed warranted pavement and length not less than 10 feetbeyond the distressed area.</td></tr>
+<tr><th id="ct-pavement-condition-assessment-5-h7-0" scope="row" rowspan="2">LONGITUDINALJOINTDETERIORATIONEDGEDETERIORATION(shoulder joint)</th><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h7-0">All mediumseverity*</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h7-0">Crack seal as specified in Section 469.</td></tr>
+<tr><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h7-0">All high severity*</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h7-0">Remove and replace distressed layer one foot either side ofthe joint transversely and a minimum of 24 inches beyonddistressed pavement in all longitudinal directions.</td></tr>
+<tr><th id="ct-pavement-condition-assessment-5-h9-0" scope="row" rowspan="2">LONGITUDINALJOINTDETERIORATIONLEFT EDGEJOINT (lane joints)</th><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h9-0">All mediumseverity*</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h9-0">Crack seal as specified in Section 469.</td></tr>
+<tr><td headers="ct-pavement-condition-assessment-5-h0-1 ct-pavement-condition-assessment-5-h9-0">All high severity*</td><td headers="ct-pavement-condition-assessment-5-h0-2 ct-pavement-condition-assessment-5-h9-0">Remove and replace distressed layer one foot either side ofthe joint transversely and a minimum of 24 inches beyonddistressed pavement in all longitudinal directions.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-pavement-condition-assessment-5-sum">Rows list PERFORMANCECRITERION; columns give THRESHOLDLEVEL, REMEDIAL ACTION.</p>
+<p class="ct-notes">Notes: *The Threshold Level as defined in Publication 336.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 347.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+
+<h2 id="related-concepts">Related Concepts</h2>
+<ul>
+<li><a href="distress.html">Distress</a></li>
+<li><a href="ride-quality.html">Ride Quality</a></li>
+</ul>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-D.3: hierarchy concept-map diagram (md->html reverse builder; per-page inject) */
+figure.hier-diagram { overflow-x: auto; margin: 1.5rem 0; }
+svg.hd { max-width: 100%; height: auto; display: block; margin-inline: auto;
+  font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+svg.hd text { text-anchor: middle; dominant-baseline: middle; }
+svg.hd .hd-hub rect { fill: var(--accent); stroke: var(--accent); }
+svg.hd .hd-hub text { fill: var(--bg); }
+svg.hd .hd-child rect { fill: var(--chip); stroke: var(--border); stroke-width: 1; }
+svg.hd .hd-child text { fill: var(--fg); }
+svg.hd .hd-edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+svg.hd .hd-stub { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 3; }
+svg.hd .hd-child { cursor: pointer; }
+svg.hd .hd-child a rect { transition: fill .12s ease, stroke .12s ease; }
+svg.hd .hd-child:hover rect,
+svg.hd .hd-child a:focus rect,
+svg.hd .hd-child a:focus-visible rect { fill: var(--chip); stroke: var(--link); stroke-width: 2; }
+.hd-tooltip { position: fixed; z-index: 10000; max-width: 22rem; padding: .45rem .7rem;
+  background: var(--fg); color: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  font-size: .8rem; line-height: 1.4; pointer-events: none; opacity: 0; visibility: hidden;
+  transition: opacity .12s ease; box-shadow: 0 3px 12px rgba(0, 0, 0, .28); }
+.hd-tooltip.hd-tooltip-show { opacity: 1; visibility: visible; }
+</style>
+<script>
+(function () {
+  var tip = null;
+  function ensureTip() {
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "hd-tooltip";
+      tip.setAttribute("role", "tooltip");
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+  function show(node) {
+    var desc = node.getAttribute("data-desc");
+    if (!desc) return;
+    var t = ensureTip();
+    t.textContent = desc;
+    var r = node.getBoundingClientRect();
+    t.style.left = Math.max(8, Math.round(r.left)) + "px";
+    t.style.top = Math.round(r.bottom + 8) + "px";
+    t.classList.add("hd-tooltip-show");
+  }
+  function hide() { if (tip) tip.classList.remove("hd-tooltip-show"); }
+  var nodes = document.querySelectorAll(".hd-child");
+  for (var i = 0; i < nodes.length; i++) {
+    (function (node) {
+      node.addEventListener("mouseenter", function () { show(node); });
+      node.addEventListener("mouseleave", hide);
+      var focusTarget = node.querySelector("a") || node;
+      focusTarget.addEventListener("focus", function () { show(node); });
+      focusTarget.addEventListener("blur", hide);
+    })(nodes[i]);
+  }
+})();
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

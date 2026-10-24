@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pavement Design</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html" class="active" aria-current="page">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><span class="crumb-current">Pavement Design</span></nav>
+<article><h1>Pavement Design</h1>
+<div class="meta"><div class="part-of">Part of: <a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a> <span class="edge edge-taxonomic" title="Pavement Design is a topic under PennDOT Pavement Policy Manual (Publication 242).">is-subtopic-of</span></div><div class="edge-reading">Pavement Design is a topic under PennDOT Pavement Policy Manual (Publication 242).</div><div><a class="tag" href="index.html?q=pavement-design">pavement-design</a><a class="tag" href="index.html?q=pavement-designs">pavement-designs</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Pavement design is the engineering process that creates a roadway structure capable of supporting projected traffic loads over its intended service life while resisting moisture, frost action, and subgrade instability. It does so by quantifying total ESALs, selecting layer or slab thicknesses that achieve the required Design Structural Number, providing adequate drainage, and incorporating joint and load‑transfer details to maintain uniform support and ride quality. The resulting design balances structural adequacy, durability, safety, and cost to meet reliability targets such as a terminal serviceability index near 3.0 for roughly twenty‑year performance.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- HIER-DIAGRAM:START -->
+<p><a href="https://www.pa.gov/agencies/penndot">PennDOT</a> publications covering <strong>“Pavement Design”</strong> also include the following subtopics: <a href="frost-heave.html">Frost Heave</a>, <a href="mix-design.html">Mix Design</a>, <a href="pavement-structure.html">Pavement Structure</a>, and <a href="rigid-pavement.html">Rigid Pavement</a>.</p>
+<figure class="hier-diagram">
+  <svg class="hd" viewBox="0 0 710 210" width="710" height="210" role="group" aria-label="Concept map: Pavement Design and its subtopics" xmlns="http://www.w3.org/2000/svg">
+    <g class="hd-hub"><rect x="250" y="16" width="210" height="48" rx="6"/><text class="hd-hub-label" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="355" y="40">Pavement Design</tspan></text></g>
+    <path class="hd-edge" d="M355 64 V 96 H 91 V 128"/>
+    <path class="hd-edge" d="M355 64 V 96 H 267 V 128"/>
+    <path class="hd-edge" d="M355 64 V 96 H 443 V 128"/>
+    <path class="hd-edge" d="M355 64 V 96 H 619 V 128"/>
+    <g class="hd-child" data-slug="frost-heave" data-desc="Frost heave is the upward movement of pavement that occurs when moisture‑laden, frost‑susceptible soils beneath a subgrade freeze and expand, temporarily reducing bearing support and producing differ…"><title>Frost heave is the upward movement of pavement that occurs when moisture‑laden, frost‑susceptible soils beneath a subgrade freeze and expand, temporarily reducing bearing support and producing differ…</title><a href="frost-heave.html"><rect x="16" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="91" y="152">Frost Heave</tspan></text></a></g>
+    <g class="hd-child" data-slug="mix-design" data-desc="Mix design is a systematic methodology used to tailor pavement mixtures to anticipated traffic loads, climate conditions, and material characteristics so that the resulting structure meets required p…"><title>Mix design is a systematic methodology used to tailor pavement mixtures to anticipated traffic loads, climate conditions, and material characteristics so that the resulting structure meets required p…</title><a href="mix-design.html"><rect x="192" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="267" y="152">Mix Design</tspan></text></a></g>
+    <g class="hd-child" data-slug="pavement-structure" data-desc="Pavement structure is an engineered layered system that provides the strength and stability needed for a roadway to safely support its anticipated traffic while shielding the subgrade from moisture‑r…"><title>Pavement structure is an engineered layered system that provides the strength and stability needed for a roadway to safely support its anticipated traffic while shielding the subgrade from moisture‑r…</title><a href="pavement-structure.html"><rect x="368" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="443" y="152">Pavement Structure</tspan></text></a></g>
+    <g class="hd-child" data-slug="rigid-pavement" data-desc="Rigid pavement is a structural system in which a Portland‑cement concrete slab—typically four to eighteen inches thick and reinforced by dowel‑bar‑connected transverse joints, tied shoulders, and app…"><title>Rigid pavement is a structural system in which a Portland‑cement concrete slab—typically four to eighteen inches thick and reinforced by dowel‑bar‑connected transverse joints, tied shoulders, and app…</title><a href="rigid-pavement.html"><rect x="544" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="619" y="152">Rigid Pavement</tspan></text></a></g>
+    <path class="hd-stub" d="M443 176 V 194"/>
+    <path class="hd-stub" d="M619 176 V 194"/>
+  </svg>
+</figure>
+<!-- HIER-DIAGRAM:END -->
+
+<p>Pavement Design incorporates <a href="frost-heave.html">Frost Heave</a> as an environmental input that dictates subgrade stability requirements and serviceability-loss criteria during freeze-thaw cycles. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The process utilizes <a href="mix-design.html">Mix Design</a> to tailor material constituents—such as cement-aggregate proportions for concrete or binder-aggregate skeletons for asphalt—to meet specific performance targets for durability and load-bearing capacity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] These materials form the <a href="pavement-structure.html">Pavement Structure</a>, a layered system that achieves the required Design Structural Number through calculated thicknesses of surface, base, and subbase layers equipped with drainage features to mitigate moisture distress. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The resulting structure relies on Pavement Structure layering to achieve the required Design Structural Number, with <a href="rigid-pavement.html">Rigid Pavement</a> serving as a specific slab-based application that manages traffic loads through concrete thickness and joint detailing. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li><li><a href="#related-concepts">Related Concepts</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+<details class="subconcepts-toggle"><summary>Sub-concepts (4)</summary><div class="subconcepts-body"><a href="frost-heave.html">Frost Heave</a> · <a href="mix-design.html">Mix Design</a> · <a href="pavement-structure.html">Pavement Structure</a> · <a href="rigid-pavement.html">Rigid Pavement</a></div></details>
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Pavement design is undertaken to create a roadway structure that can reliably support the anticipated traffic loads throughout its intended service life while resisting the detrimental effects of moisture, frost action, and subgrade instability. The process begins by quantifying the total 18‑kip equivalent single axle loads (ESALs) expected over the performance period—using initial average daily traffic, truck percentages, growth rates, and, when the design‑year ADT exceeds 8 000, a rigorous ESAL calculation method—to establish the required Design Structural Number. Layer thicknesses, typically ranging from four to eighteen inches and constrained by minimum and maximum depth limits, are then selected so that the calculated structural number exceeds this requirement, providing uniform support for overlays and ensuring load‑transfer at transverse joints in concrete sections. Adequate drainage is essential; surface and subsurface water must be removed and failed base material replaced with structurally adequate fill to prevent loss of material integrity and weakening of capacity. Seasonal variations in subgrade support are accounted for by adjusting the effective modulus of subgrade reaction (k) using base elastic moduli of 15 000 psi for spring‑thaw, 30 000 psi for normal conditions, and 50 000 psi for frozen conditions, with loss‑of‑support factors correcting for erosion or pumping. For concrete pavements, high‑strength low‑water‑cement RCC mixes are specified on roadways with an ADT of ≤2 000 and speeds of 55 mph or less, delivering a typical design life of about twenty years. When widening or adding lanes, the new sections must match the original pavement type and thickness for additions under ten feet, or be designed to the same thickness as the existing slab for wider extensions, with transverse joints aligned to maintain continuity. The design also addresses performance needs such as surface friction, resistance to rutting, cracking, raveling, potholes, and overall ride quality, targeting a terminal serviceability index of approximately 3.0 and incorporating an overall standard deviation to capture variability in traffic forecasts, material properties, and environmental conditions. By integrating these considerations—traffic loading, structural adequacy, drainage, frost‑heave effects, joint integrity, and economic optimization—the pavement design fulfills the engineering problem of delivering a durable, safe, and cost‑effective roadway that meets reliability targets over its service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=10a91d96 src=pub_242_change_10::tab:p155#1 -->
+<p>The table below lists average initial truck factors (ESALs/truck) by vehicle classification for rigid and flexible pavements.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-design-1-cap" tabindex="0"><table class="ct-table" id="ct-pavement-design-1" aria-describedby="ct-pavement-design-1-sum">
+<caption id="ct-pavement-design-1-cap">TABLE 7.1 AVERAGE INITIAL TRUCK FACTORS (ESALs/TRUCK) BY VEHICLE CLASS</caption>
+<thead>
+<tr><th id="ct-pavement-design-1-h0-0" scope="col" colspan="3">VEHICLE CLASSIFICATION</th><th id="ct-pavement-design-1-h0-3" scope="col" colspan="2">ESALs</th></tr>
+<tr><th id="ct-pavement-design-1-h1-0" scope="col">LINE # INDARWIN® 3.01</th><th id="ct-pavement-design-1-h1-1" scope="col">FHWACLASS</th><th id="ct-pavement-design-1-h1-2" scope="col">CORRESPONDINGDEPARTMENTDESCRIPTION</th><th id="ct-pavement-design-1-h1-3" scope="col">RIGID</th><th id="ct-pavement-design-1-h1-4" scope="col">FLEXIBLE</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">1</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">1</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">Motorcycle</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">0*</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">0*</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">2</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">2</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">Passenger Cars</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">0*</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">0*</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">3</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">3</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">SUV/Pick-up</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">0*</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">0*</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">4</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">4</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">BUS Factor</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">0.24</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">0.24</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">5</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">5</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">2-axle, 6-tire</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">0.24</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">0.24</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">6</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">6</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">3-axle, single unit</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">1.15</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">0.82</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">7</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">7</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">4-axle, single unit</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">7.00</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">4.50</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">8</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">8</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">3-axle, single trailer</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">0.60</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">0.44</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">9</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">9</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">3-axle, multiple axle trailer</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">1.59</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">1.00</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">10</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">10</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">6-axle, single trailer</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">1.42</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">0.75</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">11</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">11</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">5-axle, multiple trailer</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">2.40</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">2.33</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">12</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">12</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">6-axle, multiple trailer</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">1.42</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">1.28</td></tr>
+<tr><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-0">13</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-1">13</td><td headers="ct-pavement-design-1-h0-0 ct-pavement-design-1-h1-2">7-axle, multiple trailer</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-3">1.42</td><td headers="ct-pavement-design-1-h0-3 ct-pavement-design-1-h1-4">1.28</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-pavement-design-1-sum">Rows list LINE # INDARWIN® 3.01; columns give VEHICLE CLASSIFICATION (FHWACLASS, CORRESPONDINGDEPARTMENTDESCRIPTION), ESALs (RIGID, FLEXIBLE).</p>
+<p class="ct-notes">Notes: *Note: Because motorcycles, passenger cars, and SUV/Pick-up trucks do not significantly contribute to the 18-kip ESALs they are considered negligible and an ESAL/truck factor of 0 is assigned. However, the percent of the ADT in this class must be input into DARWin because the Total Percentage must equal 100.00%. If there are any vehicles that are not large enough to be classified in any of the above classes, they should be grouped with the motorcycle percentage.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 155.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 84–99), Ch. 5 (pp. 124–126), Ch. 6 (pp. 134–152), Ch. 7 (pp. 154–157), Ch. 8 (pp. 161–162), Ch. 9 (pp. 168–173)</small></p>
+<p>Pavement design must first meet functional requirements by providing effective removal of surface and subsurface water, delivering a level and stable platform for any overlay, and carrying the forecast traffic loads. For low‑volume roads (average daily traffic ≤ 2,000 vehicles) with speed limits not exceeding 55 mph, the pavement type and thickness must be appropriate to those conditions, while highway ramps are required to use the same pavement type and identical thickness as the adjoining high‑traffic roadway to ensure smooth merging. Accurate traffic forecasts and thorough condition surveys are essential to define these functional needs.</p>
+<p>Structurally, the design must supply sufficient layer or slab thickness—determined by non‑destructive testing or other accepted procedures—to achieve the required load‑bearing capacity. Thicknesses must fall within the minimum and maximum limits prescribed in design tables; for rigid concrete pavements this typically means 4 to 18 inches with a compressive strength of 4,000–10,000 psi. Joint spacing is specified (30 ft for jointed reinforced concrete pavement or 15 ft for jointed plain concrete pavement) and must include coated dowel bars, tie bars when patches exceed 65 ft, and proper seals to ensure effective load transfer at transverse joints. Shoulders provide lateral support that reduces edge stresses, further contributing to structural integrity.</p>
+<p>Durability objectives are addressed by constructing a well‑drained structure that prevents excess moisture from degrading material integrity, selecting high‑strength low‑shrinkage mixes while avoiding high early‑strength concrete, and incorporating base repair, slab stabilization, crack sealing, and appropriate overlays. The design targets an approximate 20‑year service life for roller‑compacted concrete pavements and anticipates possible heavy‑truck traffic, thereby maintaining the required durability and rideability throughout the pavement’s intended lifespan.</p>
+<p>Safety requirements include achieving the specified skid‑resistance level, improving surface friction, and applying diamond grinding when wheel ruts are shallow or when the exposed surface serves speeds of 35 mph or greater. Maintaining shoulder integrity and providing a uniform riding surface for overlays further reduce hydroplaning risk and support early but safe opening to traffic. Proper joint details and seals also prevent premature distress.</p>
+<p>Serviceability is satisfied by meeting both initial and terminal serviceability criteria. For flexible pavements, the terminal serviceability index must incorporate any loss due to frost‑heave (for example, a value of 3.75 when a 0.75 loss is calculated), using recommended frost‑heave probability ranges of 25 %–75 %. Overall ride quality, skid resistance, and long‑term performance are preserved through the combined durability and safety measures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 84–99), Ch. 5 (pp. 124–126), Ch. 6 (pp. 136–152), Ch. 8 (p. 164), Ch. 9 (pp. 168–169)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Pavement design is required for virtually any highway functional classification whenever the work involves a new or reconstructed structural system, an overlay, or a ramp that must be compatible with existing high‑traffic facilities. For both flexible and rigid pavements the analysis is triggered when the continuous length of pavement to be placed exceeds 500 ft on divided highways, 1,000 ft on undivided roads, or when bridge approaches on both sides total more than 1,000 ft. The same trigger applies to Portland‑cement concrete (PCC) roadways or shoulders that are being rebuilt for more than 500 ft, as well as to full‑width reconstruction of all lanes or replacement of a single lane extending beyond those distances. In such cases the design determines the appropriate joint type—jointed reinforced concrete pavement (JRCP) or jointed plain concrete pavement (JPCP)—the slab thickness, and whether precast concrete paving systems (PCPS) may be used as equivalents on high‑speed, high‑ADT routes.</p>
+<p>For rigid pavements built since 1945, any lane addition of ten feet or more must be designed to the original slab thickness unless traffic loading justifies a thicker section; partial widenings under ten feet must duplicate the existing pavement type and depth. JRCP can be widened with either reinforced or plain cement concrete, whereas JPCP widening is limited to plain cement concrete. Rigid designs on Interstates and expressways are further constrained to an asphalt‑treated or cement‑treated permeable base over a 2A subbase; open‑graded subbases are prohibited. Effective subgrade reaction moduli are taken as 15,000 psi in spring thaw, 30,000 psi under normal summer/fall conditions and 50,000 psi when frozen, with adjustments for loss‑of‑support factors, subbase thickness and the presence of bedrock within ten feet.</p>
+<p>Flexible pavement design covers full‑depth asphalt‑concrete sections constructed with hot‑mix or warm‑mix asphalt that meet Superpave specifications, as well as overlays placed on thin concrete slabs (less than eight inches) or pre‑1945 concrete pavements, even those exhibiting severe alkali‑silica reaction. Rehabilitations may incorporate reclaimed asphalt pavement (RAP), recycled concrete aggregate and a range of stabilizers such as calcium chloride, cement, lime, fly ash or emulsified asphalt. The design evaluates drainage, base repair, binder‑course condition, surface friction and shoulder adequacy, selects layer thicknesses according to the minimum values in the specifications, and requires density targets between roughly 92 % and 98.5 % with at least fifteen percent retainage of milled material. When flexible pavement is placed over a rigid base, an input variability standard deviation of 0.40 is used; flexible‑over‑flexible or asphalt overlay of fractured PCC uses 0.45, while purely rigid designs use 0.35.</p>
+<!-- concept-tabular:begin key=356c6662 src=pub_242_change_10::tab:p281#1 -->
+<p>The table below specifies climatic limitations for construction based on the type of stabilizer used.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-design-2-cap" tabindex="0"><table class="ct-table" id="ct-pavement-design-2" aria-describedby="ct-pavement-design-2-sum">
+<caption id="ct-pavement-design-2-cap">b. Weather Limitations. (table)</caption>
+<thead>
+<tr><th scope="col">TYPE OF STABILIZER</th><th scope="col">CLIMATIC LIMITATION FORCONSTRUCTION</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Lime, Fly Ash or Lime-Fly Ash</th><td>Do not perform work when reclaimed material couldbe frozen. Air temperature in the shade should be noless than 40°F and rising. Complete stabilization atleast one month before the first forecast temperaturedrop below freezing. Two weeks minimum of warm tohot weather is desirable after completing thestabilization work.</td></tr>
+<tr><th scope="row">Portland Cement, Portland Cement Slurry, orPortland Cement with Fly Ash</th><td>Do not perform work when reclaimed material couldbe frozen. Air temperature in shade should be no lessthan 40°F and rising. Complete stabilization should beat least one month before the first forecast temperaturedrop below freezing. Cement Slurry with acceleratingadmixtures can be used in periods of coolertemperatures with the written approval of theDME/DMM. Do not place cement slurry mixtures withaccelerating admixtures when the air temperature isanticipated to fall below 35° F within the first 24 hoursfollowing placement.</td></tr>
+<tr><th scope="row">Calcium Chloride</th><td>Do not perform work when reclaimed material couldbe frozen. Air temperature in shade should be no lessthan 40°F and rising. Complete stabilization should beat least one month before the first forecast temperaturedrop below freezing.</td></tr>
+<tr><th scope="row">Emulsified Asphalt</th><td>Do not perform work when reclaimed material could be frozen. Air temperature in the shade should be no less than 59°F and rising. The curing process for emulsified asphalt stabilization can be affected by very high humidity. Defer work when rain is imminent or when humidity is greater than 80%. Warm to hot, dry weather is preferred for all types of asphalt stabilization involving cold mixtures because of improved binder dispersion and curing.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-pavement-design-2-sum">Rows list types of stabilizers and columns provide climatic limitations for their construction.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 281.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p>Full‑depth reclamation (FDR) is appropriate when the existing support layers need upgrading rather than merely surface repair. FDR may be applied across a range of traffic levels provided reliable traffic forecasts are available and standard pavement‑design traffic analysis procedures are followed; layer thicknesses are determined in accordance with design criteria and stabilization can be mechanical (aggregate) or chemical (cement, lime, fly ash, calcium chloride, emulsified asphalt).</p>
+<p>Roller‑compacted concrete (RCC) pavements are suitable for low‑volume roads with an average daily traffic of 2,000 vehicles or less and a speed limit of 55 mph or lower. RCC may serve as a permanent concrete surface, as a concrete shoulder adjacent to reinforced or plain cement concrete, or as a base course beneath an asphalt wearing layer. The mix uses the same ingredients as conventional concrete with a water‑to‑cement ratio near 0.40 and can be placed without forms, reinforcing steel or dowel bars; design thicknesses range from four to eighteen inches and control joints are spaced according to slab thickness.</p>
+<p>Design methodology also permits a single DARWin analysis to serve multiple adjacent projects on the same corridor when key parameters—total 18‑kip equivalent single axle loads (ESALs), effective subgrade reaction or resilient modulus, initial and terminal serviceability levels, reliability, unit material costs and existing pavement structure—remain essentially unchanged. For high‑volume routes such as Interstates and expressways, subgrade characterization may rely on laboratory‑measured resilient modulus; where those values are unavailable, a California Bearing Ratio (CBR) test may be used, but any CBR greater than ten requires geotechnical engineer recommendation and values below five trigger mandatory subgrade improvement.</p>
+<p>Frost‑heave effects are incorporated for full‑depth flexible pavements on Interstates: the terminal serviceability index is increased by a loss calculated from frost‑heave rates taken from soil‑type tables, using a probability range of 25 % to 75 %. The resulting index guides selection of layer thicknesses and materials. Slab thicknesses computed by DARWin are rounded to the nearest half‑inch; for slabs thicker than seven inches covering less than 30,000 square yards the rounding is to the nearest whole inch, and reductions due to tied concrete shoulders are not permitted because their effect is already reflected in the load‑transfer coefficient.</p>
+<p>Ramps on limited‑access highway interchanges must be designed as either new or existing structures using the same pavement material—concrete or asphalt—as the higher‑traffic roadway they join, matching its thickness and classification, and sized for the greatest anticipated traffic loads, including provisions for heavy‑truck traffic if future development suggests such demand. Traffic‑volume criteria dictate the analytical method: the Simple (short) method may be used only on collector and local roads when resulting layer thicknesses stay within minimum limits; a rigorous ESAL calculation is required for cross‑routes intersecting limited‑access freeways that must meet a minimum daily 18‑kip ESAL value or when projected end‑of‑design‑life ADT exceeds eight thousand vehicles. Rehabilitation projects may employ the Simple method only when the existing pavement can accommodate the required structural capacity.</p>
+<p>Finally, flexible designs that specify an aggregate/cement or an aggregate/lime/pozzolan base course must list those two materials as bid alternatives, respect the minimum and maximum course depths defined in the applicable tables, and select asphalt binders according to a suitability table that relates material choice to average daily traffic. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 84–99), Ch. 5 (pp. 124–126), Ch. 6 (pp. 134–152), Ch. 7 (pp. 154–157), Ch. 8 (pp. 161–164), Ch. 9 (pp. 168–173)</small></p>
+<!-- formulas-check:begin pub_242_change_10::f:2a7734d31256 x pavement-design -->
+
+<p>The resilient modulus in psi is determined by the California Bearing Ratio as follows:</p>
+<!-- gaps: 6a76ead0fb24385c -->
+
+<!-- formula-anchor: eq-pub-242-change-10-2a7734d31256 -->
+
+<div class="fc-math" id="eq-pub-242-change-10-2a7734d31256" role="region" aria-label="Formula 1" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="\mathrm { M } _ { \mathrm { r } } \left( \mathrm { p s i } \right) = 1500 \times \mathrm { C B R }"><mrow><msub><mrow><mi mathvariant="normal">M</mi></mrow><mrow><mrow><mi mathvariant="normal">r</mi></mrow></mrow></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi></mrow><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0003D;</mo><mn>1500</mn><mo>&#x000D7;</mo><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">R</mi></mrow></mrow></math></div>
+<p>The resilient modulus in psi is computed from the California Bearing Ratio (CBR). As the CBR value increases, the resilient modulus rises.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-3" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-3">Symbols: Resilient modulus from CBR ([1] PDF p. 142)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="M_r"><mrow><msub><mi>M</mi><mi>r</mi></msub></mrow></math></td><td>Mr</td><td>psi</td><td>output</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="CBR"><mrow><mi>C</mi><mi>B</mi><mi>R</mi></mrow></math></td><td>CBR test results</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+</table></div>
+
+<p><small>[1] — PDF p. 142</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats: not stated in the publication near this formula.</p>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<p>See also:</p>
+<ul>
+<li><a href="subgrade.html#eq-pub-242-change-10-2a7734d31256">Subgrade</a></li>
+</ul>
+<details class="fc-calc"><summary>Calculator: Resilient modulus from CBR ([1] PDF p. 142)</summary><iframe src="_apps/pub-242-change-10-2a7734d31256.html" title="Calculator: Resilient modulus from CBR ([1] PDF p. 142)" loading="lazy"></iframe><p><a href="_apps/pub-242-change-10-2a7734d31256.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-24.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 206 words before and 1241 words after the formula.</p>
+<p>Found by the search:</p>
+<ul>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="M_r"><mrow><msub><mi>M</mi><mi>r</mi></msub></mrow></math> from PDF p. 142, beside the formula</li>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="CBR"><mrow><mi>C</mi><mi>B</mi><mi>R</mi></mrow></math> from PDF p. 142, 1 step / 107 words after the formula</li>
+</ul>
+</details>
+
+<!-- formulas-check:end -->
+
+<p>Alternative design approaches become preferable whenever the premises of a conventional pavement design are not met. If providing a detour is prohibitively expensive or impractical, traffic must be kept in the work zone and the resulting loading on intermediate layers and cold longitudinal joints degrades performance, prompting the use of accelerated concrete that reaches opening strength in four to seven hours or precast concrete paving systems, especially where no reasonable detour exists. The Superpave Restricted Performance Specification may only be applied when the existing surface is stable, properly leveled, sealed and patched and satisfies the minimum thicknesses; otherwise a conventional overlay, total reconstruction, or another rehabilitation method must be selected. When an asphalt or concrete slab shows extensive deterioration—such as a deteriorated concrete section of roughly five hundred feet or intermittent patches that would leave ten feet or less of original slab between them—a full‑width reconstruction with a formal pavement design analysis to verify slab thickness is required. In high‑traffic corridors where minimizing work‑zone impacts is critical, accelerated concrete or precast systems are favored despite their higher cost, while roller‑compacted concrete is limited to roadways with an average daily traffic of two thousand vehicles or less and a speed limit of fifty‑five miles per hour; it also should be avoided where the International Roughness Index will be measured for ride‑quality incentives. For lane additions on rigid pavements, a full addition of ten feet or more that will carry heavier loads must be designed for the actual traffic rather than merely matching existing thickness, whereas partial widenings under ten feet must duplicate the existing pavement type and depth and adjust joint spacing to between ten and seventeen feet when original transverse joints exceed twenty feet. When distress is primarily surface‑related, full‑depth reclamation loses its advantage; similarly, if the remaining pavement thickness is too thin to form an effective reclaimed layer or the subgrade is excessively wet and cannot be adequately drained, other rehabilitation strategies are preferred. Under PennDOT oversight a DARWin pavement design analysis becomes mandatory when continuous length exceeds five hundred feet on divided roadways or one thousand feet on undivided roadways; for shorter sections the existing structure may be matched only if it meets minimum thickness criteria, but composite pavements that far exceed those minima or contain elements that cannot reasonably be replicated require a DARWin analysis directed by the District Pavement Management Engineer. Adjacent projects on a common route that exhibit significant differences in key inputs—such as total 18‑kip ESALs, subgrade or soil resilient modulus, initial or terminal serviceability, reliability level, or unit costs for pavement materials—must be treated with separate design approaches because the original assumptions no longer hold. Subgrade CBR values outside the normal range—greater than ten or less than five—or unreliable CBR data render the standard pavement design process insufficient; values above ten require chief geotechnical approval and values below five demand subgrade improvement, while values exceeding twenty are prohibited in the Heukelom‑Klomp correlation and also trigger more conservative designs. When isolated low‑CBR zones or large stretches with markedly different soil types occur, designers should improve those weak sections locally or divide the project into subsections each using its own pavement design rather than applying a uniform structure. If back‑calculated resilient modulus from Falling Weight Deflectometer data cannot be applied because the required pavement situations are absent, alternative testing methods must be employed. The simple (short) design method is permissible only on collectors and local roads and only when the resulting layer thicknesses remain within the minimum values for those road types; if those limits are exceeded for new construction or a rehabilitation requires structural capacity beyond what the existing pavement can provide, the rigorous ESAL calculation must replace it, and for cross‑routes that connect directly to limited‑access freeways the rigorous method becomes mandatory once projected design‑year average daily traffic exceeds eight thousand vehicles per day. When significant differential frost heave is anticipated, the standard rigid‑pavement thickness calculation is inadequate; increasing slab thickness offers limited success, so a dedicated frost‑design procedure or an alternative structural system should be employed. Subgrades composed of OL, MH, or OH soils that fail to satisfy minimum specifications, or marginal ML‑OL material with uncertain properties, make a full‑depth flexible pavement design unsuitable, prompting the use of a different structural system or subgrade improvement. Finally, when design must obey prescribed minimum and maximum lift depths from the tables or when minimizing total pavement cost drives layer‑thickness selection, designers are instructed to avoid the layered analysis thickness method and instead rely on either the specified‑thickness design or optimized‑thickness design approaches; if those constraints cannot be satisfied, an alternative design strategy becomes preferable. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 84–99), Ch. 5 (pp. 124–126), Ch. 6 (pp. 134–150), Ch. 7 (pp. 154–157), Ch. 8 (p. 164), Ch. 9 (pp. 169–173)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The design process begins with a precise definition of the project site, which is documented on a location map that marks the start and end points, any intersecting roadways, and includes cover‑letter data such as MPMS number, county, state route and segment offsets together with the environmental approval date. The intended function—whether a shoulder, temporary surface or a permanent roadway—is identified, and for roller‑compacted concrete (RCC) applications the traffic is limited to an average daily traffic of 2 000 vehicles or less and a design speed not exceeding 55 mph. Traffic inputs must also contain a full ADT and truck‑percentage summary, a forecast of total 18‑kip equivalent single axle loads (ESALs), and a breakdown of future loading that supports the selection of initial and terminal serviceability levels and an overall reliability target. Material information comprises representative samples collected at appropriate depths to characterize existing pavement layers and subgrade material. For RCC the mix design calls for cement, a dense aggregate gradation with a maximum size under one inch, and a water‑to‑cement ratio as low as 0.30 but typically around 0.40; optional air‑entraining admixtures may be used. The target compressive strength ranges from about 4 000 to 10 000 psi, and unit cost estimates for each material are recorded in the design package. Environmental considerations include an anticipated service life of roughly twenty years, climate‑driven surface treatments such as diamond grinding when operating speeds exceed 35 mph, and a frost‑heave probability assessment. Drainage evaluation is required to locate excess moisture or wet subgrade areas so that remedial measures can be incorporated before construction. Geotechnical data are gathered through in‑situ testing—such as falling weight deflectometer (FWD), dynamic cone penetrometer (DCP) and light weight deflectometer (LWD)—to determine the effective modulus of subgrade reaction or resilient modulus, CBR values, and overall subgrade stiffness. The subgrade and any existing subbase must be verified during design as capable of supporting RCC compaction, and all geotechnical results are signed by the district geotechnical engineer. Existing‑condition information is supplied through a recent pavement‑condition survey that documents current distress, RMS history of the pavement structure within project limits, and detailed typical section drawings that show existing layer thicknesses and any temporary pavements needed for construction sequencing. This comprehensive set of site, traffic, material, environmental, geotechnical, and existing‑condition inputs forms the foundation for a technically sound pavement design. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 124–126), Ch. 6 (pp. 134–137)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>In concrete pavement design the selection of slab thickness begins with the standard PennDOT procedures that allow a range from four to eighteen inches depending on the anticipated compressive strength of the concrete, typically between four‑ thousand and ten‑thousand psi. When a project involves replacing more than five hundred feet of pavement across all lanes, a full‑width design analysis is performed; only if this analysis shows a deficiency is a thicker slab specified. For lane additions or widenings that are at least ten feet wide the thickness normally matches the existing pavement unless the added lane will be subjected to heavier traffic, in which case the actual traffic loads drive a thicker design. Narrow (&lt; 10 ft) widenings must use the same concrete type and depth as the adjacent section. The required depth may be placed in a single lift or built up with multiple lifts to achieve the target thickness.</p>
+<p>Joint configuration follows both material type and existing geometry. Jointed reinforced concrete pavements employ perpendicular joints spaced at thirty feet, while jointed plain concrete pavements use fifteen‑foot spacing. When new work is tied into an existing pavement, transverse joints are aligned with the original layout: if the legacy joint spacing is twenty feet or less, the added slabs retain that length; where the original spacing exceeds twenty feet, the design reduces the spacing to a range of ten to seventeen feet and inserts intermediate joints so that slab lengths remain roughly equal. In single‑lane reconstructions the new joints must line up with existing ones, and an additional joint is introduced whenever the pre‑existing spacing is greater than twenty feet.</p>
+<p>Longitudinal continuity is provided by tie bars or tie bolts, which are required only for concrete patches longer than sixty‑five feet. Cross‑slope continuity across a replacement zone is achieved by setting precast slabs slightly higher—approximately one‑quarter inch above the surrounding surface—and then applying a final diamond grind to restore the designed slope. Transitions between new and existing pavement are therefore managed through careful joint alignment, appropriate use of tie‑bars for longer patches, and the elevation adjustment that preserves the required cross‑slope. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–99)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>Pavement design must identify the material system for every structural layer and prescribe its essential properties and mixture proportions. For flexible pavements the designer selects an asphalt mix—hot‑mix, warm‑mix, or reclaimed‑asphalt‑pavement‑based—and applies the minimum surface‑course thicknesses required for Superpave wearing and binder courses as shown in Table 9.5. The mix is required to meet target values for asphalt content, percent passing the No. 200 sieve, percent passing the primary control sieve, and an in‑place density that typically falls between 92 % and 98.5 %. When reclaimed asphalt pavement or recycled concrete aggregate is incorporated, the applicable specifications for those reclaimed materials are followed. The design also provides two alternative base options—an aggregate‑cement mix and an aggregate‑lime‑pozzolan mix—which must be presented as bid alternatives.</p>
+<p>For rigid pavements the specification calls for a concrete mix that conforms to Publication 408 Section 704, using an optimized aggregate gradation, or a higher‑strength Class AA cement concrete when required. The required compressive strength and the period needed to achieve it are stated; standard mixes reach traffic‑opening strength in 24 to 48 hours while accelerated mixes may do so in four to seven hours. Dowel anchoring systems are defined, including the use of epoxy, polyester, or vinylester binders for full‑length bond and high‑performance dowel bars when service life exceeds twenty years. When widening an existing jointed plain concrete pavement (JRCP) the new portion must match the existing type—plain cement concrete for JRCP and either reinforced or plain cement concrete for jointed reinforced concrete pavements—and slab thickness is retained unless traffic demands a different design; transverse joints are aligned with existing joints.</p>
+<p>Roller‑compacted concrete sections require identification of the three basic constituents—cement, aggregate, and water—with a low water‑to‑cement ratio as low as 0.30 and typically around 0.40, combined with a dense aggregate gradation whose maximum size is less than one inch. The mix may include air entrainment or limited admixtures at the designer’s discretion and is expected to achieve compressive strengths between four thousand and ten thousand psi.</p>
+<p>The subgrade material is defined together with its key engineering properties. Either a resilient modulus, determined in consultation with the geotechnical engineer per Publication 293, or a California Bearing Ratio (CBR) value—converted to resilient modulus by the Heukelom‑Klomp equation—is required; CBR values above ten are acceptable while values below five require additional justification. Detailed soil classification, gradation coefficients Cu and Cc, percent passing the #200 sieve, Atterberg limits (liquid limit, plastic limit, plasticity index), AASHTO group index, maximum dry density, and optimum moisture content are all specified. Seasonal adjustments are applied: a 10‑20 % reduction to spring resilient modulus values and a doubling of the modulus for frozen conditions.</p>
+<p>All borrow material and any stabilized subgrade must meet a minimum resilient modulus. Rock capping is prescribed as one to three feet of R‑3 rock or AASHTO No. 1 rock, modeled with a CBR value of 20, and a structural coefficient of 0.12 is used when lime or cement stabilization is modeled. Geosynthetic reinforcement is required where indicated: Class 4 geotextile Type A for full‑lane layer separation and Type C for stabilization on low‑CBR soils, together with any geogrid that satisfies agency specifications.</p>
+<p>For rigid pavement designs the base and subbase layers are defined as an Asphalt Treated Permeable Base (ATPB) or Cement Treated Permeable Base (CTPB) over a 2A subbase, each with assigned thicknesses. The loss‑of‑support factor is applied to every layer for effective k‑value calculations, and seasonal base elastic moduli of fifteen thousand psi for spring thaw, thirty thousand psi for normal conditions, and fifty thousand psi for frozen conditions are used. The combined stiffness of the subbase relative to the underlying soil resilient modulus is limited to a ratio of four; open‑graded subbases are prohibited, and drainage layers are confined to ATPB or CTPB.</p>
+<p>Ramp sections must use the same pavement material—concrete or asphalt—as the higher‑traffic roadway they serve, with acceleration and deceleration portions matching the mainline thickness and meeting at least the minimum depth appropriate for that traffic volume. Structural coefficients for each layer are obtained from Table 9.3, drainage coefficients for all layers are fixed at one, and the overall structural number must satisfy or exceed the required value while remaining within the allowable lift depths shown in the minimum‑and‑maximum depth tables (Tables 9.4 and 9.5). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 84–99), Ch. 6 (pp. 141–152), Ch. 8 (pp. 161–162), Ch. 9 (pp. 172–173)</small></p>
+<p>Pavement designers begin by quantifying the anticipated traffic loads, evaluating existing pavement condition, and measuring subgrade strength so that a required Design Structural Number (SN) can be established. That SN is then allocated to individual layers through the standard equation SN = a1·d1 + a2·d2·m2 + …, using structural coefficients drawn from reference tables and setting all drainage coefficients to 1.0; the resulting layer thicknesses must fall within the prescribed minimum and maximum lift depths. For the concrete surface, the mix is chosen to meet both structural strength and durability goals while remaining constructible. High‑early‑strength (HES) concrete is excluded because its propensity for excessive shrinkage cracking compromises long‑term performance, whereas accelerated concrete is specified when an early traffic opening is required. The baseline pavement concrete prescribed in Publication 408 Section 704, with an optimized aggregate gradation, attains the necessary strength within 24 to 48 hours and serves most standard projects. When a longer service life or higher durability is demanded—such as for precast paving systems—a high‑strength Class AA mixture is selected, often supplemented by high‑performance dowel bars when the pavement is expected to remain in service beyond twenty years.</p>
+<p>In situations where roller‑compacted concrete (RCC) is preferred, the mix is made very dry with a water‑cement ratio typically around 0.40 and as low as 0.30, producing a damp‑gravel consistency that yields compressive strengths between 4 000 and 10 000 psi. A dense aggregate gradation limited to one‑inch maximum size, together with optional air entrainment or minimal admixtures, enhances durability while allowing placement with an asphalt paver and compaction by rollers without the need for forms, reinforcement, or dowel bars. Structural adequacy is achieved by selecting a slab thickness between four and eighteen inches in accordance with PennDOT design procedures that reflect the projected traffic loads.</p>
+<p>When reclaimed materials are incorporated, designers select a stabilization method—pulverization alone, mechanical stabilization that adds aggregate to improve gradation, or chemical stabilization using cement, lime, fly ash, or similar additives—and proportion those agents based on laboratory‑tested mix designs. The proportioning is calibrated to achieve the target strength while avoiding excessive brittleness and ensuring constructability.</p>
+<p>For rigid pavements, the choice of base and sub‑base layers follows from the subgrade’s resilient modulus and the required effective k‑value. Engineers select a sub‑base type such as ATPB or CTPB whose inherent modulus matches the soil, then assign thicknesses that, after applying loss‑of‑support factors, produce a weighted average k‑value suitable for the anticipated traffic and environmental conditions. The ratio of sub‑base to roadbed soil resilient modulus is kept below four, open‑graded sub‑base materials are prohibited, and drainage layers are incorporated only where positive outlet drainage can be assured. In widening or lane‑addition work, policy mandates Class AA cement concrete unless an exemption is granted; full‑width additions (ten feet or more) retain the original slab thickness, while partial widenings under ten feet match the existing pavement type and depth. Jointed plain concrete pavements are widened with plain cement concrete, whereas jointed reinforced sections may be widened with either plain or reinforced concrete, ensuring that transverse joints align and slab lengths respect prescribed spacing limits. These material‑selection and proportioning strategies collectively satisfy structural adequacy, durability, constructability, and overall performance requirements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–99), Ch. 5 (pp. 124–126), Ch. 8 (pp. 161–162), Ch. 9 (pp. 172–173)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>Design of rigid pavements requires a comprehensive specification of joints, reinforcement, load‑transfer devices and transition details. All transverse joints must be defined in type—skewed or non‑skewed—and placed according to the pavement classification: jointed reinforced concrete pavement (JRCP) calls for 30 ft spacing with perpendicular joints, coated dowel bars and appropriate seals, whereas jointed plain concrete pavement (JPCP) uses 15 ft spacing under the same conditions. In any reconstruction or widening, new joints are required to align with existing ones; when the original transverse joint spacing is twenty feet or less the added slabs retain the original slab length, while spacings greater than twenty feet limit slab lengths to between ten and seventeen feet and may require an intermediate joint. Full lane additions of ten feet or more are built to the same thickness as the existing pavement unless traffic demands a heavier design, and partial widenings must match the original type and depth, with the new section tied into the existing structure. Load transfer across every transverse joint is provided by dowel bars that are fully bonded along their embedded length and anchored with epoxy‑type binders, although polyester or vinylester binders may also be used. Dowel bar retrofits are employed on working transverse cracks, and longitudinal reinforcement—epoxy‑coated deformed tie bars placed at an angle—is installed to cross‑stitch longitudinal cracks or joints in plain cement concrete pavements, but such tie bars or tie bolts are required only when a concrete patch exceeds sixty‑five feet. Spall repair, joint rehabilitation, cleaning and resealing of joints, and sealing of cracks are also mandated by the specifications. When roller‑compacted concrete (RCC) is used, forms, steel reinforcement and dowel bars are omitted; control joints are provided as required, with shoulder joints aligned to the mainline. Joint spacing for RCC follows thickness‑based rules: sections thinner than eight inches receive control joints every fifteen to twenty feet, while thicker sections use a spacing equal to 2.5 times the pavement thickness. Subgrade and aggregate interfaces may be stabilized with geogrids, and class 4 geotextiles are specified for layer separation (Type A) or combined separation and lateral restraint (Type C). Where a new pavement abuts an existing section of different total depth, granular transition material creates a gradual change in support conditions. Frost‑susceptible soils are addressed either by removal and replacement with non‑frost‑susceptible fill or by providing a stronger base course that serves as a load‑transfer measure against differential heave. Tied concrete shoulders constitute an additional load‑transfer system; their effect is incorporated through the load‑transfer coefficient J in slab‑thickness calculations. After computing thickness, values are rounded to the nearest half‑inch, or to the nearest inch for slabs thicker than seven inches when the area is under thirty thousand square yards. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 84–99), Ch. 6 (pp. 143–150), Ch. 8 (p. 164)</small></p>
+<p>Design of the interfaces between pavement layers and adjacent structures is governed by a set of detailed criteria that ensure load transfer, structural continuity, and durability. At transverse joints in concrete pavements, load‑transfer devices are required; dowel bars must be fully bonded along their embedded length and anchored with epoxy, polyester or vinylester binders to preserve joint continuity. The prescribed joint spacing depends on the pavement type: 30 ft for jointed reinforced concrete (JRCP) and 15 ft for jointed plain concrete (JPCP), with perpendicular, coated dowels and appropriate sealing. When a single‑lane reconstruction extends beyond about 20 ft between joints, an intermediate joint is introduced to keep spacing within limits, and longitudinal tie bars or tie bolts are incorporated only in patches longer than 65 ft. For lane additions or widenings of rigid pavements the new slabs must be aligned with the existing transverse joints. If the original joint spacing does not exceed 20 ft, the added slab length matches that of the existing pavement; when the original spacing is greater than 20 ft, the design adopts joint spacings between a minimum of 10 ft and a maximum of 17 ft, and the new portion is physically tied to the existing structure to maintain continuity. RCC sections use control joints that are coordinated with adjacent concrete pavements; on shoulders the joint pattern mirrors the mainline. Joint spacing follows a rule of 15–20 ft for slabs thinner than eight inches, while for thicknesses of eight inches or more the spacing equals 2.5 times the slab thickness in feet. Where the RCC surface will be exposed to traffic at speeds of 35 mph or higher, a textured finish obtained by diamond grinding is required before service entry; this treatment is not needed when the RCC serves as a base beneath an asphalt wearing course. Separation and reinforcement fabrics are specified for layer interfaces. A Class 4 Type A geotextile, extending across the full lane width of at least eight feet, separates dissimilar materials such as subbase and subgrade. Where the subgrade CBR is below three, a Class 4 Type C geotextile provides both separation and lateral restraint, and a geogrid may be installed at the subgrade‑aggregate interface to stabilize weak soils; all such treatments must conform to Publication 408 specifications, including Sections 221 and 738. Ramp‑to‑highway connections require material and thickness continuity. The ramp pavement must use the same concrete or asphalt type as the higher‑traffic roadway it merges with, and its acceleration and deceleration sections adopt the same thickness. Design of all ramp structures within an interchange is based on the most heavily loaded ramp, applying at least the minimum depth prescribed for the higher‑volume road. The interface between subbase and base courses is treated as a single support layer whose effective modulus of subgrade reaction (k) is obtained by weighting each layer’s loss‑of‑support factor by its thickness using the expression LS₁·D₁/(D₁+D₂)+LS₂·D₂/(D₁+D₂). The resulting k‑value is limited so that the ratio of subbase to soil resilient modulus does not exceed four. Only Asphalt or Cement Treated Permeable Base layers may be placed over a 2A subbase, while Open Graded Subbase is prohibited; drainage layers are permitted only where positive outlet drainage can be achieved. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–99), Ch. 6 (pp. 143–152), Ch. 8 (pp. 161–162)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>Effective pavement design begins with a systematic survey of existing drainage conditions; any deficiencies are corrected before the reclaimed layer is placed, and wet subgrade locations are provided with appropriate drainage features. The design package must explicitly document these provisions on the typical section drawing, showing all edge drains and, where required, longitudinal edge drains for dense bases or positive‑outlet drainage for permeable base layers such as Asphalt Treated Permeable Base (ATPB) or Cement Treated Permeable Base (CTPB); open‑graded subbase is prohibited. Subgrade characterization incorporates seasonal moisture and temperature effects: laboratory or field resilient‑modulus tests are performed on representative soil samples under wet and dry conditions, yielding spring modulus values that are 10 %–20 % lower than summer values and frozen‑ground moduli roughly twice the normal values. These seasonally adjusted moduli, together with CBR, fines content, Atterberg limits and group index, feed the AASHTO calculations for flexible pavements and the effective modulus of subgrade reaction for rigid pavements, which is taken as 15 000 psi for spring‑thaw conditions, 30 000 psi for normal summer/fall, and 50 000 psi for frozen winter. Climate‑related frost effects are addressed through a frost‑heave probability assessment that typically ranges from 25 % to 75 % of the project area. For flexible pavements the designer selects a frost‑heave rate from tables based on soil type, determines the depth of frost penetration using the Design Freezing Index for the nearest weather station, reads this depth against a drainage‑quality curve (e.g., FAIR) to obtain the maximum potential serviceability loss, and then applies the probability factor via the AASHTO chart to adjust the terminal serviceability index. Where distinct soil zones exist, the project may be divided into sections so that each section can receive a drainage system sized for its specific pavement thickness and subgrade condition. In frost‑susceptible soils, the design calls for removal or replacement with a sufficiently thick layer of non‑frost‑susceptible material to insulate the roadbed, complemented by base drains or other suitable drainage features that limit water accumulation and differential heave. Rigid pavements rely on saturated‑subgrade strength data to provide reserve capacity during spring thaws; no separate frost‑thickness adjustments are prescribed, but when differential frost heave is anticipated designers must consult dedicated frost‑design guidance, recognizing that increasing slab thickness alone offers limited mitigation. Throughout both flexible and rigid designs a loss‑of‑support factor is applied to the weighted average subbase k‑value to account for potential erosion or pumping caused by moisture. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p>The following figure provides a design chart for determining frost penetration depth based on these climatic and soil parameters.</p>
+<!-- concept-compliance:begin fig=ac5992d4 n=1 -->
+<figure class="cmp-figure" id="cmp-pavement-design-1">
+<img src="assets/pavement-design/ac5992d4eca9ce9a5aaa720aa292e9b3eaec15c302b69ef0d0af2da9701583c4.jpg" alt="Nomograph plotting frost penetration in inches against the design freezing index in degree days." aria-describedby="cmp-pavement-design-1-ld">
+<figcaption>A design chart plotting frost penetration depth against the design freezing index. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</figcaption>
+</figure>
+<div id="cmp-pavement-design-1-ld" hidden>
+<p>A nomograph with a logarithmic x-axis and a semi-logarithmic y-axis. The horizontal axis represents the Design Freezing Index in Degree Days, ranging from 15 to 3000. The vertical axis represents Frost Penetration in Inches, ranging from 4 to 100.</p>
+<p>A single solid line indicates a positive correlation between the two variables.</p>
+</div>
+<details class="cmp-longdesc">
+<summary>Text description of this figure</summary>
+<p>A nomograph with a logarithmic x-axis and a semi-logarithmic y-axis. The horizontal axis represents the Design Freezing Index in Degree Days, ranging from 15 to 3000. The vertical axis represents Frost Penetration in Inches, ranging from 4 to 100.</p>
+<p>A single solid line indicates a positive correlation between the two variables.</p>
+</details>
+<!-- concept-compliance:end -->
+
+<p>The figure displays a log-log graph with &lsquo;Frost Penetration (Inches)&rsquo; on the vertical axis and &lsquo;Design Freezing Index (Degree Days)&rsquo; on the horizontal axis, showing a linear relationship where frost depth increases as the freezing index rises.</p>
+<p><small>[1] — Ch. 5 (pp. 124–126), Ch. 6 (pp. 134–150), Ch. 8 (pp. 161–164), Ch. 9 (pp. 168–169)</small></p>
+<p>Effective pavement design must first assure accessibility and safety by providing drainage that removes both surface and subsurface water and by delivering adequate skid resistance through appropriate surface friction. Lateral support is supplied by shoulders that reduce edge stresses, while the structural layer thickness is derived from laboratory testing or accepted design methods to sustain anticipated traffic loads. Geometric considerations begin with joint spacing: reinforced concrete pavements require joints spaced at thirty feet, plain concrete pavements at fifteen feet, all joints must be perpendicular and equipped with coated dowel bars and proper seals, and any new joints in reconstructed lanes must align with existing ones or include intermediate joints when the spacing exceeds twenty feet. Slab dimensions are limited to a maximum width of one lane, with lengths ranging from six to fifteen feet, extending to twenty feet for prestressed units, and surface corrections and cross‑slope adjustments are achieved through leveling courses. When widening an existing rigid pavement, full lanes ten feet or wider must retain the original thickness unless heavier traffic dictates otherwise, while partial widenings under ten feet must match the existing pavement type and depth. Transverse joints in the new work follow the original pattern; if the original spacing is twenty feet or less, slab lengths are duplicated, whereas larger spacings require slabs between ten and seventeen feet with intermediate joints to keep lengths roughly equal. Roller‑compacted concrete may be employed only on roadways with an average daily traffic of two thousand vehicles or fewer and a speed limit not exceeding fifty‑five miles per hour; if the surface is exposed and the posted speed is thirty‑five miles per hour or higher, diamond grinding must texture the pavement to provide sufficient skid resistance. Control joint spacing for RCC follows thickness criteria: sections thinner than eight inches receive joints every fifteen to twenty feet, while thicker sections use a spacing equal to two point five times the pavement thickness in feet. Ramp pavements on limited‑access highways must use the same material and thickness as the higher‑traffic roadway they connect to, with classification consistent with that road, and design is driven by the ramp experiencing the greatest traffic loading, incorporating minimum depths appropriate for the higher‑volume road. Designers also anticipate future development around interchanges and provision for any expected heavy‑truck traffic. User considerations include planning for early opening of concrete repairs using accelerated or precast systems so that lanes can be reopened within four to seven hours, and specifying liquidated damages if lane closures exceed prescribed time frames, thereby ensuring the pavement supports expected loads without compromising public safety. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 84–99), Ch. 6 (p. 152)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed pavement design is first assembled into a full package that includes a cover letter, Form D‑4332, typical section drawings, DARWin printouts, structural calculations, traffic and geotechnical data, and life‑cycle cost analysis results. This package is submitted to Central Office where it is directly compared with an AASHTOWare Pavement ME design performed by the office to confirm that the proposed structure follows the 1993 AASHTO procedures, satisfies all minimum thickness and material criteria, and aligns with the project’s traffic loads, environmental conditions, cost‑effectiveness targets, and schedule constraints. The review confirms compliance with departmental standards and provides final approval of the design.</p>
+<p>For rigid pavements, after the calculations are completed the engineer applies the prescribed rounding rules—rounding to the nearest half‑inch for typical sections and, when a pavement exceeds seven inches in depth and its area is under thirty thousand square yards, rounding to the nearest inch. The rounded thickness is then checked against the minimum and maximum limits listed in Table 8.3 to ensure it falls within acceptable bounds. The designer also evaluates combinations of design variables that achieve the most economical solution while maintaining required durability and rideability, thereby confirming performance expectations.</p>
+<p>For flexible pavements, verification begins by confirming that the calculated structural number from the chosen thickness design exceeds the required design structural number, establishing structural adequacy. Layer thicknesses are generated using either the Specified Thickness Design or Optimized Thickness Design method in DARWin, with the Layered Analysis approach expressly excluded. All layer depths must respect the minimum and maximum lift limits set out in Tables 9.4 and 9.5, addressing constructability concerns. Drainage coefficients are fixed at 1.0 and structural coefficients are taken from Table 9.3; cost factors such as per‑inch costs for surface, base, and subbase materials are examined alongside any mandated base material alternatives to ensure the design remains consistent with project specifications and budgetary goals.</p>
+<p>Throughout this verification process, any constructability issues or questions of alignment with overall project requirements are resolved through coordination with the District Pavement Management Engineer or Pavement Manager. This integrated review guarantees that the completed pavement design is compliant, constructible, performs as intended, and remains fully consistent with the broader objectives of the project. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–136), Ch. 8 (p. 164), Ch. 9 (pp. 172–173)</small></p>
+<p>The pavement design is expected to provide a service life of roughly twenty years, based on the chosen materials, anticipated traffic volumes and prevailing environmental conditions. Structural durability is achieved through a high compressive strength ranging from four thousand to ten thousand psi, which supplies resistance to load‑induced distress such as cracking and rutting. Because roller‑compacted concrete develops a surface texture that is inherently rougher than conventional Portland cement concrete or asphalt, the design does not rely on the International Roughness Index for ride‑quality assessment; consequently ride quality is not measured for payment or performance incentives. In addition to durability, the design must meet defined initial and terminal serviceability levels, and when an asphalt wearing course is incorporated it must satisfy a specified Skid Resistance Level. These serviceability and skid‑resistance targets are evaluated through the DARWin mechanistic‑empirical analysis, recorded on Form D‑4332, and incorporate the stipulated reliability level together with the projected total equivalent single axle loads (ESALs) as part of the design criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 6 (pp. 136–137)</small></p>
+<h2 id="related-concepts">Related Concepts</h2>
+<ul>
+<li><a href="frost-heave.html">Frost Heave</a></li>
+<li><a href="mix-design.html">Mix Design</a></li>
+<li><a href="pavement-structure.html">Pavement Structure</a></li>
+<li><a href="rigid-pavement.html">Rigid Pavement</a></li>
+</ul>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-D.3: hierarchy concept-map diagram (md->html reverse builder; per-page inject) */
+figure.hier-diagram { overflow-x: auto; margin: 1.5rem 0; }
+svg.hd { max-width: 100%; height: auto; display: block; margin-inline: auto;
+  font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+svg.hd text { text-anchor: middle; dominant-baseline: middle; }
+svg.hd .hd-hub rect { fill: var(--accent); stroke: var(--accent); }
+svg.hd .hd-hub text { fill: var(--bg); }
+svg.hd .hd-child rect { fill: var(--chip); stroke: var(--border); stroke-width: 1; }
+svg.hd .hd-child text { fill: var(--fg); }
+svg.hd .hd-edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+svg.hd .hd-stub { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 3; }
+svg.hd .hd-child { cursor: pointer; }
+svg.hd .hd-child a rect { transition: fill .12s ease, stroke .12s ease; }
+svg.hd .hd-child:hover rect,
+svg.hd .hd-child a:focus rect,
+svg.hd .hd-child a:focus-visible rect { fill: var(--chip); stroke: var(--link); stroke-width: 2; }
+.hd-tooltip { position: fixed; z-index: 10000; max-width: 22rem; padding: .45rem .7rem;
+  background: var(--fg); color: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  font-size: .8rem; line-height: 1.4; pointer-events: none; opacity: 0; visibility: hidden;
+  transition: opacity .12s ease; box-shadow: 0 3px 12px rgba(0, 0, 0, .28); }
+.hd-tooltip.hd-tooltip-show { opacity: 1; visibility: visible; }
+</style>
+<script>
+(function () {
+  var tip = null;
+  function ensureTip() {
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "hd-tooltip";
+      tip.setAttribute("role", "tooltip");
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+  function show(node) {
+    var desc = node.getAttribute("data-desc");
+    if (!desc) return;
+    var t = ensureTip();
+    t.textContent = desc;
+    var r = node.getBoundingClientRect();
+    t.style.left = Math.max(8, Math.round(r.left)) + "px";
+    t.style.top = Math.round(r.bottom + 8) + "px";
+    t.classList.add("hd-tooltip-show");
+  }
+  function hide() { if (tip) tip.classList.remove("hd-tooltip-show"); }
+  var nodes = document.querySelectorAll(".hd-child");
+  for (var i = 0; i < nodes.length; i++) {
+    (function (node) {
+      node.addEventListener("mouseenter", function () { show(node); });
+      node.addEventListener("mouseleave", hide);
+      var focusTarget = node.querySelector("a") || node;
+      focusTarget.addEventListener("focus", function () { show(node); });
+      focusTarget.addEventListener("blur", hide);
+    })(nodes[i]);
+  }
+})();
+</script>
+<style>
+/* FR-MH-21.2: formula-block display math (md->html reverse builder; per-page inject) */
+div.fc-math { overflow-x: auto; margin: 1rem 0; }
+
+/* FR-MH-21.12(a): formula-block calculator disclosure (md->html reverse builder; per-page inject) */
+details.fc-calc { margin: 1rem 0; }
+details.fc-calc > summary { cursor: pointer; }
+details.fc-calc iframe { display: block; box-sizing: content-box; width: calc(100% - 2px);
+  height: 28rem; margin-top: .5rem; border: 1px solid var(--border); }
+</style>
+<script>
+window.addEventListener("message", function (e) {
+  if (!e.data || e.data.type !== "fc-calc-height") return;
+  var frames = document.querySelectorAll("details.fc-calc iframe");
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].contentWindow === e.source) frames[i].style.height = e.data.height + "px";
+  }
+});
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

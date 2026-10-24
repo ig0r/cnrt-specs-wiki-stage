@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cracking</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html" class="active" aria-current="page">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><a href="distress.html">Distress</a><span class="crumb-sep">›</span><span class="crumb-current">Cracking</span></nav>
+<article><h1>Cracking</h1>
+<div class="meta"><div class="part-of">Part of: <a href="distress.html">Distress</a> <span class="edge edge-taxonomic" title="Cracking is a topic under Distress.">is-subtopic-of</span></div><div class="edge-reading">Cracking is a topic under Distress.</div><div><a class="tag" href="index.html?q=cracking">cracking</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Cracking is the visible expression of loss of structural integrity in both asphalt and concrete pavements, appearing as surface fissures that range from minor superficial cracks to extensive alligator‑type patterns caused by oxidation, moisture intrusion, and inadequate support [1]. Its purpose in pavement engineering is to restore a sound structural and functional condition by arresting further propagation—through simple seal coats or micro‑surfacing for low‑severity distress, or by fragmenting free‑moving slabs into 12–24 inch pieces and seating them to create a uniform base that limits differential movement and reflective cracking in overlays [1]. The defining characteristic of effective crack treatment is the re‑establishment of continuity and support, whether by filling voids and shallow ruts with surface treatments or by breaking and reseating slabs before overlay placement, thereby improving performance and extending service life [1].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Cracking is the visible expression of loss of structural integrity in both asphalt and concrete pavements. When cracks are minor or low‑severity they appear as superficial fissures that can be sealed with surface treatments such as seal coats, slurry seals, or a Type A micro‑surfacing scratch course; these applications fill voids and shallow ruts less than one‑half inch deep, restore skid resistance, and arrest further propagation. In concrete pavements where cracking is extensive—often accompanied by faulting, joint movement, or punchouts—the cracking/breaking and seating process is employed to reduce the size of free‑moving slabs, create a uniform stable base, and limit reflective cracking that would otherwise travel through an overlay, thereby improving performance and service life. Alligator‑type cracking caused by age‑related oxidation signals fatigue and low‑temperature distress; an ultra‑thin bonded wearing course can seal the surface, reduce oxidation, and maintain resilience against further fatigue cracking while also correcting raveling and moderate rutting. Cracking is a primary distress recorded in annual condition surveys and quantified as the percentage of pavement surface that is cracked for FHWA reporting. To retard its progression, routine‑maintenance crack sealing—particularly cyclic sealant applications on the Interstate system—is scheduled at intervals of approximately three to five years. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (pp. 103–126), Ch. 10 (p. 183), Ch. 13 (pp. 216–221)</small></p>
+<p>The overarching objective when addressing cracking in pavement engineering is to re‑establish a sound structural and functional condition that will carry traffic loads reliably while also limiting any further loss of performance. By fragmenting large, free‑moving concrete slabs through controlled cracking and seating, the treatment creates a uniform support layer that reduces differential movement at existing joints and punchouts, thereby diminishing reflective cracking in subsequent overlays. For low‑severity cracks, a micro‑surfacing sealant—typically a Type A mix—is applied to close the fissures and fill voids, directly repairing the damage and restoring surface continuity. More generally, the distress survey that documents crack patterns is used to identify the underlying mechanisms so that rehabilitation measures can be designed to prevent those same mechanisms from recurring, effectively halting additional deterioration. When extensive cracking exists beneath a bonded Portland‑cement concrete overlay, the cracks must be repaired before placement; otherwise the defects would propagate through the new slab and compromise its monolithic behavior. Routine crack‑sealing actions, scheduled cyclically every three to five years for asphalt surfaces, serve both to repair existing distress and to retard further propagation, thereby extending the pavement’s service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (pp. 105–126), Ch. 10 (p. 183), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>Cracking in both concrete and asphalt pavements originates from a suite of interrelated mechanisms that reduce the ability of the structure to distribute stresses. Moisture infiltration is repeatedly identified as a primary driver: water entering through surface fissures or inadequate drainage accumulates in the base and subgrade, weakening support and promoting crack propagation. When drainage is insufficient, excess water not only erodes material integrity but also creates freeze‑thaw cycles that expand trapped moisture, accelerating fissuring. In concrete decks, this moisture effect combines with weak subbase conditions; premature mid‑slab cracking often occurs where the underlying subbase lacks adequate stiffness or thickness, and where subsurface drainage problems are present.</p>
+<p>Material aging further compounds these stresses. Oxidative ageing of asphalt binders reduces fatigue resistance and low‑temperature resilience, leading to alligator cracking that is unrelated to structural capacity. In concrete, aggregate‑related reactions such as alkali‑silica reaction (ASR) and the presence of reactive Vanport Limestone degrade the cement matrix, hastening fissure development.</p>
+<p>Structural inadequacies also play a critical role. Insufficient slab support—whether from low subgrade stiffness or thin pavement sections—creates stress concentrations under anticipated traffic loads, especially heavy vehicles, prompting crack initiation. When existing slabs have become free‑moving due to faulting or differential movement at joints, the practice of cracking and seating the pavement into 12–24 inch pieces is employed to reestablish a uniform support condition before overlay placement.</p>
+<p>Construction and rehabilitation techniques can inadvertently introduce additional stresses. Improper slabjacking, such as lifting a concrete slab too rapidly or without accounting for temperature‑induced expansion, imposes excessive tensile forces that generate new cracks. The procedure must be performed incrementally, with careful control of grout flow and consideration of subgrade and drainage conditions, to avoid compression of expanded joints.</p>
+<p>Mitigation strategies described in the report target these mechanisms directly. Application of Type A micro‑surfacing mixes or ultra‑thin bonded wearing courses (UTWC) provides a sealed membrane that limits moisture ingress and reduces oxidation of the surface, thereby preserving resilience against fatigue and low‑temperature cracking. Adequate subdrainage is required wherever subsurface drainage deficiencies exist to prevent water accumulation beneath overlays.</p>
+<p>In summary, the distress of cracking is accelerated by moisture intrusion coupled with inadequate drainage, weak or insufficient support layers, material aging (oxidation, ASR), environmental cycling (freeze‑thaw, temperature effects), heavy traffic loads, and improper slabjacking practices. Addressing each of these mechanisms through proper design, drainage provision, material selection, and controlled construction techniques is essential to limit crack development and extend pavement service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 92–98), Ch. 5 (pp. 105–126), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Crack sealing is applied as a routine‑maintenance treatment on asphalt‑surfaced pavements that exhibit fissures, typically performed at intervals of three to five years; concrete joint sealing follows a similar routine on concrete pavements about every five years. The treatment is triggered by observed cracking distress rather than specific traffic or environmental thresholds, although site conditions such as an inadequate subbase can precipitate premature mid‑slab cracking that would also warrant sealant repair. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=ea35dae6 src=pub_242_change_10::tab:p220#1 -->
+<p>The table below lists maintenance frequencies for asphalt pavement activities.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-cracking-1-cap" tabindex="0"><table class="ct-table" id="ct-cracking-1" aria-describedby="ct-cracking-1-sum">
+<caption id="ct-cracking-1-cap">Asphalt Pavements</caption>
+<thead>
+<tr><th scope="col">Activity</th><th scope="col">Frequency</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Crack sealing</th><td>3 to 5 years</td></tr>
+<tr><th scope="row">Micro Surfacing (optional)</th><td>5 to 10 years</td></tr>
+<tr><th scope="row">Resurfacing</th><td>8 to 12 years (with no interim Micro Surfacing) 13 to 17 years (with an interim Micro Surfacing)</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-cracking-1-sum">Rows list pavement maintenance activities and columns provide their recommended frequency intervals.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 220.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 13 (pp. 220–221)</small></p>
+<p>When pavement distress is limited to low‑severity surface cracks, simple surface treatments such as seal coating or routine crack sealing may be applied; however, these methods are prohibited on Interstate highways and must be avoided whenever the pavement requires structural upgrading. If cracking progresses beyond low severity—moderate or severe cracks—or if it coexists with other distresses such as medium‑to‑high raveling, deep rutting, significant friction loss, moisture infiltration, or extensive faulting, surface treatments like micro‑surfacing become inappropriate and a more substantial preservation, rehabilitation, or reconstruction technique should be selected. Likewise, when the amount of patching needed exceeds roughly ten percent of the pavement area, or when cracking is linked to deeper problems such as inadequate subbase material, routine crack sealing no longer satisfies treatment criteria and a higher‑level intervention is required.</p>
+<p>For concrete pavements, extensive cracking or faulting precludes the use of bonded overlays because the distress will propagate through the new layer unless it is first repaired; in those cases an unbonded overlay, repair of the cracks, or another rehabilitation method should be chosen. When the existing slab is so distressed that patching is no longer economical, the practice of cracking and seating the slab is also unsuitable, especially when an unbonded jointed plain concrete pavement (JPCP) overlay can provide the needed support at lower cost. The same reasoning applies to asphalt overlays: opting for an unbonded JPCP overlay avoids the unnecessary work and expense associated with cracking and seating.</p>
+<p>Finally, full‑depth reclamation is generally inappropriate for surface‑related cracking because its purpose is to improve support layers rather than address superficial distress; a surface treatment or other preservation strategy should be used instead. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (pp. 103–126), Ch. 10 (p. 183), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>To establish whether cracking repair or a related treatment is required on a pavement segment, an agency must first conduct a current pavement condition or distress survey that follows the applicable PennDOT manuals and FHWA guidelines. The visual inspection records the presence, type and severity of cracks together with other distresses such as rutting, raveling, potholes and drainage deficiencies, and the results are compiled into a summary report that links observed cracking to its underlying causes and feeds the rehabilitation strategy. For concrete pavements, the Condition Survey evaluation method in DARWin is used to quantify the extent of cracking or faulting; if the survey indicates a great extent of distress, a bonded PCC overlay would be rejected because the cracks would propagate through the new slab. The distress survey also quantifies the percentage of surface that is cracked, and this crack‑percentage measurement is taken for each pavement segment alongside International Roughness Index (IRI) and rutting or faulting values. A segment is classified as being in poor condition when two or more of these three distress components are rated poor, and FHWA policy limits a state to no more than five percent of its Interstate lane‑miles in that category. In addition to the visual data, the annual automated pavement condition surveys (videologging) required by the STAMPP program capture the same crack extent information and other condition data such as edge deterioration, joint spalling and faulting. The survey outputs are entered into the Pavement Condition/Treatment Matrices; any segment that meets the matrix thresholds for cracking triggers routine‑maintenance crack sealing, a treatment applied on a three‑to‑five‑year cycle to arrest further propagation. Finally, in‑situ strength testing is performed to verify that the underlying structure can support the proposed repair, with typical tests including Falling Weight Deflectometer (FWD) measurements, dynamic cone penetrometer readings or lightweight deflectometer assessments, all of which provide subgrade stiffness values needed before rehabilitation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126), Ch. 10 (p. 183), Ch. 13 (pp. 216–221)</small></p>
+<p>Cracking interventions are prescribed according to the severity of the observed distress. When a concrete pavement has deteriorated beyond the point where patching is economical—evidenced by free‑moving slabs, faulted joints, or pronounced differential movement—the cracking/breaking and seating method is employed; in this severe condition the slab is broken into pieces roughly 12 to 24 inches long and rolled into the base or subbase to provide a uniform support before an overlay is placed. For pavements that remain structurally sound but display only low‑severity or minor cracking, surface treatments are appropriate. An asphalt surface treatment or scratch‑course/seal‑coat combination can correct minor cracking together with minor rutting and loss of fine aggregate, provided the pavement does not require structural upgrading. Similarly, a Type A micro‑surfacing mix is applied when low‑severity cracking (often accompanied by low to medium raveling, friction loss, or moisture infiltration) is present; the mix seals cracks, fills voids, and a double application is recommended unless the overall condition is judged excellent. Bonded concrete overlays are limited to sections where the existing concrete shows only a modest amount of cracking or faulting, because extensive cracking would transmit through the overlay if left unrepaired. Finally, routine‑maintenance crack sealing is triggered as soon as surface cracks are identified in periodic condition surveys and is scheduled cyclically—typically every three to five years for asphalt pavements and every five years for concrete joints—to repair and retard further propagation of the distress. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=5aab6368 src=pub_242_change_10::tab:p104#1 -->
+<p>Table: TABLE 5.1SEAL COAT, SLURRY SEALAND SURFACE TREATMENT SELECTION GUIDE.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-cracking-2-cap" tabindex="0"><table class="ct-table" id="ct-cracking-2" aria-describedby="ct-cracking-2-sum">
+<caption id="ct-cracking-2-cap">TABLE 5.1SEAL COAT, SLURRY SEALAND SURFACE TREATMENT SELECTION GUIDE</caption>
+<thead>
+<tr><th scope="col">CURRENTADT</th><th scope="col">SEALCOAT</th><th scope="col">SEAL COATUSINGAGGREGATESFROM RAP</th><th scope="col">SLURRYSEAL</th><th scope="col">SURFACETREATMENT</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">0 - 1000</th><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><th scope="row">1001 - 1,500</th><td>Yes</td><td>4</td><td>Yes</td><td>Yes</td></tr>
+<tr><th scope="row">1,501 - 3,000</th><td>2</td><td>4</td><td>Yes</td><td>2</td></tr>
+<tr><th scope="row">3,001 - 5,000</th><td>2</td><td>4</td><td>Yes</td><td>2</td></tr>
+<tr><th scope="row">5,001 - 12,000</th><td>2</td><td>No</td><td>1</td><td>2</td></tr>
+<tr><th scope="row">12,001 - 20,000</th><td>3</td><td>No</td><td>1</td><td>2</td></tr>
+<tr><th scope="row">Over 20,000</th><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-cracking-2-sum">Rows list CURRENTADT; columns give SEALCOAT, SEAL COATUSINGAGGREGATESFROM RAP, SLURRYSEAL, SURFACETREATMENT.</p>
+<p class="ct-notes">Notes: The numbers in the Table refer to the following: 1 - Use only if the base is good and the existing surface is a Superpave surface. 2 - Use only if traffic is controlled during and after construction and aggregate is precoated or held to 1.0% passing #200 sieve. 3 - Use only if traffic is detoured or the lane is closed for 24 hours and aggregate is precoated or held to 1.0% passing #200 sieve. 4 - Use only if approved by the District Executive in writing.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 104.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (pp. 103–105), Ch. 10 (p. 183), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>When pavement cracking reaches a level where conventional patching is no longer economical, the preferred corrective action is the crack‑and‑seat method. This technique fractures the existing concrete slab into pieces roughly twelve to twenty‑four inches long and rolls each fragment into the underlying base or subbase, thereby creating a uniform support before an overlay is placed. Any cracks that are patched in advance of this operation must be filled with a flexible‑base course replacement rather than a conventional concrete patch, ensuring compatibility with the seated slab.</p>
+<p>For surface‑level cracking and shallow depressions up to one‑half inch deep, a micro‑surfacing treatment using a Type A mix is specified. The Type A material seals cracks, fills voids, and addresses shallow ruts while also providing a scratch or surface course. Unless the pavement condition is judged excellent, a double coat of this mix is applied; on Interstate projects a double application of Type A SRL‑E is required even when the surface appears excellent.</p>
+<p>An alternative mitigation strategy employs an Ultra‑thin Bonded Wearing Course (UTWC). This system combines a polymer‑modified emulsified asphalt membrane laid by a self‑priming paver with an ultra‑thin hot‑mix overlay. Three aggregate gradations are available—Type A, B, or C—with nominal maximum sizes of 6.3 mm, 9.5 mm, and 12.5 mm respectively. The finished thickness is set at one‑to‑one‑and‑a‑half times the largest aggregate diameter, which translates to about a half‑inch for Type A and three‑quarters of an inch for Types B and C. The membrane‑overlay combination reduces oxidation, enhancing resistance to fatigue and low‑temperature cracking while also correcting raveling and moderate rutting; it is expected to perform for eight to ten years without traffic restrictions.</p>
+<p>To prevent reflective cracking when a new asphalt overlay is placed over an existing cracked surface, the design calls for an asphalt paving interlayer positioned between the old pavement and the new wearing course. Acceptable interlayers include needle‑punched geotextile fabric, high‑strength fiberglass mesh grids, or composite reinforcing grids, each of which must be compatible with the asphalt mix and applied with a suitable tack coat as directed by the supplier. The overlay incorporating the interlayer should have a minimum thickness of one and a half inches to ensure adequate support for milling and bonding, following the detailed procedures outlined in Publication 408 Section 466. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (pp. 105–120)</small></p>
+<p>The success of crack‑related repairs and overlays depends on a combination of material characteristics, compatibility with existing pavement layers, and the condition of the underlying structure. Low‑viscosity expanding polyurethane grout, such as high‑density two‑component polyurethane, penetrates voids more completely than higher‑viscosity cement grouts and offers resistance to water and chemical attack, thereby reducing stress concentrations that could initiate new cracks. When slabjacking is required, work should be scheduled for cooler periods because high temperatures cause slabs to expand and place joints in compression, making lifting impractical; lifts must be performed incrementally to keep slab stresses low. Hole patterns for injection must be laid out on site with attention to subgrade quality, drainage conditions, and the locations of existing joints and cracks.</p>
+<p>For overlay treatments, the structural condition of the existing concrete is critical. Bonded jointed plain‑concrete pavement (JPCP) overlays are appropriate only when the substrate is in good or fair condition, the subgrade is stable, and drainage functions properly; under these circumstances the overlay and slab act as a monolithic unit that resists further cracking. Conversely, unbonded concrete overlays can be employed on moderately to severely deteriorated pavements where bonding is not required. Prior to any bonded overlay, existing slabs should be cracked or broken at joints to reduce the size of free‑moving panels and limit differential movement that would otherwise cause reflective cracking.</p>
+<p>Micro‑surfacing treatments are effective when the pavement exhibits low‑severity cracking, modest raveling, limited weathering, and minimal moisture infiltration. Selecting the correct type—Type A for shallow cracks and ruts less than one‑half inch deep, Type B for moderate distress, or Type RF for deeper faults—and applying a double coat unless the surface is in excellent condition ensures material compatibility with the observed damage level.</p>
+<p>Ultra‑thin bonded wearing courses rely on a polymer‑modified emulsified asphalt membrane beneath an ultra‑thin hot‑mix overlay. The membrane must seal the surface to limit oxidation and weathering, which preserves fatigue resistance and reduces low‑temperature cracking. Thicknesses are limited to one‑half inch for Type A and three‑quarters of an inch for Types B and C, making precise control of aggregate size essential.</p>
+<p>When a polymer interlayer is used beneath an asphalt overlay, the interlayer must be thermally stable, physically durable, and chemically compatible with the asphalt so that it forms a strong internal adhesive or mechanical bond. The overlying Superpave 6.3 mm wearing course should be placed only on sound pavements where structural integrity is confirmed and patching does not exceed two percent of the surface area; a minimum overlay thickness of about one‑and‑a‑half inches is required to maintain sufficient bond strength for reflective‑crack mitigation.</p>
+<p>Reclaimed pavement mixes introduce additional considerations. The reclaimed material’s strength potential must be balanced against brittleness, which can increase if chemical stabilizers such as cement, lime, or fly ash are added beyond laboratory‑determined limits. Excessive stabilizer content raises stiffness but may promote cracking, especially when the existing subgrade is moist or drainage deficiencies exist. Therefore, a thorough distress survey should identify current cracking severity, moisture levels, and any drainage problems, which must be corrected before constructing the reclaimed layer.</p>
+<p>Finally, inherent material issues in the original pavement can predispose it to premature cracking. An inadequate subbase may trigger mid‑slab cracking in jointed concrete pavements, while problematic aggregates such as Vanport limestone or susceptibility to alkali‑silica reaction are not always captured by automated condition surveys and must be detected through field inspection before any crack‑related treatment is selected. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 92–98), Ch. 5 (pp. 105–126), Ch. 10 (p. 183), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>To treat a severely distressed concrete pavement that cannot be economically patched, the cracking/breaking and seating method is employed. The existing jointed plain‑concrete or reinforced concrete slabs are fractured into roughly 12–24 inch pieces, which are then rolled into the underlying base or subbase to provide a uniform support before any overlay is placed. Any cracks that remain after this process are patched using a flexible base‑course material rather than additional concrete, ensuring a stable substrate for the new pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98)</small></p>
+<p>Implementation of crack mitigation depends on the treatment selected. For minor cracking, seal coats, slurry seals and comparable surface treatments are applied without special equipment, but they are prohibited on Interstate highways and must meet the criteria set out in Table 5.1 for other roads. When an ultra‑thin bonded wearing course is used, a self‑priming paver deposits the polymer‑modified emulsified asphalt membrane directly ahead of the screed and then lays the hot‑mix in a single pass with one paving machine; this operation is performed under normal paving weather and imposes no traffic restrictions while the surface cures. For overlay methods that address structural cracking, the work sequence begins with preparation of the existing pavement—often a scratch or leveling course placed after removal of deficient material using heater planers or milling machines. The activity must be timed within the weather limits specified in Publication 408, and good surface and sub‑surface drainage is required because freeze‑thaw cycles can accelerate cracking. When traffic remains on site, especially stopping, turning, or slow‑moving vehicles, a non‑tracking tack coat is applied to protect the fresh overlay; thin overlays on Interstates are limited to a minimum thickness of 1½ inches unless special approval is obtained. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=e2b13a12 src=pub_242_change_10::tab:p106#1 -->
+<p>Table 5.2 provides a selection guide for polymer-modified emulsified paving systems based on traffic volume and rut depth.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-cracking-3-cap" tabindex="0"><table class="ct-table" id="ct-cracking-3" aria-describedby="ct-cracking-3-sum">
+<caption id="ct-cracking-3-cap">TABLE 5.2POLYMER-MODIFIED EMULSIFIED PAVING SYSTEM SELECTION GUIDE</caption>
+<thead>
+<tr><th id="ct-cracking-3-h0-0" scope="col" rowspan="2">CURRENTADT5</th><th id="ct-cracking-3-h0-1" scope="col" colspan="3">NON-SURFACELEVELING COURSE</th><th id="ct-cracking-3-h0-4" scope="col" colspan="3">RE-PROFILE COURSE,RUT FILL USED ASSURFACE COURSE</th><th id="ct-cracking-3-h0-7" scope="col" colspan="2">WEARINGCOURSE,FULL WIDTH</th></tr>
+<tr><th id="ct-cracking-3-h1-1" scope="col">TYPEA</th><th id="ct-cracking-3-h1-2" scope="col">TYPEB</th><th id="ct-cracking-3-h1-3" scope="col">TYPERF</th><th id="ct-cracking-3-h1-4" scope="col">TYPEA</th><th id="ct-cracking-3-h1-5" scope="col">TYPEB</th><th id="ct-cracking-3-h1-6" scope="col">TYPERF</th><th id="ct-cracking-3-h1-7" scope="col">TYPEA</th><th id="ct-cracking-3-h1-8" scope="col">TYPEB</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-cracking-3-h2-0" scope="row">0 - 5,000</th><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-1 ct-cracking-3-h2-0">2</td><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-2 ct-cracking-3-h2-0">3</td><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-3 ct-cracking-3-h2-0">4</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-4 ct-cracking-3-h2-0">2</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-5 ct-cracking-3-h2-0">3</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-6 ct-cracking-3-h2-0">4</td><td headers="ct-cracking-3-h0-7 ct-cracking-3-h1-7 ct-cracking-3-h2-0">Yes</td><td headers="ct-cracking-3-h0-7 ct-cracking-3-h1-8 ct-cracking-3-h2-0">Yes</td></tr>
+<tr><th id="ct-cracking-3-h3-0" scope="row">5,000 - 10,000</th><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-1 ct-cracking-3-h3-0">2</td><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-2 ct-cracking-3-h3-0">3</td><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-3 ct-cracking-3-h3-0">4</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-4 ct-cracking-3-h3-0">2</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-5 ct-cracking-3-h3-0">3</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-6 ct-cracking-3-h3-0">4</td><td headers="ct-cracking-3-h0-7 ct-cracking-3-h1-7 ct-cracking-3-h3-0">Yes</td><td headers="ct-cracking-3-h0-7 ct-cracking-3-h1-8 ct-cracking-3-h3-0">Yes</td></tr>
+<tr><th id="ct-cracking-3-h4-0" scope="row">10,001 - 20,000</th><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-1 ct-cracking-3-h4-0">2</td><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-2 ct-cracking-3-h4-0">3</td><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-3 ct-cracking-3-h4-0">4</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-4 ct-cracking-3-h4-0">2</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-5 ct-cracking-3-h4-0">3</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-6 ct-cracking-3-h4-0">4</td><td headers="ct-cracking-3-h0-7 ct-cracking-3-h1-7 ct-cracking-3-h4-0">Yes</td><td headers="ct-cracking-3-h0-7 ct-cracking-3-h1-8 ct-cracking-3-h4-0">Yes</td></tr>
+<tr><th id="ct-cracking-3-h5-0" scope="row">Over 20,000</th><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-1 ct-cracking-3-h5-0">2</td><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-2 ct-cracking-3-h5-0">3</td><td headers="ct-cracking-3-h0-1 ct-cracking-3-h1-3 ct-cracking-3-h5-0">4</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-4 ct-cracking-3-h5-0">No</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-5 ct-cracking-3-h5-0">3</td><td headers="ct-cracking-3-h0-4 ct-cracking-3-h1-6 ct-cracking-3-h5-0">4</td><td headers="ct-cracking-3-h0-7 ct-cracking-3-h1-7 ct-cracking-3-h5-0">Yes</td><td headers="ct-cracking-3-h0-7 ct-cracking-3-h1-8 ct-cracking-3-h5-0">No</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-cracking-3-sum">Rows list CURRENTADT5; columns give NON-SURFACELEVELING COURSE (TYPEA, TYPEB, TYPERF), RE-PROFILE COURSE,RUT FILL USED ASSURFACE COURSE (TYPEA, TYPEB, TYPERF), WEARINGCOURSE,FULL WIDTH (TYPEA, TYPEB).</p>
+<p class="ct-notes">Notes: Numbers in the Table refer to the following notes: 1 - Use only if the existing surface is Superpave asphalt pavement 2 - Use only if wheel ruts or depressions average 1/2 inch or less 3 - Use only if wheel ruts or depressions average more than 1/2 inch and less than 1 1/2 inches 4 - Use only if wheel ruts or depressions average 1 1/2 inches or more 5 - For divided highways, the Current ADT is based on one-way counts.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 106.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 103–120)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>When a bonded PCC overlay is planned, the inspection must focus on the existing concrete’s cracking and faulting because any significant distress will be transmitted through the new slab unless it is repaired. The condition‑survey evaluation should quantify the extent of cracks and other defects, and corrective work must be completed before placing the overlay. During construction the overlay thickness must be checked to confirm it falls within the prescribed minimum and maximum limits, ensuring the bonded system behaves as a single monolithic slab. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 10 (p. 183)</small></p>
+<p>A satisfactory cracking treatment is one that reduces the distressed concrete slab to fragments roughly twelve to twenty‑four inches in length and then seats those pieces into the underlying base or subbase, thereby creating a uniform support for any subsequent overlay. The fragment size serves as a primary indicator that free‑moving slabs have been sufficiently broken to limit differential movement at existing cracks, joints, and punchouts. In addition, the condition of the remaining pavement must meet low‑severity cracking criteria; only surfaces exhibiting low‑severity (or minimal/insignificant) cracking are deemed acceptable for treatments such as micro‑surfacing or bonded Portland cement concrete overlays. When more extensive cracking or faulting is present, the segment fails the acceptance tolerance and must be repaired before overlay placement to prevent reflection of underlying distress. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (p. 105), Ch. 10 (p. 183)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Cracking in concrete or asphalt pavements appears as fissures that generate free‑moving slabs, causing differential movement that degrades surface condition and ride quality. This loss of condition reduces structural durability and shortens the pavement’s expected service life. When extensive cracking exists, it can propagate through bonded overlays, compromising their integrity; consequently designers limit bonded PCC overlays to pavements with only minimal distress or require prior repair of the cracks. A common rehabilitation approach therefore breaks the existing concrete into pieces roughly 12 to 24 inches long and seats them in the base or subbase before applying an overlay. This stabilizes support, limits slab movement, and reduces reflective cracking in the new layer, thereby restoring structural condition, improving functionality, enhancing durability, and extending service life despite higher project cost. In addition, placing a rigid or flexible overlay of at least 1½ inches thickness after proper preparation further restores functionality; incorporating an interlayer such as geotextile fabric, fiberglass mesh, or composite grid retards crack propagation and provides moisture protection, especially in freeze‑thaw environments, which also contributes to a longer effective design life. Routine maintenance actions, notably cyclic crack sealing every three to five years on asphalt surfaces, preserve functional condition and delay the need for more extensive rehabilitation, helping to maintain the pavement’s service life until reconstruction becomes necessary. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 5 (pp. 115–126), Ch. 10 (p. 183), Ch. 13 (pp. 220–221)</small></p>
+<p>Improper slabjacking can generate new cracking, tilting and faulting of concrete slabs when lifts are not made in small increments, grout leaks from joints or cracks before the target elevation is reached, or temperature conditions place the slab in compression during pumping. The likelihood of these failures also depends on the size and length of the depressed area, the amount of correction required, subgrade and drainage conditions, and the proximity of existing joints and cracks; traffic must be withheld until cement grout has cured, which may require up to twelve hours. When extensive cracking exists in a concrete pavement, free‑moving slabs can shift differentially at existing cracks, joints and punchouts, producing reflective cracking in any subsequent overlay. Reducing slab size through cracking/breaking and seating creates a more uniform support condition that limits differential movement and thus mitigates recurring reflective cracking. In asphalt overlays placed over cracked pavements, reflective cracking is common, especially when pre‑existing cracks are not treated; alligator‑type cracking caused by age oxidation can also propagate through the new surface. The propensity for these distresses increases with severe existing cracks, high traffic loads, adverse climate such as freeze‑thaw cycles, and moisture intrusion that weakens the subgrade. Premature mid‑slab cracking in jointed concrete pavements is often linked to inadequate subbase material, while routine crack sealing of asphalt (every three to five years) and joint sealing of concrete (approximately every five years) are employed to retard further progression. Rehabilitation strategies must therefore consider traffic loading forecasts, excess moisture effects, and drainage deficiencies to prevent repeated cracking after treatment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=c85876f9 src=pub_242_change_10::tab:p127#1 -->
+<p>The table below presents a selection matrix for Full Depth Reclamation (FDR) based on specific pavement distress types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-cracking-4-cap" tabindex="0"><table class="ct-table" id="ct-cracking-4">
+<caption id="ct-cracking-4-cap">TABLE 5.8 SELECTION OF FULL DEPTH RECLAMATION (FDR)</caption>
+<tbody>
+<tr><th scope="row">PAVEMENT DISTRESS</th><td>FDR</td></tr>
+<tr><th scope="row">Surface DefectsRavelingFlushingLow skid resistance</th><td></td></tr>
+<tr><th scope="row">DeformationCorrugationsLow RuttingModerate/High Rutting1</th><td>X 2,3</td></tr>
+<tr><th scope="row">Cracking (Load Associated)AlligatorLongitudinalWheel PathPavement EdgeSlippage</th><td>XXX</td></tr>
+<tr><th scope="row">Cracking (Non-Load Associated)Block (Shrinkage)Longitudinal (Joint)Transverse (Thermal)Reflection</th><td>XXX</td></tr>
+<tr><th scope="row">Maintenance PatchingSpraySkinPotholeFull Depth Replacement</th><td>X4X4X</td></tr>
+<tr><th scope="row">Weak Base or Subgrade</th><td>X</td></tr>
+<tr><th scope="row">Ride Quality/RoughnessGeneral UnevennessDepressions (Settlement)High Spots (Heaving)</th><td>X 5X6</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: 1 Rutting originating from the lower portion of the pavement (below surface course and including base and subgrade). 2 The addition of new aggregate may be required for unstable mixes. 3 The chemical stabilization of the subgrade may be required if the soil is soft, or wet. 4 In some instances, spray and skin patches may be removed by cold planing prior to these treatments (considered if very asphalt rich, bleeding). 5 Used if depressions are due to a poor subgrade condition. 6 Used if high spots caused by frost heave or swelling of an expansive subgrade soil exist.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 127.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 92–98), Ch. 5 (pp. 115–126), Ch. 10 (p. 183), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After crack sealing or other cracking treatment, the segment should be entered into the routine annual pavement condition assessment program; the Automated Pavement Condition Survey (videologging) performed under STAMPP records cracking each year to provide a baseline for detecting recurrence. If the survey fails to capture a specific distress, field visual inspections must be conducted so that any un‑identified problems are documented and addressed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 13 (pp. 220–221)</small></p>
+<p>When only minor fissures appear—often accompanied by slight rutting or loss of fine aggregate—a seal coat or surface treatment may be sufficient, but the emergence of structurally significant cracking marks a shift away from simple preservation. Once crack severity reaches a level that, together with other distresses such as pronounced rutting, raveling, potholes, or drainage deficiencies, threatens the structural integrity of the pavement, additional maintenance, repair, or rehabilitation becomes necessary. In concrete sections slated for a bonded PCC overlay, any extensive cracking or faulting in the existing slab signals that corrective work must be performed before overlay placement; otherwise the underlying distress will propagate through the new monolithic layer and compromise performance. A segment is classified as being in poor condition when the measured percentage of cracked surface receives a poor rating and at least one other distress metric—such as roughness (IRI) or rutting/faulting—is also rated poorly, meeting the criterion that two of three distress components are poor. At the network level, if more than five percent of Interstate lane‑miles fall into this poor condition category, corrective actions are mandated to avoid funding penalties. Routine crack sealing is appropriate only at prescribed intervals—every three to five years for asphalt and every five years for concrete—and while patching remains cost‑effective only up to roughly ten percent of the pavement area. When crack density or severity exceeds these thresholds, or when premature mid‑slab cracking appears (often linked to inadequate subbase material), the response must progress from routine sealing to more extensive preservation measures such as micro‑surfacing or overlay, and ultimately to rehabilitation if structural capacity has been compromised. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 103–126), Ch. 10 (p. 183), Ch. 13 (pp. 216–221)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

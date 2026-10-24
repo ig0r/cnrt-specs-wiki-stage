@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distress</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html" class="active" aria-current="page">Distress</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><span class="crumb-current">Distress</span></nav>
+<article><h1>Distress</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-condition-assessment.html">Pavement Condition Assessment</a> <span class="edge edge-taxonomic" title="Distress is a topic under Pavement Condition Assessment.">is-subtopic-of</span></div><div class="edge-reading">Distress is a topic under Pavement Condition Assessment.</div><div><a class="tag" href="index.html?q=distress">distress</a><a class="tag" href="index.html?q=distresses">distresses</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Distress is any observable deterioration—whether on the surface or within the pavement structure—that compromises support, ride quality, durability, or serviceability[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It manifests as a suite of surface‑oriented failures such as transverse and miscellaneous cracking, joint spalling, faulting in concrete, rutting, shoving, raveling, potholes and related defects, each measured against severity thresholds (e.g., rut depth less than 1½ in, crack depth under 1 in with widths no greater than ½ in)[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Recognizing distress enables engineers to diagnose load‑related, climate‑ or material‑related causes and select appropriate preservation or rehabilitation measures that restore functional performance and extend the pavement’s service life[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<!-- HIER-DIAGRAM:START -->
+<p><a href="https://www.pa.gov/agencies/penndot">PennDOT</a> publications covering <strong>“Distress”</strong> also include the following subtopics: <a href="cracking.html">Cracking</a>.</p>
+<figure class="hier-diagram">
+  <svg class="hd" viewBox="0 0 242 192" width="242" height="192" role="group" aria-label="Concept map: Distress and its subtopics" xmlns="http://www.w3.org/2000/svg">
+    <g class="hd-hub"><rect x="16" y="16" width="210" height="48" rx="6"/><text class="hd-hub-label" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="121" y="40">Distress</tspan></text></g>
+    <path class="hd-edge" d="M121 64 V 96 H 121 V 128"/>
+    <g class="hd-child" data-slug="cracking" data-desc="Cracking is the visible expression of loss of structural integrity in both asphalt and concrete pavements, appearing as surface fissures that range from minor superficial cracks to extensive alligato…"><title>Cracking is the visible expression of loss of structural integrity in both asphalt and concrete pavements, appearing as surface fissures that range from minor superficial cracks to extensive alligato…</title><a href="cracking.html"><rect x="46" y="128" width="150" height="48" rx="6"/><text class="hd-child-label" text-anchor="middle" dominant-baseline="central" font-size="13"><tspan x="121" y="152">Cracking</tspan></text></a></g>
+  </svg>
+</figure>
+<!-- HIER-DIAGRAM:END -->
+
+<p><a href="cracking.html">Cracking</a> serves as a primary manifestation of distress by expressing the loss of structural integrity through surface fissures that range from minor superficial cracks to extensive alligator-type patterns. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li><li><a href="#related-concepts">Related Concepts</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+<details class="subconcepts-toggle"><summary>Sub-concepts (1)</summary><div class="subconcepts-body"><a href="cracking.html">Cracking</a></div></details>
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Distress refers to any observable deterioration—whether on the surface or within the pavement structure—that compromises support, ride quality, durability, or serviceability. In concrete pavements it includes significant transverse and miscellaneous cracking, joint spalling, joint faulting, and other fault‑type failures that, if left untreated, will propagate through a bonded overlay and reduce its effectiveness. In asphalt layers that retain adequate structural capacity the relevant distresses are surface‑oriented such as rutting, shoving, slippage cracks, thermal or fatigue cracking, edge deterioration, shoulder drop‑off, raveling, weathering, potholes, bleeding, and localized settlements or heaves. The severity limits commonly applied for surface‑only treatments are a rut depth of less than one‑and‑a‑half inches, crack depths under one inch with average widths not exceeding one‑half inch, and medium‑severity ratings for raveling and rutting. When these conditions are identified through distress surveys, engineers select appropriate preservation or rehabilitation measures—ranging from ultra‑thin bonded wearing courses, hot‑in‑place recycling, interlayer systems, to full‑depth reclamation—to restore structural capacity and functional performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 82–84), Ch. 5 (pp. 107–133), Ch. 10 (pp. 183–186), Ch. 13 (pp. 220–221), Ch. 14 (p. 227)</small></p>
+<p>The objective when dealing with pavement distress is multifaceted: it seeks to repair the damage that has occurred, restore the pavement’s functional performance, and thereby extend its service life. By first identifying the underlying causes—whether they stem from load stresses, climate effects, or material deficiencies—the treatment can include structural improvements that not only fix existing cracks, rutting, or potholes but also prevent those same mechanisms from recurring. This diagnostic approach, typically carried out through a distress survey, informs a rehabilitation strategy that addresses each form of deterioration appropriately, slowing further progression while maintaining or improving the pavement’s condition over time. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 124–133), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress linked to inadequate subsurface drainage is located beneath concrete joints and within the subgrade where water becomes trapped, producing transverse cracks in the concrete slab, surface rutting that mirrors deformation of the softened subgrade, and surface roughness or undulations that degrade ride quality. These manifestations can be extensive enough to be visible across the pavement surface. The specification confines such distress to the pavement surface and limits its extent by depth and width thresholds: rutting shall not exceed roughly one‑and‑a‑half inches; transverse and miscellaneous cracks shall remain under one inch in depth with an average width no greater than half an inch, corresponding to a medium severity rating; raveling or weathering is also limited to medium severity. When trapped water freezes during freeze‑thaw cycles, joint tenting accelerates crack propagation, resulting in rapid progression of the distress. As support from the fluid base diminishes, severity escalates from minor surface undulations to noticeable loss of ride comfort, increased vehicle wear, more frequent maintenance, and ultimately a shortened service life. Although direct safety or operational impacts are not quantified for surface‑confined distress, the loss of ride quality and heightened vehicle wear imply operational consequences. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 131–133)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Distress is considered appropriate when evaluating Portland cement concrete pavements that exhibit visible deterioration, because the underlying causes are classified as either load‑related (reflecting traffic stresses) or climate/materials‑related (reflecting environmental effects). The assessment must therefore take into account site conditions such as subgrade and subbase quality, drainage functionality, friction adequacy, ride quality, and the presence of polishing‑susceptible aggregate, all of which influence both the type and severity of distress observed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84)</small></p>
+<p>Distress‑based assessment is appropriate only when the observed problems are limited to low‑severity cracking or raveling, infrequent corrugations, settlements, heaves, slippage cracks and medium‑severity rutting. Once conditions exceed these thresholds—such as high‑severity cracking, frequent corrugations, severe rutting, bleeding, active pumping that signals a weak subgrade, or water intrusion from springs or standing water—the reliance on distress alone is insufficient and another maintenance, preservation, rehabilitation, or repair strategy must be employed. When the underlying cause of the distress is inadequate subsurface drainage, simple patching or resurfacing will not correct the problem; instead drainage‑oriented work such as installing or repairing edge drains, lateral underdrains, and subgrade drains is required to remove moisture, restore support, and prevent further damage. Patch‑only repair becomes unsuitable when the area to be patched exceeds roughly ten percent of the pavement surface, at which point a cost‑effectiveness analysis should be performed and alternatives such as an asphalt or concrete overlay, structural rehabilitation, or other preservation treatments considered. Hot‑In‑Place Recycled treatment is limited to surface‑only damage that does not exceed a rut depth of about 1½ in., transverse crack depth of 1 in. and width no greater than ½ in.; the presence of rubberized or fiber‑reinforced layers, extensive mastic patches larger than five square feet, or overbanded rubberized joint sealants also disqualifies HIR, necessitating alternative rehabilitation methods. Bonded Portland cement concrete overlays are unsuitable where the existing concrete exhibits extensive cracking or faulting because such flaws will propagate through the new slab unless repaired first; an unbonded overlay or repair of the underlying pavement should then be selected. Routine crack‑sealing treatments become inappropriate when distress stems from deeper problems such as premature mid‑slab cracking caused by inadequate subbase material, aggregate deficiencies (e.g., Vanport limestone, alkali‑silica reaction), or skid‑resistance issues not captured in surveys; these conditions require more extensive preservation, rehabilitation, or full reconstruction. Full‑depth reclamation is appropriate only where support‑layer deficiencies exist; surface‑only distresses like shallow rutting, cracking, raveling, potholes, or drainage problems are better served by other maintenance or preservation techniques. When a distress‑based recommendation is generated by the STAMPP program for a segment, it should not be used as the basis of a formal rehabilitation design; instead a comprehensive strategy—typically an asphalt overlay surfacing—must be selected. Finally, once the functional life of the pavement has been exceeded, only complete reconstruction satisfies acceptance criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=4a3bb5bc src=pub_242_change_10::tab:p133#1 -->
+<p>The table below summarizes pavement conditions acceptable for Hot-In-Place Recycled (HIR) asphalt treatment.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-distress-1-cap" tabindex="0"><table class="ct-table" id="ct-distress-1" aria-describedby="ct-distress-1-sum">
+<caption id="ct-distress-1-cap">TABLE 5.9SUMMARY OF PAVEMENT CONDITIONS ACCEPTABLE FOR HIR ASPHALT</caption>
+<thead>
+<tr><th id="ct-distress-1-h0-0" scope="col" colspan="2">Condition</th><th id="ct-distress-1-h0-2" scope="col">Surface Recycling</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-distress-1-h0-0" rowspan="2">Surface Defects</td><td headers="ct-distress-1-h0-0">Raveling, Potholes, Skid Resistance</td><td headers="ct-distress-1-h0-2">Yes</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Bleeding</td><td headers="ct-distress-1-h0-2">10</td></tr>
+<tr><td headers="ct-distress-1-h0-0" rowspan="6">Deformations</td><td headers="ct-distress-1-h0-0">Shoulder Drop Off</td><td headers="ct-distress-1-h0-2">No</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Rutting - Wear</td><td headers="ct-distress-1-h0-2">Yes</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Rutting Mix Instability</td><td headers="ct-distress-1-h0-2">No</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Rutting Deep Structural</td><td headers="ct-distress-1-h0-2">No</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Corrugations</td><td headers="ct-distress-1-h0-2">Yes</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Shoving</td><td headers="ct-distress-1-h0-2">6</td></tr>
+<tr><td headers="ct-distress-1-h0-0" rowspan="4">Load Associated Cracking</td><td headers="ct-distress-1-h0-0">Fatigue - Bottom up</td><td headers="ct-distress-1-h0-2">No</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Fatigue - Top Down</td><td headers="ct-distress-1-h0-2">4</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Edge</td><td headers="ct-distress-1-h0-2">1 &amp; 5</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Slippage</td><td headers="ct-distress-1-h0-2">6</td></tr>
+<tr><td headers="ct-distress-1-h0-0" rowspan="2">Non-Load Associated Cracking</td><td headers="ct-distress-1-h0-0">Block, Longitudinal</td><td headers="ct-distress-1-h0-2">Yes</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Transverse, Reflective</td><td headers="ct-distress-1-h0-2">3</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Combined Cracking</td><td headers="ct-distress-1-h0-0">Joint reflection, Discontinuity</td><td headers="ct-distress-1-h0-2">1</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Base/Subgrade Deficiencies</td><td headers="ct-distress-1-h0-0">Swells, Bumps, Sags, Depressions</td><td headers="ct-distress-1-h0-2">1</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Roughness</td><td headers="ct-distress-1-h0-0">Ride Quality</td><td headers="ct-distress-1-h0-2">Yes</td></tr>
+<tr><td headers="ct-distress-1-h0-0" rowspan="5">Other Criteria</td><td headers="ct-distress-1-h0-0">All Levels of Traffic</td><td headers="ct-distress-1-h0-2">7</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Rural</td><td headers="ct-distress-1-h0-2">Yes</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Urban</td><td headers="ct-distress-1-h0-2">8</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Stripping</td><td headers="ct-distress-1-h0-2">2 &amp; 3</td></tr>
+<tr><td headers="ct-distress-1-h0-0">Poor Drainage</td><td headers="ct-distress-1-h0-2">9</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-distress-1-sum">Rows list various pavement conditions categorized by defect type, while columns provide specific criteria descriptions and acceptable limits for surface recycling applications.</p>
+<p class="ct-notes">Notes: 1. May mitigate, not correct. 2. Needs to be verified by a mix design. 3. Determine the severity and depth of existing layers that are affected. May mitigate, not correct. 4. Ensure structural requirements can be met. 5. Need to provide shoulder confinement after HIR. 6. Depth must exceed slippage plane (≤1 1/2 inches). 7. Only if proper pavement structural design is performed to ensure future traffic is factored into the analysis. 8. Geometric constraints may influence the type of recycling units used. 9. Poor drainage must be improved for HIR, or any other pavement treatment, to ensure adequate performance.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 133.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 82–84), Ch. 5 (pp. 107–133), Ch. 10 (p. 183), Ch. 13 (pp. 220–221), Ch. 14 (p. 227)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>Determining whether distress treatment is required begins with a recent pavement‑condition survey that follows the procedures of Publication 336, Publication 343 or the STAMPP automated videologging protocol. The visual component records every observable defect—cracking, rutting, raveling, joint spalling, faulting, edge deterioration and drainage problems—and quantifies them so that each item can be tabulated against accepted thresholds. For surface‑type distress the inspector measures rut depth (must be less than 1½ in), transverse or miscellaneous crack depth (less than 1 in) and average crack width (no greater than ½ in); raveling severity, bleeding, low‑friction conditions and asphalt thickness relative to planned milling depths are also noted. When a loss of skid resistance is suspected a targeted friction test is performed. To evaluate the condition beneath the surface, core samples are extracted from joints that appear deteriorated and from randomly selected locations; laboratory analysis of these cores establishes subbase or subgrade soil properties and reveals hidden deterioration. In‑situ non‑destructive testing follows, typically beginning with a Falling Weight Deflectometer assessment to obtain pavement deflection profiles, complemented by Dynamic Cone Penetrometer or Light‑Weight Deflectometer measurements that quantify subgrade stiffness and support capacity. Additional techniques such as faulting measurements, ground‑penetrating radar, MIRA scans, MIT‑Scan 2/T2 assessments or tensile bond tests may be employed to pinpoint the extent of distress and identify specific joints that require replacement or slab stabilization. For concrete pavements a condition survey using the DARWin method calculates an Effective Existing Thickness; if the survey shows extensive cracking or faulting beyond acceptable limits, those defects must be repaired before any bonded PCC overlay is placed because untreated distress will propagate through the new layer. The combined results of the visual inventory, measured severity thresholds, core sampling and the suite of non‑destructive tests provide a comprehensive picture that allows engineers to locate precisely where distress treatment—such as joint replacement, slab stabilization or surface rehabilitation—is warranted. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 124–133), Ch. 10 (p. 183), Ch. 13 (pp. 220–221), Ch. 14 (p. 227)</small></p>
+<p>Distress assessment and treatment are appropriate once a recent condition survey has revealed visible surface problems and the pavement is still in an early‑to‑moderate stage of deterioration. At this point the pavement typically shows low‑severity cracking or raveling, occasional corrugations, settlements, heaves or infrequent slippage cracks, together with medium‑severity rutting that does not exceed a depth of one and a half inches. Surface‑distress thresholds for applying hot‑in‑place recycled asphalt are also defined: rutting must be less than 1½ inches; transverse and miscellaneous cracking shall be shallower than 1.0 inch with average crack widths no greater than a half‑inch (medium rating); raveling or weathering may not exceed the medium rating; any corrugation, shoving or slippage should remain under 1½ inches, and the existing asphalt layer must be at least 1½ inches thicker than the planned milling depth while prohibited materials such as rubber or fiber are absent. When these mild to moderate surface conditions exist, a distress survey is performed to document severity before selecting a rehabilitation strategy such as an ultra‑thin bonded wearing course or hot‑in‑place recycling. If, however, the pavement exhibits severe distress—extensive cracking, deep rutting, or potholes that threaten structural performance—the earlier surface treatments are insufficient and full‑depth reclamation becomes the appropriate remedial action. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 107–133), Ch. 10 (p. 183), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>The repair of pavement distress may be accomplished by applying either an ultra‑thin bonded wearing course or a hot‑in‑place recycled (HIR) overlay, each with defined material specifications and dimensional requirements. For surface problems such as raveling or moderate rutting the preferred method is an Ultra‑Thin Bonded Wearing Course (UTWC). This system first places a polymer‑modified emulsified asphalt membrane (UTWCEM) using a self‑priming paver, which is immediately overlaid with hot‑mix asphalt concrete. The hot mix may be placed in one of three gradations—Type A, B or C—with nominal maximum aggregate sizes of 6.3 mm, 9.5 mm and 12.5 mm respectively, and the finished thickness is about one‑half inch for Type A and three‑quarters inch for Types B and C, roughly one to one‑and‑a‑half times the aggregate diameter. The treatment seals the surface, limits oxidation and provides an expected service life of eight to ten years. When the distress is limited to the surface layer a Hot‑In‑Place Recycled (HIR) overlay can be used. The HIR mixture is typically placed at a depth of one and a half inches, with an allowable range from one to two inches. For composite pavements the existing asphalt beneath the HIR must be at least one and a half inches thick; for full‑depth pavements the required thickness increases to two or three inches, and any paving fabric must remain at least one and a half inches below the cut depth. Acceptable distress levels for this method are restricted to rutting less than one and a half inches, transverse or miscellaneous cracks no deeper than one inch and not wider than a half‑inch, and only medium‑severity raveling. Under Penn DOT’s STAMPP program any identified surface distress that triggers a treatment recommendation is addressed by placing an asphalt overlay on the affected segment; the program does not prescribe a particular thickness or configuration beyond the indication that surfacing in the form of an asphalt layer is required. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 107–133), Ch. 14 (p. 227)</small></p>
+<p>The ability of any distress‑mitigating pavement treatment to perform as intended is governed first and foremost by the inherent qualities of the existing materials.  Base and subbase layers must be highly permeable so that water can drain by gravity, preventing capillary rise and avoiding saturation of the subgrade; a saturated or low‑permeability subgrade reduces support for concrete slabs and often manifests as transverse cracking or surface rutting that mirrors subgrade deformation.  In Portland‑cement concrete pavements the slab’s compressive strength, air content, percentage of existing patching, and the presence of polishing‑susceptible aggregates all influence whether an overlay will bond effectively, while aggregates such as Vanport limestone can lower skid resistance and exacerbate surface‑grinding effects.  Alkali‑silica reaction in the concrete matrix, although not readily detected by standard STAMPP data, also threatens durability and must be considered when selecting a rehabilitation strategy.</p>
+<p>For asphalt‑based treatments, the polymer‑modified emulsified asphalt membrane used in ultra‑thin bonded wearing courses provides a seal that limits oxidation, weathering, raveling and moderate rutting, delivering an expected service life of eight to ten years.  The aggregate gradation (Types A, B, C) dictates the required thickness—approximately one‑half inch for Type A and three‑quarters inch for Types B and C—to achieve that lifespan.  Interlayer materials must be thermally stable, physically durable, and chemically compatible with the asphalt binder to form a strong internal adhesive or mechanical bond; thin Superpave wearing courses (6.3 mm) are limited to sound surfaces with less than two percent patching and adequate surface‑and‑subsurface drainage.  When reclaimed or stabilized layers are incorporated, their gradation, moisture content, and the dosage of chemical stabilizers must be matched to the existing material strength; excessive additive creates brittleness while insufficient strength limits durability.</p>
+<p>Existing pavement condition thresholds further constrain treatment selection.  Falling Weight Deflectometer testing should confirm subgrade stiffness before rehabilitation.  Rutting severity must be less than about 1½ inches, transverse and miscellaneous cracking depth under one inch with average crack widths not exceeding ½ inch, and the remaining asphalt thickness after milling must exceed the milling depth by at least 1½ inches.  For Hot‑In‑Place Recycled overlays, rubberized binders or fiber reinforcement may not be present in the top two inches, rutting should be under 1½ inches, and cracks shallower than one inch with widths below half an inch are required.  Bonded Portland‑cement concrete overlays are appropriate only when underlying slabs exhibit minimal cracking or faulting, allowing the new and existing concrete to act as a monolithic unit; bonded concrete overlays over asphalt demand a minimum of three inches of milled asphalt remaining after milling and are suited for pavements in good‑to‑fair structural condition displaying typical distresses such as rutting, shoving, slippage or thermal cracking.  Inadequate subbase material can also precipitate premature mid‑slab cracking in jointed concrete slabs, underscoring the need to verify that subgrade support and aggregate characteristics are compatible with the chosen treatment before implementation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 82–84), Ch. 5 (pp. 107–133), Ch. 10 (pp. 183–186), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>Treating pavement distress begins with a thorough preparation phase. Where the existing surface is uneven, a separate scratch or a leveling course of at least one inch thickness is placed to provide a uniform platform for the subsequent treatment; if the transverse or longitudinal profile is poor, heater‑planing or milling may be employed, and when milling over a concrete base a minimum of 1½ inches of the existing asphalt should be retained. For hot‑in‑place recycling, all raised markers, durable thermoplastic or epoxy markings are removed together with any mastic patches larger than five square feet; shallow milling is then performed to open deeper cracks while preserving vertical clearance for structures. Full‑depth reclamation starts with a distress survey and subgrade testing, followed by identification and correction of any drainage problems. The existing asphalt layer is pulverized through to the underlying base or subgrade, which forms the foundation for stabilization. Mechanical stabilization adds aggregate or reclaimed asphalt pavement during pulverization, whereas chemical stabilization mixes dry or slurry additives such as cement, fly ash or lime kiln dust either ahead of the reclaimer or within its mixing chamber. The reclaimed mixture, once stabilized, is placed back on the roadway grade, shaped with motor graders and compacted to achieve the required stiffness; any added binders then cure according to laboratory mix designs. Surface distress that can be corrected by an ultra‑thin bonded wearing course is treated in a single pass using a self‑priming paver that first lays a polymer‑modified emulsified asphalt membrane directly ahead of the screed and immediately overlays it with hot‑mix asphalt concrete. The finished thickness is specified as one‑half inch for Type A gradations or three‑quarters inch for Types B and C, which corresponds to roughly 1–1.5 times the largest aggregate size. After placement there are no traffic restrictions, and the treatment is expected to provide eight to ten years of service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 107–133)</small></p>
+<p>Implementation of distress mitigation in pavements is governed by a defined set of equipment, procedural sequencing, environmental considerations, and traffic controls.  Assessment begins with condition surveys that may employ automated video‑loggers or tools such as the MicroPaver™, followed by non‑destructive strength testing using Falling Weight Deflectometers, dynamic cone penetrometers, light weight deflectometers, or other devices like ground‑penetrating radar, friction meters and roughness gauges.  The results dictate whether distress is load‑related or climate/materials‑related—such as drainage deficiencies, frost damage, or polishing‑susceptible aggregates—and therefore which repair strategy to adopt.  For concrete pavements the construction sequence proceeds from slab stabilization or slabjacking through partial‑depth repairs, load‑transfer retrofits, cross‑stitching, full‑depth patching, base‑drain installation, diamond grinding or grooving, shoulder rehabilitation and finally joint cleaning and sealing, with certain activities allowed to run concurrently but joint sealing deferred until after grinding.  When an ultra‑thin bonded wearing course is specified, a self‑priming paver lays the polymer‑modified emulsified asphalt membrane immediately ahead of the screed and a single paving machine applies the hot‑mix overlay in one uninterrupted pass, permitting placement under open traffic.  Distress‑mitigating overlays require surface preparation—typically a minimum one‑inch scratch or leveling course—before Superpave binder and wearing layers are placed with pavers; milling machines, heater planers, coring tools and non‑tracking tack‑coat applicators ensure proper bonding, while at least 1½ inches of existing asphalt must remain when milling over concrete.  Full‑depth reclamation follows a strict order: pulverization of the existing asphalt and base with a road reclaimer, optional stabilization, placement of the reclaimed mix, grading with motor graders and final compaction; traffic may not return until the compacted base is achieved.  Hot‑In‑Place Recycled (HIR) treatment similarly mandates pre‑HIR milling to address deep cracks, after which the HIR mixing and laying system installs the new surface that can be reopened once it cools to the required temperature.  Environmental constraints include adherence to weather limits outlined in Publication 408 for overlay work, ensuring adequate surface and subsurface drainage, and avoiding wet subgrade conditions before reclamation.  Traffic restrictions vary with the treatment: open‑traffic placement is allowed for ultra‑thin bonded courses; non‑tracking tack coats are recommended where stopping or turning traffic occurs; ADT thresholds may limit overlay activities; high‑traffic corridors may require accelerated concrete mixes to meet maintenance windows; and all full‑depth reclamation or HIR operations remain closed to traffic until compaction or cooling is complete. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 107–133), Ch. 10 (p. 186), Ch. 14 (p. 227)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>When inspecting pavement distress, the evaluator first confirms that only surface‑level defects are present and that each falls within the accepted limits. Rutting is permissible only when its depth is less than one‑and‑a‑half inches, transverse or miscellaneous cracks must not exceed a depth of one inch and their average width must remain at or below half an inch, and minor corrugation, shoving, or slippage are acceptable only if the typical depth stays under one‑and‑a‑half inches. The use of rubber in the pavement material renders the section unsuitable for the High‑Intensity Repair (HIR) process. Material condition is then verified by extracting concrete cores near visibly deteriorated joints and at random locations to evaluate subbase or subgrade quality beneath the surface. These cores are examined for the percentage of concrete that requires patching and for compressive strength; if the amount of required patching exceeds ten percent—excluding existing patches already in good condition—a supplemental cost‑effectiveness analysis must be performed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 131–133)</small></p>
+<p>A satisfactory distress condition is first established by measuring and tabulating all visible distress. The total area that requires patching must remain at or below ten percent; if this threshold is exceeded a cost‑effectiveness analysis is required and preservation treatment is no longer permissible, prompting a higher‑level rehabilitation. Any identified causes of the distress must be corrected before restoration to ensure the work is not wasted. Acceptable pavement condition limits observable damage to low‑severity cracking or raveling, only infrequent corrugations, settlements, heaves, or slippage cracks, and rutting that does not exceed medium severity. For Hot‑In‑Place Recycled overlays, surface distress must stay within specific bounds: rutting less than one and a half inches, transverse and miscellaneous cracks shall be shallower than one inch with an average width no greater than half an inch, raveling or weathering may reach only a medium rating characterized by a rough, pitted surface with loose particles, and minor corrugation, shoving or slippage are permissible provided their average depth is also under one and a half inches; any load‑related distress or base problems disqualify the pavement. A bonded Portland cement concrete overlay is acceptable only when the existing concrete exhibits limited cracking and faulting, because significant distress would be reflected through the new slab if not repaired. Finally, an acceptable condition for preservation programs includes crack sealing of asphalt surfaces every three to five years and joint sealing of concrete pavements every five years, reinforcing that patching must stay below the ten‑percent limit. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84), Ch. 5 (pp. 107–133), Ch. 10 (p. 183), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Distress manifests as rutting, transverse or miscellaneous cracking, raveling, potholes, edge deterioration, shoving, slippage, thermal cracking, or drainage‑related damage, signalling a decline in pavement condition and loss of functional performance. When water is retained in the base or subbase, subgrade support deteriorates, producing increased deflections, surface roughness and a noticeable loss of ride quality; these moisture‑associated distresses accelerate deterioration, demand more frequent maintenance and shorten service life unless remedial drainage such as continuous edge drains, lateral underdrains, cleaned ditches or highly permeable base materials is installed. Load‑related distress reflects inadequate structural capacity and may require structural improvement in addition to any climate or material corrections. The severity of each distress type governs the treatment choice: surface rutting less than about 1½ inches and crack depth under 1 inch can be effectively treated with a hot‑in‑place recycled (HIR) overlay, which restores appearance, improves performance and prolongs service life as an interim wearing course. When distress exceeds those thresholds or involves structural loss, thicker overlays of at least 1½ inches are prescribed; standard or thin Superpave wearing courses of 6.3 mm or 9.5 mm are selected according to the extent of damage, with a patching limit of less than 2 % to achieve the intended life‑extension benefits. For cracking that is not associated with structural deficiency, interlayers such as geotextile fabric, fiberglass mesh or composite grid may be placed beneath the wearing course, while other distresses like rutting, bleeding or raveling are addressed through appropriate overlay thicknesses rather than interlayers. When support‑layer deterioration is evident—signalled by severe rutting, cracking, raveling, potholes or drainage problems—a full‑depth reclamation (FDR) using mechanical, chemical or pulverization stabilization can restore the subgrade and provide a durable foundation for subsequent surface treatments. Bonded concrete overlays, whether placed over asphalt (BCOA) or existing concrete, add structural capacity and mitigate surface distresses when the underlying pavement is in good‑to‑fair condition; extensive cracking or faulting must be repaired before bonding to prevent propagation through the new slab. Routine maintenance actions such as crack sealing, joint sealing, micro‑surfacing, milling or grinding retard distress progression and preserve functional condition, but once distress surpasses maintenance limits, rehabilitation that adds structural capacity—or full reconstruction when functional life is exhausted—becomes necessary. In the STAMPP program, accumulated cracking and rutting are compiled; when they trigger a surface‑treatment flag, an asphalt overlay is recommended. That overlay restores riding quality, improves resistance to further deterioration, and consequently prolongs the segment’s expected service life relative to leaving the distress untreated. Thus, addressing identified distress through appropriate drainage, structural overlays, interlayers, full‑depth reclamation or bonded concrete overlays restores pavement condition, regains functionality, enhances durability, and extends expected service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 82–84), Ch. 5 (pp. 115–133), Ch. 10 (pp. 183–186), Ch. 13 (pp. 220–221), Ch. 14 (p. 227)</small></p>
+<p>In pavement practice, distress refers to the repeatable failures that appear in both concrete and asphalt layers. The most frequently encountered problems are various forms of cracking—transverse, miscellaneous, thermal or shrinkage cracks, premature mid‑slab cracks in jointed concrete, and reflective cracking that propagates from an existing cracked base into a new overlay. Surface deformations such as rutting, shoving, slippage, corrugation, and shallow depressions also recur, together with raveling or weathering of the wearing course, edge deterioration, joint spalling and faulting, potholes, and water‑induced stripping. The appearance and severity of these distresses are governed by a set of load‑related and climate/materials‑related factors. Saturated or poorly drained subgrades reduce support and allow moisture to become trapped beneath joints; when that water freezes it can cause joint tenting and further crack propagation. Excess moisture weakens the pavement matrix, promotes stripping, and accelerates oxidation‑related raveling. Heavy traffic loads—particularly daily equivalent single axle loads exceeding roughly 2,500 ESALs—and high axle weights increase shear stresses that generate rutting, shoving, slippage and fatigue cracking. Structural deficiencies such as thin asphalt bases (less than the three‑inch minimum required before a Portland cement concrete overlay), insufficient sub‑base material, or unstable base layers also amplify reflective cracking and mid‑slab failures. Material issues, including low concrete compressive strength, high air content, aggregate polishing susceptibility, or reactive aggregates like Vanport limestone, further predispose pavements to cracking and loss of skid resistance.</p>
+<p>Treatment success depends on recognizing these underlying mechanisms. When the existing pavement exhibits more than about 10 % surface patching, a cost‑effectiveness analysis is required before proceeding with rehabilitation. Acceptance criteria for hot‑in‑place recycled overlays limit rutting severity to less than 1½ inches, crack depth to under 1 inch with average widths no greater than 0.5 inch, raveling to a medium rating, and corrugation, shoving or slippage to depths below 1½ inches. Bonded concrete overlays should be limited to sections where cracking and faulting are minimal; otherwise the underlying distress will be reflected through the overlay unless repaired. Interlayers such as geotextile fabrics or fiberglass meshes can mitigate reflective cracking by providing moisture barriers and stress absorption, but they do not address rutting, bleeding, or raveling, which require structural improvements. Ultra‑thin bonded wearing courses seal the surface, reduce oxidation, and modestly delay raveling and moderate rutting for an expected service life of eight to ten years, yet they cannot compensate for weak subgrade conditions. Full‑depth reclamation that stabilizes the base with cementitious binders or lime kiln dust effectively eliminates reflective cracking by creating a stronger, more flexible foundation. Ultimately, recurring pavement distresses arise from moisture intrusion, inadequate drainage, subgrade weakness, excessive traffic loading, climatic temperature swings, and insufficient remediation of existing damage; addressing these root causes through appropriate structural treatment and preventive maintenance—such as cyclic crack sealing for asphalt every three to five years and joint sealing for concrete about every five years—offers the best chance of extending pavement performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 82–84), Ch. 5 (pp. 107–133), Ch. 10 (pp. 183–186), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After the distress repair is finished, the rehabilitated section should be evaluated with post‑construction in‑situ testing to confirm that the new pavement has achieved the required stiffness and subgrade support. A Falling Weight Deflectometer test is typically run to measure the restored structural capacity, and complementary tests such as a dynamic cone penetrometer or light weight deflectometer can be used to assess subgrade conditions. The results are compiled in a post‑treatment report that documents the observed condition and verifies compliance with the design criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126)</small></p>
+<p>When surface rutting mirrors subgrade deformation—especially once its depth exceeds about one‑and‑a‑half inches—the pavement begins to feel rough or unsupported, indicating a loss of structural support. This condition is compounded when cracks become deeper than an inch or wider than half an inch, when transverse and miscellaneous cracking reach medium‑rating widths, when raveling or weathering move beyond a medium rating, and when corrugation or shoving exceed 1½ inches; at those thresholds the pavement can no longer be treated with short‑term interim solutions. Persistent ponded water that lingers on the deck signals inadequate drainage, allowing moisture to infiltrate the structure and further weaken it. High severity of rutting, cracking, raveling, potholes, edge deterioration, joint spalling or faulting, shoulder drop‑off, and fatigue cracking observed in periodic distress surveys likewise point to accelerated degradation.</p>
+<p>Quantitatively, if the amount of visible distress that would require patching surpasses roughly ten percent of the pavement surface—excluding patches already in good condition—the cost‑effectiveness of simple preservation diminishes, prompting consideration of more extensive rehabilitation such as structural overlays or reconstruction. Likewise, when routine crack sealing for asphalt surfaces has not been performed within three to five years, or joint sealing for concrete exceeds five years, the untreated distress indicates that scheduled maintenance windows have been missed.</p>
+<p>Underlying causes must be identified: load‑related failures, climate or material issues—including drainage deficiencies, excessive moisture, low friction, and inadequate subgrade or subbase material—can all drive the observed deterioration. In the specific case of bonded Portland cement concrete overlays, any extensive cracking or faulting in the existing slab must be repaired before placement because such distress will propagate through the new layer.</p>
+<p>Finally, automated condition surveys such as PennDOT’s STAMPP system flag significant rutting, fatigue cracking, shoulder drop‑off, or generate a treatment recommendation for surface treatment; these signals confirm that the segment has exceeded acceptable limits and requires additional maintenance, repair, or rehabilitation to restore functional performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 82–84), Ch. 5 (pp. 124–133), Ch. 10 (p. 183), Ch. 13 (pp. 220–221), Ch. 14 (p. 227)</small></p>
+<h2 id="related-concepts">Related Concepts</h2>
+<ul>
+<li><a href="cracking.html">Cracking</a></li>
+</ul>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-D.3: hierarchy concept-map diagram (md->html reverse builder; per-page inject) */
+figure.hier-diagram { overflow-x: auto; margin: 1.5rem 0; }
+svg.hd { max-width: 100%; height: auto; display: block; margin-inline: auto;
+  font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+svg.hd text { text-anchor: middle; dominant-baseline: middle; }
+svg.hd .hd-hub rect { fill: var(--accent); stroke: var(--accent); }
+svg.hd .hd-hub text { fill: var(--bg); }
+svg.hd .hd-child rect { fill: var(--chip); stroke: var(--border); stroke-width: 1; }
+svg.hd .hd-child text { fill: var(--fg); }
+svg.hd .hd-edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+svg.hd .hd-stub { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 3; }
+svg.hd .hd-child { cursor: pointer; }
+svg.hd .hd-child a rect { transition: fill .12s ease, stroke .12s ease; }
+svg.hd .hd-child:hover rect,
+svg.hd .hd-child a:focus rect,
+svg.hd .hd-child a:focus-visible rect { fill: var(--chip); stroke: var(--link); stroke-width: 2; }
+.hd-tooltip { position: fixed; z-index: 10000; max-width: 22rem; padding: .45rem .7rem;
+  background: var(--fg); color: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  font-size: .8rem; line-height: 1.4; pointer-events: none; opacity: 0; visibility: hidden;
+  transition: opacity .12s ease; box-shadow: 0 3px 12px rgba(0, 0, 0, .28); }
+.hd-tooltip.hd-tooltip-show { opacity: 1; visibility: visible; }
+</style>
+<script>
+(function () {
+  var tip = null;
+  function ensureTip() {
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "hd-tooltip";
+      tip.setAttribute("role", "tooltip");
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+  function show(node) {
+    var desc = node.getAttribute("data-desc");
+    if (!desc) return;
+    var t = ensureTip();
+    t.textContent = desc;
+    var r = node.getBoundingClientRect();
+    t.style.left = Math.max(8, Math.round(r.left)) + "px";
+    t.style.top = Math.round(r.bottom + 8) + "px";
+    t.classList.add("hd-tooltip-show");
+  }
+  function hide() { if (tip) tip.classList.remove("hd-tooltip-show"); }
+  var nodes = document.querySelectorAll(".hd-child");
+  for (var i = 0; i < nodes.length; i++) {
+    (function (node) {
+      node.addEventListener("mouseenter", function () { show(node); });
+      node.addEventListener("mouseleave", hide);
+      var focusTarget = node.querySelector("a") || node;
+      focusTarget.addEventListener("focus", function () { show(node); });
+      focusTarget.addEventListener("blur", hide);
+    })(nodes[i]);
+  }
+})();
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

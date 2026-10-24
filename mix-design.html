@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mix Design</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html" class="active" aria-current="page">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Mix Design</span></nav>
+<article><h1>Mix Design</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Mix Design is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Mix Design is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=mix-design">mix-design</a><a class="tag" href="index.html?q=mix-designs">mix-designs</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>Mix design is a systematic methodology used to tailor pavement mixtures to anticipated traffic loads, climate conditions, and material characteristics so that the resulting structure meets required performance targets for load‑carrying capacity, durability, and serviceability over its intended life. It accomplishes this by selecting appropriate constituents—such as cement, aggregates, and water for roller‑compacted concrete or a performance‑grade binder and gap‑graded aggregate skeleton for asphalt—and proportioning them to satisfy quantitative criteria like low water‑cement ratios, target compressive strength, specified air‑void levels, voids in mineral aggregate, and ESAL‑based traffic categories, while optionally incorporating stabilizing agents to enhance moisture resistance and freeze–thaw resilience. The process follows standardized state‑approved procedures (e.g., PennDOT Publication 408, Bulletin 27) that define material limits, thickness ranges, and performance verification tests, ensuring the pavement will resist rutting, cracking, moisture damage, and other distress mechanisms throughout its service life [1].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Mix design is employed to resolve the fundamental engineering challenge of producing a pavement structure that can reliably sustain anticipated traffic loads and environmental conditions while maintaining long‑term structural integrity and serviceability. For roller‑compacted concrete, the objective is to formulate an extremely dry mix with a low water‑cement ratio and dense aggregate gradation that yields higher compressive strength than conventional concrete and provides an open surface texture comparable to hot‑mix asphalt, thereby enabling the pavement to accommodate up to 2,000 average daily traffic (ADT) on roads limited to 55 mph without the need for reinforcement or formwork. In asphalt systems, the Superpave methodology tailors the binder grade and incorporates projected 20‑year design‑life equivalent single axle loads (ESALs) so that the mixture resists permanent deformation (rutting) and low‑temperature thermal cracking under the specific climatic and traffic regime of a project. For cold‑recycled base courses, mix design must overcome the inherently low initial structural strength, limited abrasion resistance, and elevated void content of reclaimed materials; this is achieved by meeting dimensional constraints such as a minimum compacted depth of three inches, supplementing fine reclaimed asphalt pavement (RAP) with sufficient virgin coarse aggregate, and often adding polymer‑modified emulsions to accelerate early strength development for higher traffic volumes. Stone Matrix Asphalt mix design addresses the need for a wearing course that can endure heavy traffic without rutting while delivering long‑term durability by selecting appropriate aggregates, establishing a gap‑graded gradation that creates stone‑on‑stone contact, achieving required voids in mineral aggregate, and targeting an air‑void level that ensures sufficient strength, stability, moisture resistance, and binder draindown control. Finally, the inclusion of stabilizing agents such as calcium or magnesium chloride, or emulsified asphalt, is calibrated within the mix design to enhance particle cementation for increased strength, lower the freezing point to improve freeze‑thaw resilience, reduce susceptibility to water‑related damage, and boost fatigue resistance under repeated loading. Collectively, these design considerations ensure that the pavement meets its performance targets for load‑carrying capacity, durability, deformation resistance, thermal cracking avoidance, abrasion tolerance, moisture protection, and environmental stability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–128)</small></p>
+<p>The mix design must generate a pavement that reliably serves its intended function under the projected traffic volumes and climatic influences while satisfying a suite of structural, durability, safety, and serviceability requirements. For roller‑compacted concrete (RCC) pavements the design is limited to low‑volume routes with an average daily traffic of two thousand vehicles or less and speed limits not exceeding fifty‑five miles per hour; the pavement must be capable of delivering a compressive strength between four thousand and ten thousand psi using a low water‑cement ratio in the range of thirty to forty percent, and it should be placed at a thickness that can vary from four to eighteen inches. The RCC layer is expected to provide roughly twenty years of service life, and when an exposed surface will carry traffic at thirty‑five miles per hour or higher the surface must be textured by diamond grinding to preserve safety and ride quality.</p>
+<p>When the design calls for a Superpave asphalt course, it must be tailored to the specific climate and traffic conditions of the project site and must furnish the tensile strength and air‑void content required for the structural role of the layer—for example, an air‑void level of about two point five percent in air‑reinforced base courses. The mixture must be engineered to resist permanent deformation such as rutting, low‑temperature thermal cracking, bottom‑up cracking, and moisture‑induced damage throughout a twenty‑year design horizon that is defined by the anticipated equivalent single axle loads. In addition, the mix must retain adequate skid resistance so that safety is not compromised during its service life.</p>
+<p>For a Stone Matrix Asphalt (SMA) wearing course the objective is to produce a tough, stable surface that resists rutting through stone‑to‑stone contact while a rich mortar binder supplies durability. The aggregate gradation must be gap‑graded to achieve the required stone‑on‑stone framework and must meet or exceed the minimum voids in mineral aggregate so that the prescribed binder content can be used. The selected binder quantity must attain the target air‑void level for serviceability, and the design must include assessments of moisture susceptibility and asphalt cement draindown to ensure that performance is not degraded over time. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–124)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>The mix‑design methodology is employed whenever a pavement structure must be tailored to the anticipated climate, traffic loading, and material characteristics. For conventional asphalt concrete paving courses—including wearing, binder, and base layers—the Superpave system is used when a 20‑year design life is expressed in ESALs; designers select a performance‑grade binder and optional additives such as aramid fibers according to the projected ESAL range, which is divided into categories of less than 0.3 million, 0.3 to &lt; 3.0 million, 3.0 to &lt; 10.0 million, 10.0 to &lt; 30.0 million, and 30 million or greater. Higher ESAL brackets often require polymer‑modified binders or fiber‑reinforced mixes for rut resistance, and projects are generally limited to three distinct mix designs, rising to five only on large schemes to control cost. When the total base thickness exceeds six inches in new or reconstructed pavements, an Asphalt Rich Base Course is specified to enhance tensile strength and moisture durability.</p>
+<p>Cold‑recycled base‑course mix design is appropriate when the existing pavement retains at least two inches of asphalt that can be milled, the underlying base and subgrade are sound and well drained, and traffic can be limited or detoured during curing. The method targets cracked pavements—fatigue, transverse thermal, reflection cracks, or raveling—and is most effective on collector and local access highways, shoulder reconstructions, or widening projects where reclaimed asphalt pavement is blended with virgin coarse aggregate (No. 8, 57, or 67). The compacted thickness must lie between three and five inches, a wearing surface is required because of higher void content, and daily heavy‑truck traffic should not exceed roughly two hundred ESALs; if traffic volumes approach three thousand AADT or the truck proportion is high, polymer‑modified emulsions are recommended to provide early strength.</p>
+<p>Stone Matrix Asphalt (SMA) mix design becomes advantageous when a substantial wearing‑course area—at least fifty thousand square yards and preferably approaching one hundred thousand—is involved, making it cost‑effective for Interstates, Interstate look‑alike highways, and other high‑speed freeways that experience more than thirty million ESALs. The SMA system relies on durable aggregates arranged in a gap‑graded gradation to achieve stone‑on‑stone contact, together with a fiber or polymer‑modified binder and a relatively high asphalt content, delivering superior rut resistance and durability; it is avoided in small sections, intersections, or locations where frequent paver adjustments are required.</p>
+<p>Full‑depth reclamation (FDR) projects also depend on mix design to determine the type and quantity of stabilizing agents such as calcium or magnesium chlorides or emulsified asphalt, as well as any supplementary additives like granular material, cement, or lime. The selection and proportioning follow the procedures described in PennDOT Bulletin 27 for special asphalt mixtures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–128)</small></p>
+<p>RCC mix design is limited to roadways with an average daily traffic of two thousand vehicles or less and a speed limit of fifty‑five miles per hour or lower; when either the traffic volume exceeds that threshold or speeds are higher, conventional concrete or hot‑mix asphalt designs become preferable. In addition, RCC should be avoided where the International Roughness Index will be used to assess ride quality because its surface texture does not satisfy those criteria, leading designers to select a pavement design that follows standard mix‑design procedures. Cold‑recycled mixes are unsuitable when projects experience heavy truck traffic of two hundred or more daily equivalent single axle loads, have poor drainage, possess less than two inches of existing asphalt, contain underlying aggregates larger than two inches or overly soil‑rich material, or cannot accommodate traffic control or detours during the curing phase; under such conditions a conventional hot‑mix plant or full‑depth reclamation approach is preferred. Stone matrix asphalt (SMA) also has constraints: projects smaller than roughly fifty thousand square yards, limited budgets, numerous complex features such as many intersections that demand extensive hand work or frequent paver adjustments, and any problems in the existing pavement structure make SMA’s higher material and equipment costs uneconomical, so a conventional dense‑graded mix is the more appropriate design choice. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 121–124)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>In Pennsylvania, the mix‑design process for any pavement layer is dictated by a set of state publications and project‑specific limits. For conventional hot‑mix asphalt and Superpave courses, Publication 408 supplies the primary specifications; Section 5.10 together with Table 5.5 requires that the binder be selected from the performance‑grade (PG) system and that a 20‑year design life ESAL calculation place the project into one of five traffic ranges. Typically no more than three individual mix designs are permitted on standard projects and up to five on major ones, and when the estimated cumulative traffic exceeds ten million ESALs a polymer‑modified PG 64E‑22 binder must be used to control rutting. The same Publication 408 also contains the requirements for special mixtures: Stone Matrix Asphalt is covered in Section 419 (Item 0419‑0000) where the aggregate gradation must provide stone‑on‑stone contact, meet or exceed the specified VMA, and the asphalt content must achieve the target air‑void level while passing moisture susceptibility and draindown tests. SMA is recommended only for projects of at least 50 000 sq yd—preferably 100 000 sq yd or more—on interstates, high‑speed freeways, or pavements with traffic greater than thirty million ESALs, and it should be avoided where extensive handwork or underlying pavement distress is expected.</p>
+<p>Cold‑recycled base courses are designed according to Bulletin 27 (Publication 27), Chapter 2, which defines the test methods, allowable emulsified asphalts and the requirement to add virgin coarse aggregate when the reclaimed material is fine‑graded. The design must also comply with Publication 408 Section 344 for full‑depth reclamation, and projects that experience heavy truck traffic of 200 or more daily ESALs are excluded from cold‑recycling. A minimum compacted thickness of three inches (maximum five inches) and at least one week of curing under favorable weather before the wearing course is placed are mandatory.</p>
+<p>Full‑depth reclamation mixes follow the same Bulletin 27 procedures, with additional guidance for chloride or emulsified‑asphalt stabilization found in Appendix J (sections J.3.D/E for design development and J.4.D/E for construction). All quality‑control steps prescribed in Bulletin 27 must be observed.</p>
+<p>Roller‑Compacted Concrete mixes are governed by PennDOT Publication 408 (Sections 323, 502, 658) and the state concrete pavement design manual Chapter 8. The mix must employ a lower water‑to‑cement ratio—typically around 0.40 but not less than about 0.30—and may use a dense aggregate gradation with a maximum size under one inch, limited admixtures, and optional air entrainment. RCC is restricted to roadways with an average daily traffic of 2 000 vehicles or fewer and speed limits of 55 mph or less; when the surface is exposed on roads with speeds of 35 mph or higher, diamond grinding is required to provide texture. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–128)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>Mix design in pavement engineering follows a series of standardized procedures that define material selection, proportioning, and performance verification. For roller‑compacted concrete the PennDOT RCC design procedure described in Chapter 8 is applied; it uses conventional concrete ingredients but requires a reduced water‑cement ratio—often 0.40 and as low as 0.30—and a dense aggregate gradation with a maximum size under one inch, optionally incorporating air entrainment or limited admixtures. The resulting mix is then evaluated for required pavement thickness using the PennDOT concrete pavement design tools in Chapter 8 Section 8.15. The Superpave asphalt mixture design replaces the Marshall method with a volumetric design framework that integrates performance‑grade binder selection, traffic loading categories expressed as 20‑year design‑life equivalent single axle loads (ESALs), and predictive models for rutting and low‑temperature cracking. Designers first assign a Performance Grade binder, compute the ESALs, place the value into one of five predefined ranges (&lt; 0.3 million, 0.3–&lt; 3 million, 3–&lt; 10 million, 10–&lt; 30 million, ≥ 30 million), and then proportion aggregates, binder, and additives to meet volumetric targets; the procedure is supported by advanced performance testing and performance‑prediction models. Cold‑recycled base course mixes are designed according to Publication 27 (Bulletin 27) Chapter 2, which prescribes laboratory test methods and limits the emulsified asphalts that may be used. When traffic exceeds roughly 3,000 two‑lane AADT, when truck percentages are high, or when early/late season recycling demands rapid strength gain, polymer‑modified emulsions are specified to improve initial stability. Stone Matrix Asphalt follows a five‑step sequence that begins with selection of appropriate aggregates and proceeds to develop an aggregate gradation that creates stone‑on‑stone contact. The gradation is checked against minimum voids in the mineral aggregate (VMA) or to permit the minimum binder content, after which the asphalt content is adjusted to achieve the target air‑void level. Finally, moisture susceptibility and binder draindown are evaluated; implementation commonly relies on specialized equipment such as a fiber‑mixing machine, a 100‑ton test strip for trial mixes, and a distinct method of adding a high proportion of mineral filler. Full‑depth reclamation also adheres to the Publication 27 Chapter 2 procedure, which defines required test methods, allowable emulsified asphalts, and quality‑control steps for PennDOT projects; any chloride stabilization follows the guidelines in Appendix J. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=c85876f9 src=pub_242_change_10::tab:p127#1 -->
+<p>The table below presents a selection matrix for Full Depth Reclamation (FDR) based on specific pavement distress types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-mix-design-1-cap" tabindex="0"><table class="ct-table" id="ct-mix-design-1">
+<caption id="ct-mix-design-1-cap">TABLE 5.8 SELECTION OF FULL DEPTH RECLAMATION (FDR)</caption>
+<tbody>
+<tr><th scope="row">PAVEMENT DISTRESS</th><td>FDR</td></tr>
+<tr><th scope="row">Surface DefectsRavelingFlushingLow skid resistance</th><td></td></tr>
+<tr><th scope="row">DeformationCorrugationsLow RuttingModerate/High Rutting1</th><td>X 2,3</td></tr>
+<tr><th scope="row">Cracking (Load Associated)AlligatorLongitudinalWheel PathPavement EdgeSlippage</th><td>XXX</td></tr>
+<tr><th scope="row">Cracking (Non-Load Associated)Block (Shrinkage)Longitudinal (Joint)Transverse (Thermal)Reflection</th><td>XXX</td></tr>
+<tr><th scope="row">Maintenance PatchingSpraySkinPotholeFull Depth Replacement</th><td>X4X4X</td></tr>
+<tr><th scope="row">Weak Base or Subgrade</th><td>X</td></tr>
+<tr><th scope="row">Ride Quality/RoughnessGeneral UnevennessDepressions (Settlement)High Spots (Heaving)</th><td>X 5X6</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: 1 Rutting originating from the lower portion of the pavement (below surface course and including base and subgrade). 2 The addition of new aggregate may be required for unstable mixes. 3 The chemical stabilization of the subgrade may be required if the soil is soft, or wet. 4 In some instances, spray and skin patches may be removed by cold planing prior to these treatments (considered if very asphalt rich, bleeding). 5 Used if depressions are due to a poor subgrade condition. 6 Used if high spots caused by frost heave or swelling of an expansive subgrade soil exist.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 127.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–128)</small></p>
+<p>Mix designs for pavement structures are required to satisfy a set of quantitative criteria that reflect material properties, traffic loading, climatic exposure, construction practices, and quality‑control procedures. For roller‑compacted concrete (RCC) the mix must be produced with a water‑to‑cement ratio as low as 0.30 and typically about 0.40, using a dense aggregate gradation whose maximum particle size is limited to less than one inch; the resulting concrete is expected to develop compressive strengths in the range of four thousand to ten thousand pounds per square inch and to be placed in sections whose thickness may vary from four to eighteen inches. The RCC design is limited to roadways that carry an average daily traffic of roughly two thousand vehicles or fewer, operate at speeds not exceeding fifty‑five miles per hour, and are intended for a service life of about twenty years. When the Superpave system is employed, the mix must be tailored to the specific project by selecting a performance‑grade (PG) binder based on the predicted equivalent single axle loads (ESALs) calculated over a twenty‑year design period. The ESAL estimate places the mix into one of five defined ranges—less than 0.3 million, 0.3 to less than 3 million, 3 to less than 10 million, 10 to less than 30 million, and 30 million or greater—and any range exceeding ten million ESALs requires the specification of a polymer‑modified binder such as PG 64E‑22 for the wearing course. The number of distinct mix designs on a project is capped at three, with major projects permitted up to five, in order to control cost and complexity. Cold‑recycled base‑course mixes must be allowed to cure for at least one week under favorable weather conditions before the wearing course is placed, and the compacted thickness of the recycled layer must lie between three and five inches. Projects that experience heavy truck traffic—defined as two hundred or more daily ESALs—or overall traffic volumes greater than about three thousand vehicles on a two‑lane highway are generally excluded from cold recycling unless polymer‑modified emulsions are incorporated to provide early strength, and virgin coarse aggregate must be added when the reclaimed asphalt pavement consists of wearing‑course material. Stone Matrix Asphalt (SMA) designs rely on a gap‑graded aggregate skeleton that creates stone‑on‑stone contact while meeting or exceeding the minimum voids in mineral aggregate required to permit the lowest feasible binder content. The selected binder content is then adjusted to achieve the target air‑void level, and the mix is evaluated for moisture susceptibility and binder draindown before approval. SMA is specified only when the project area exceeds fifty thousand square yards—preferably one hundred thousand—and is recommended for high‑traffic routes carrying more than thirty million ESALs; it is avoided where extensive handwork or underlying pavement deficiencies are present. Finally, any mix intended for pavement stabilization must follow the procedures and quality‑control requirements set forth in Publication 27 Chapter 2. The appropriate type and quantity of stabilizing material must be selected, and when calcium or magnesium chloride is used, a minimum 35 percent solution applied at a rate of 0.1 to 0.15 gallons per square yard for each inch of reclaimed depth is required to achieve the prescribed strength gain and freeze‑thaw resistance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=b5dba4e4 src=pub_242_change_10::tab:p122#1 -->
+<p>The table below specifies cold recycling options based on average daily traffic volume.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-mix-design-2-cap" tabindex="0"><table class="ct-table" id="ct-mix-design-2" aria-describedby="ct-mix-design-2-sum">
+<caption id="ct-mix-design-2-cap">TABLE 5.7ADT CRITERIA</caption>
+<thead>
+<tr><th scope="col">ADT VOLUME</th><th scope="col">COLD RECYCLING OPTION</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">1,000 and less</th><td>Provide a surface treatment (double application) as a minimumfor wearing course.</td></tr>
+<tr><th scope="row">1,001 to 3,000</th><td>Provide a Superpave wearing course or cold mix wearingcourse (FB modified, FB-2, or FB-1).</td></tr>
+<tr><th scope="row">3,001 to 10,000</th><td>Provide a Superpave wearing course.</td></tr>
+<tr><th scope="row">10,001 to 15,000</th><td>If daily ESALs are less than 200, provide a Superpave wearingcourse and binder course.</td></tr>
+<tr><th scope="row">More than 15,000</th><td>Do not use.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-mix-design-2-sum">Rows list ADT volume ranges, columns give cold recycling options.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 122.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–128)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>For cold‑recycled base courses the mix design calls for a compacted thickness between three and five inches; the existing pavement must contribute at least two inches of asphalt, and an additional one inch of reclaimed or virgin aggregate is added to reach the three‑inch minimum overall depth. No other specific dimensions for base, subbase, treated‑soil, slab, shoulder, edge‑support, or reinforcement are provided in the source. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 121–123)</small></p>
+<p>The RCC mix design determines slab thickness using the PennDOT concrete pavement design procedures, which permit structural depths from four to eighteen inches and may be placed in a single lift or multiple lifts according to paver width. Control joint spacing is governed by slab thickness: for slabs less than eight inches thick joints are spaced fifteen to twenty feet, while for slabs eight inches or thicker the spacing equals 2.5 times the thickness (in feet), and shoulder joints must line up with the adjacent mainline concrete joints. Layer configuration therefore consists of selecting single‑ or multiple‑lift placement to achieve the required thickness, while the guideline does not specify cross‑slope, transition or tie‑in design details. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>A complete mix design must first identify the fundamental constituents of the mixture and then prescribe their exact proportions, properties, and any supplemental agents required to achieve the desired performance. For roller‑compacted concrete the design specifies cement, aggregate and water, with a low water‑to‑cement ratio that may be as low as 0.30 but is typically around 0.40. The aggregate gradation must be dense and limited to a maximum size of less than one inch; the use of air entrainment is optional and any admissible admixtures are listed. The target compressive strength for this concrete is defined within a range of roughly four‑thousand to ten‑thousand psi. In a Superpave asphalt mix the performance‑grade (PG) binder appropriate to the climate and traffic conditions is named, and the 20‑year design equivalent single axle load (ESAL) range is stated to set volumetric targets. When a fiber‑modified course is required, optional additives such as aramid fibers are identified, while an Asphalt Rich Base Course calls for a nominal maximum aggregate size of 25 mm and a target air‑void content of 2.5 percent. A cold‑recycled base mix must contain recycled asphalt pavement together with virgin coarse aggregate of No. 8, 57 or 67 size when the RAP is a wearing‑course or fine‑graded material, and it requires an emulsified asphalt binder; polymer‑modified emulsions are prescribed for high traffic volumes or early/late season recycling. The finished layer thickness is limited to three to five inches, achieved by ensuring at least two inches of existing asphalt plus one inch of reclaimed or virgin aggregate to meet the minimum overall depth. For a Stone Matrix Asphalt wearing course the design identifies the specific aggregate type and defines an aggregate gradation that creates stone‑on‑stone contact while satisfying the minimum voids in mineral aggregate (VMA) requirement; the asphalt binder content is set to obtain the target air‑void level, and durability considerations such as moisture susceptibility and binder draindown are addressed. The mix may also include fibers or polymer modifiers and a high proportion of mineral filler applied in a special manner. Finally, any stabilizing agents are specified with exact concentrations and application rates: calcium or magnesium chloride must be supplied as at least a 35 % solution applied at roughly 0.1 to 0.15 gallons per square yard for each inch of reclaimed depth, and when emulsified asphalt is used the design states the appropriate emulsion type and dosage according to established quality‑control procedures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–128)</small></p>
+<p>The mix design process begins by characterizing the traffic and environmental demands of the project. For concrete pavements, a very dry mix is adopted with a water‑cement ratio that can be as low as 0.30 and typically around 0.40; this low ratio together with a dense aggregate gradation whose maximum size is kept below one inch produces compressive strengths ranging from roughly four thousand to ten thousand pounds per square inch, allowing designers to select pavement thicknesses anywhere between four and eighteen inches based on the anticipated loading. When asphalt mixtures are required, the Superpave methodology first establishes the 20‑year design ESAL range; if the projected cumulative traffic exceeds ten million ESALs a polymer‑modified binder such as PG 64E‑22 is specified to control rutting, whereas lower traffic levels permit less severe binder grades. To keep construction practical and cost effective, most projects are limited to three distinct mix designs, with major undertakings allowed up to five, and any adjustments in quantities are used only to shift the ESAL classification by a single level. For base layers thicker than six inches, an Asphalt Rich Base Course is mandated to provide high tensile strength at the pavement bottom, improving durability and resistance to moisture intrusion.</p>
+<!-- concept-tabular:begin key=efdd81eb src=pub_242_change_10::tab:p114#1 -->
+<p>The table below specifies PG binders for Superpave pavement courses based on traffic conditions and project types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-mix-design-3-cap" tabindex="0"><table class="ct-table" id="ct-mix-design-3" aria-describedby="ct-mix-design-3-sum">
+<caption id="ct-mix-design-3-cap">TABLE 5.5 SELECTING PG-BINDERS FOR SUPERPAVE PAVEMENT COURSES</caption>
+<thead>
+<tr><th scope="col">PG-BINDER</th><th scope="col">PROJECT TYPES</th><th scope="col">ELIGIBLEPAVEMENTCOURSES</th><th scope="col">COST(STANDARDORPREMIUM)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">PG 58S-28</th><td>To be used in the northern half of the State{Districts 1-0, 2-0, 3-0, 4-0, 9-0, 10-0, 11-0,12-0, and 5-0 (Monroe, Carbon, &amp;Schuylkill Counties only)} under light trafficconditions and level or rolling terrain. Donot use in heavily trafficked intersections.Do not use on steep downgrades wheretraffic is under moderate to heavy braking.Do not use on steep upgrades where trucktraffic slows considerably. Use in situationswhere PG 58-22 was specified in the past.</td><td>WearingBinderBase</td><td>Standard(but may bedifficult toacquire)</td></tr>
+<tr><th scope="row">PG 64S-22</th><td>To be used in any part of the State undermost traffic conditions. Use in situationswhere PG 64-22 was specified in the past.</td><td>WearingBinderBaseLevelingScratch</td><td>Standard</td></tr>
+<tr><th scope="row">PG 64E-22</th><td>To be used in any part of the State underheavy traffic situations, at intersections, onsteep grades, or at locations where ruttinghas occurred in the past. Use isrecommended for projects that have anestimated ESAL range ≥ 10 million ESALs.Use in situations where polymer-modifiedasphalt (PMA) was specified in the past.</td><td>WearingBinder *</td><td>Premium</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-mix-design-3-sum">Rows list specific PG-Binder types and their usage guidelines. Columns provide project type descriptions, eligible pavement courses, and cost classification for each binder.</p>
+<p class="ct-notes">Notes: *Under extremely heavy traffic situations or locations where rutting has been a problem in the past, the District should specify the PG 64E-22 in both the Wearing Course and Binder Course.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 114.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p>In cold‑recycled base‑course designs, projects that experience heavy truck traffic—defined as two hundred or more daily ESALs—are screened out, and the mix must achieve a compacted depth between three and five inches. The reclaimed asphalt pavement is blended with virgin coarse aggregate of No. 8, 57, or 67 size when the RAP is fine‑graded to satisfy Publication 27 requirements; polymer‑modified emulsions are selected whenever average daily traffic exceeds three thousand vehicles on a two‑lane road, truck percentages are high, or early‑season curing limits are present, thereby supplying the necessary initial strength. After placement the mixture must cure for at least one week under favorable weather—low humidity and warm temperatures—before the wearing course is applied, ensuring that structural strength development, abrasion resistance, and overall performance criteria are met.</p>
+<p>For surface courses such as Stone Matrix Asphalt, durable aggregate types are chosen and a gap‑graded gradation is developed to create stone‑on‑stone contact that furnishes structural robustness. The gradation is required to meet or exceed the minimum voids in mineral aggregate so that the low binder content can be used while still achieving the target air‑void level for durability. The mix is then evaluated for moisture susceptibility and binder draindown, and SMA is specified only when project quantities are large enough—generally at least fifty thousand square yards—to justify its higher material cost and specialized construction procedures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–124)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>Within mix‑design procedures the specification of joints, reinforcement, load‑transfer devices, transitions or other structural details is minimal. For roller‑compacted concrete (RCC) mixes the design eliminates steel reinforcement, dowel bars and formwork; the only required structural element is a system of control joints that must align with any adjacent concrete shoulders. Joint spacing follows thickness‑based rules: sections thinner than 8 inches are provided with control joints spaced between 15 ft and 20 ft, while thicker sections use a spacing equal to 2.5 times the pavement thickness expressed in feet. When the RCC surface serves a roadway with a posted speed of 35 mph or higher, the surface must be textured by diamond grinding, which is a finishing requirement rather than an additional joint or reinforcement detail. In the Superpave mix‑design framework no special joints, reinforcement, load‑transfer devices, transitions or connections are prescribed beyond standard construction practice; the mixture is defined by binder grade, traffic loading and volumetric limits. The sole structural condition linked to the mix design occurs when a fiber‑modified asphalt overlay is placed over an existing concrete pavement: the overlay must be sawed and sealed at any underlying transverse joint, and the overlay does not permit reduction of the required pavement thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–113)</small></p>
+<p>The mix‑design process treats each contact between layers, materials and adjoining structures as a critical interface that must be defined through precise geometric and material specifications. For roller‑compacted concrete (RCC) sections the plan must locate control joints so that they line up with the joint pattern of any neighboring conventional concrete pavement; this alignment ensures that cracks propagate in predictable paths. Joint spacing follows thickness‑based criteria: when the RCC slab is thinner than eight inches, joints are placed at intervals of fifteen to twenty feet, whereas for slabs eight inches or thicker the spacing equals 2.5 times the slab thickness expressed in feet. If the RCC surface will remain exposed and the design speed is thirty‑five miles per hour or higher, the top must be textured by diamond grinding before it can function as a wearing course. The RCC layer may also serve directly as a base beneath an asphalt wearing surface or as a shoulder abutting reinforced or plain concrete pavements, provided these conditions are reflected in the specifications. Similarly, the lower portion of an asphalt base course is defined as a high‑performance interface with the subgrade. The mix design calls for an Asphalt Rich Base Course (ARBC) to occupy the bottom three to six inches of the first lift; this material is limited to mixes that have less than 0.3 million equivalent single axle loads and are placed at about 2.5 percent air voids, which yields the greatest tensile strength to resist upward cracking and moisture intrusion at the subgrade interface. When a fiber‑modified asphalt overlay is applied over an existing concrete pavement, the design must incorporate sawing and sealing of the underlying transverse joints so that a durable bond is achieved between the new mix and the concrete structure. Consistency across all layer interfaces is further reinforced by selecting an appropriate performance‑graded binder and restricting the total number of distinct mixes—typically three for standard projects and five for larger ones—so that each interface experiences compatible material behavior. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–113)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>In Superpave mix design the climate of the project site is addressed by selecting a performance‑grade binder and designing the mixture for a 20‑year design‑life ESAL count, which together target resistance to rutting and low‑temperature cracking. Moisture susceptibility is mitigated by using an Asphalt Rich Base Course with low air voids that provides high tensile strength at the bottom of the pavement and improves moisture‑damage resistance. In cold‑recycled mix design a well‑drained base and subgrade are prerequisites; projects that have deteriorated because of poor drainage are excluded from recycling. Because strength develops only after curing, the mix is required to cure for at least one week under low humidity and high temperature, and when early‑season moisture or temperature threatens initial strength, a polymer‑modified emulsion is specified to improve stability. In SMA mix design, after aggregate selection and establishing a gap‑graded gradation that satisfies VMA, the procedure explicitly evaluates moisture susceptibility and asphalt cement draindown sensitivity as the primary mechanism for addressing environmental moisture conditions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–124)</small></p>
+<p>When developing a mix design the engineer must first verify that the project’s traffic and geometric conditions fall within prescribed limits. For roller‑compacted concrete the pavement may only be placed on roadways whose average daily traffic does not exceed two thousand vehicles and where the posted speed limit is fifty‑five miles per hour or lower. If the RCC surface will remain exposed and the design speed is thirty‑five miles per hour or higher, the surface must be textured by diamond grinding to achieve adequate skid resistance. Control joints are a geometric requirement: sections thinner than eight inches require joint spacing of fifteen to twenty feet, while thicker sections call for spacing equal to the pavement thickness multiplied by 2.5 feet. Moreover, RCC should not be used on segments where ride quality will be evaluated with the International Roughness Index because its rougher texture can affect safety‑related performance incentives.</p>
+<p>For cold‑recycled mixes the geometric constraints differ; the compacted layer must be between three and five inches thick and must cure for at least one week under favorable weather before a wearing course is placed. Because these mixes have higher void content, a wearing surface is essential to protect against abrasion. Safety and accessibility considerations dictate that projects with heavy truck traffic—defined as two hundred or more daily equivalent single axle loads (ESALs)—are excluded, and only sites where traffic can be controlled or detoured during base construction and the curing period may be selected, ensuring users are protected while the mix gains strength. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 121–123)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The mix design process for both roller‑compacted concrete (RCC) and Superpave asphalt aims to achieve a service life of approximately twenty years. For RCC, the low water‑cement ratio is selected to raise compressive strength relative to conventional concrete, which translates into greater resistance to cracking and other forms of distress. The anticipated durability is evaluated through standard compressive‑strength testing that confirms the higher strength level. Because RCC typically produces a rougher surface texture, ride quality is expected to be more variable; consequently the International Roughness Index (IRI) is used as the measurement criterion for ride‑quality performance, and projects that rely on IRI‑based payment incentives avoid specifying RCC.</p>
+<p>In Superpave designs, a 20‑year equivalent single axle load (ESAL) count defines the traffic loading scenario. The appropriate performance‑grade (PG) binder and volumetric proportions are then chosen to resist permanent deformation (rutting) and low‑temperature thermal cracking. These expectations are verified through advanced laboratory performance tests—such as repeated‑load triaxial or wheel‑track testing—and through predictive models that simulate the mixture’s response under the projected climatic and traffic conditions.</p>
+<p>Across both systems, additional performance attributes include measurable gains in strength, enhanced resistance to freeze–thaw cycles, reduced susceptibility to water‑related damage, and improved fatigue life under traffic loading. Strength improvements are quantified by standard compressive or indirect tensile strength tests; moisture susceptibility is assessed with moisture‑damage testing; freeze‑thaw durability is measured using cyclic freezing and thawing procedures that track loss of stiffness or mass; and fatigue performance is evaluated through repeated‑load testing that determines the number of cycles to failure at specified strain levels. For projects following PennDOT’s FDR guidelines, these tests are mandated by Bulletin 27, which prescribes the specific quality‑control protocols to confirm that the designed mixture meets the targeted durability and distress‑resistance criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–128)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subgrade</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.N5kEBs4AiK -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">27 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="cracking.html">Cracking</a></li></ul></details></li><li><a href="ride-quality.html">Ride Quality</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="shoulder.html">Shoulder</a></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html" class="active" aria-current="page">Subgrade</a></li></ul></details></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li></ul></details></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a></li><li><a href="concrete-overlay.html">Concrete Overlay</a></li><li><a href="resurfacing.html">Resurfacing</a></li></ul></details></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><span class="crumb-current">Subgrade</span></nav>
+<article><h1>Subgrade</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-structure.html">Pavement Structure</a> <span class="edge edge-taxonomic" title="Subgrade is a topic under Pavement Structure.">is-subtopic-of</span></div><div class="edge-reading">Subgrade is a topic under Pavement Structure.</div><div><a class="tag" href="index.html?q=subgrade">subgrade</a><a class="tag" href="index.html?q=subgrades">subgrades</a></div><div>Created 2026-10-23 · Updated 2026-10-23</div></div>
+<p>The subgrade is the prepared earth foundation that underlies a pavement and supplies the necessary bearing capacity and stiffness to transfer traffic loads to the ground without excessive deflection. By achieving a uniform, stable layer whose stiffness is expressed through a resilient modulus (typically 5–10) or an equivalent California Bearing Ratio, and by meeting seasonal effective modulus of subgrade reaction values (≈15 000 psi for spring‑thaw, 30 000 psi for normal conditions, and 50 000 psi when frozen), the design ensures that settlement, differential heave, rutting and other distress are avoided. Proper drainage and moisture control are integral, because moisture variations can lower the modulus by 10–20 % in spring or double it when frozen, and corrective actions such as undercutting, stabilization, or subgrade drains are required whenever measured values fall outside these limits. Satisfying these stiffness and load‑bearing criteria extends the service life of both flexible and rigid concrete pavements.[1]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>The subgrade is provided to solve the fundamental problem of insufficient bearing capacity and non‑uniform support in native soils that would otherwise cause excessive settlement, differential heave, cracking, rutting and other distress in overlying concrete pavements. By preparing a uniform, stable earth foundation whose stiffness—expressed through resilient modulus (Mr) or California Bearing Ratio (CBR) typically 5–10—and effective modulus of subgrade reaction (k) meets prescribed seasonal limits, the design ensures that traffic loads are reliably transferred to the ground without loss of support. Seasonal moisture conditions are accounted for: spring moduli are 10 %–20 % lower than summer values and frozen subgrades can be roughly twice as stiff, leading to required base elastic modulus values of 15 000 psi for spring‑thaw, 30 000 psi for normal (summer/fall) and 50 000 psi for frozen conditions. The ratio of subbase modulus to soil resilient modulus is limited to four to prevent excessive deformation. When in‑situ Mr or CBR fall outside these ranges, corrective actions such as undercutting, backfilling, stabilization, addition of a prepared subbase, or installation of subgrade drains are mandated to restore uniform support and proper drainage. Satisfying these stiffness and load‑bearing criteria prevents differential settlement, frost heave, erosion or pumping, limits deflection, and thereby extends the service life of rigid concrete pavements, including roller‑compacted concrete slabs designed for the anticipated average daily truck traffic. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 57–59), Ch. 4 (pp. 84–99), Ch. 5 (pp. 124–126), Ch. 6 (pp. 141–150), Ch. 8 (pp. 160–167)</small></p>
+<p>The subgrade must provide reliable load‑supporting capacity and stiffness so that traffic loads are transferred to the foundation without excessive deflection, thereby maintaining ride quality and safety. To achieve this functional objective it must meet the minimum roadbed resilient modulus and California Bearing Ratio (CBR) values stipulated in the design; CBR values above 10 require approval by the Chief Geotechnical Engineer and no value greater than 20 may be used in the Heukelom‑Klomp correlation. Where isolated low‑CBR zones exist, they must be improved to bring the subgrade performance into line with overall project conditions. Durability is ensured by keeping the subgrade dry. Effective drainage must be incorporated before construction so that moisture does not degrade material integrity or reduce structural capacity. All wet locations are identified and remedied, and water is removed from beneath the pavement surface to prevent loss of support, frost‑heave deformation, rutting, and surface roughness that would impair serviceability. Safety and serviceability are further protected by eliminating frost‑susceptible soils or treating them with rock capping, stabilization, geogrids, or other measures to avoid differential heaving during freeze‑thaw cycles. When laboratory CBR results appear uncertain or unusually high or low, additional field testing such as falling weight deflectometer (FWD) or dynamic cone penetrometer (DCP) is required to validate the modulus before design use, thereby preventing unexpected settlement or failure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 124–126), Ch. 6 (pp. 143–150)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>The subgrade design approach is required for any pavement reconstruction effort, including rubblized projects, and applies to both flexible and rigid pavement designs. For flexible pavements the resilient modulus of the soil characterizes the roadbed; when designing rigid pavements this modulus must be converted to an effective modulus of subgrade reaction. Laboratory determination of the resilient modulus or CBR testing may be used for interstate or expressway facilities, with a geotechnical engineer consulted if values fall outside typical ranges. Subgrade evaluation is especially appropriate for full‑depth asphalt sections, asphalt overlays placed on thin concrete slabs less than eight inches thick, pre‑1945 concrete pavements, concrete suffering severe alkali‑silica reaction, and AC overlays of fractured PCC, as well as the rare case where loads are applied directly to subgrade or subbase. For collector and local roads the resilient modulus may be estimated from soil surveys, but higher‑classification projects must rely on laboratory or field test results such as CBR, falling weight deflectometer or dynamic cone penetrometer. When existing subgrade CBR is around five, strengthening with cement, lime, or rock capping becomes cost‑effective if the pavement quantity exceeds roughly 25 000 square yards and the traffic pattern group is 1 to 4. In frost‑susceptible areas the subgrade may be removed and replaced with non‑frost‑susceptible material or a stronger base course provided, while still meeting design assumptions. For rigid‑pavement structures such as jointed plain concrete pavement or roller‑compacted concrete, a uniform and stable subgrade is required before placing the surface layer. Interstate and expressway rigid designs typically incorporate an asphalt or cement‑treated permeable base over a 2A subbase; the effective k‑value is adjusted for subbase type, thickness, loss‑of‑support factors, depth to bedrock, and seasonal conditions—spring thaw (15 000 psi), normal summer/fall (30 000 psi), and frozen winter (50 000 psi). Consequently, the subgrade design approach is appropriate wherever flexible or rigid pavements are being designed, particularly on high‑volume highways, reconstruction projects, thin‑slab overlays, frost‑prone regions, and situations requiring subgrade strengthening. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 141–150), Ch. 8 (pp. 160–162)</small></p>
+<p>When the native subgrade consists of weak clays or silts that cannot support construction equipment, an overlay may initially appear attractive because it shields the deficient soil from traffic loads. However, if providing the overlay would require extensive shoulder widening, slope changes, guide‑rail relocation, or vertical adjustments at structures—changes that significantly increase overall project cost—the overlay ceases to be the most economical choice and another design strategy must be pursued. Likewise, when the existing pavement is severely deteriorated or grade restrictions prevent raising the surface with an overlay, designers should abandon reliance on the existing subgrade and opt for complete removal of the pavement down to a stable layer, followed by backfilling, stabilization, or full replacement; this approach yields a more uniform foundation while minimizing grade adjustments. In situations where distress is primarily surface‑related rather than due to inadequate support layers, improving the subgrade through full‑depth reclamation (FDR) is not preferred; instead, alternative rehabilitation methods should be selected. Excess moisture in the subgrade further discourages reliance on subgrade improvement, requiring effective drainage before any FDR can be considered, and the practicality of FDR diminishes when the existing pavement is too thin or the available subgrade material insufficient to form a reclaimed layer. Geotechnical criteria also dictate alternative approaches: CBR values exceeding ten must be reviewed and approved by the District and Chief Geotechnical Engineers before a subgrade‑based design proceeds, while CBR values below five trigger requirements for significant undercutting, stabilization, or replacement, indicating that another pavement design is preferable. If reliable CBR data cannot be obtained—often due to high fines content, elevated Atterberg limits, or a high Group Index—designers are directed to consult the Highway Design and Technology Section for viable options. Isolated low‑CBR zones or widespread low values likewise deem the native subgrade inadequate, necessitating targeted improvement or replacement; when large variations in soil type and CBR exist across an alignment, it may be appropriate to divide the project into limited subsections each with its own design. For projects of at least 25,000 square yards on Traffic Pattern Groups 1 to 4, a cost‑benefit analysis of strengthening techniques such as cement or lime stabilization, rock capping (modeled with CBR = 20), or geogrid/geotextile reinforcement is required when CBR falls below five. Finally, frost‑susceptible soils that could cause differential heaving demand either a stronger base course or removal and replacement with non‑frost‑susceptible material, as reliance on the subgrade alone would not ensure performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 57–58), Ch. 4 (p. 98), Ch. 5 (pp. 124–126), Ch. 6 (pp. 141–150)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The subgrade design must be based on a comprehensive set of site‑specific data, beginning with an estimate of future traffic loading to define the expected stresses, and a recent pavement condition survey that documents existing distress and drainage problems. Geotechnical information is obtained through in‑situ testing such as Falling Weight Deflectometer, dynamic cone penetrometer or lightweight deflectometer to quantify subgrade stiffness, while material characteristics are captured by systematic sampling of the existing layers for laboratory evaluation. Environmental considerations focus on identifying wet subgrade areas and ensuring proper drainage to prevent moisture‑induced loss of strength. Together these traffic, existing‑condition, material, geotechnical and environmental inputs provide the basis for determining appropriate layer thicknesses and rehabilitation strategies. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126)</small></p>
+<p>The subgrade that underlies any pavement on PennDOT right‑of‑way must be designed and constructed in accordance with a set of departmental publications, specifications, test methods, and performance constraints. Drainage requirements are established in Publication 72M Roadway Construction Standards, which mandates protection of drainage outlets located in mowable areas by headwalls, while the sizing and spacing of pavement‑base drains are prescribed in Publication 13M Design Manual Part 2 (Chapter 10, Section 10.3.D). In wet subgrade zones lateral underdrains are encouraged, continuous edge drains are required on interstate facilities, and additional subgrade drains must be provided wherever water damage or sagging is observed. Geotechnical evaluation follows the Geotechnical Engineering Manual (Publication 293). The designer must consult the District Geotechnical Engineer to obtain a resilient modulus for the roadbed soil; this modulus is derived from a suite of AASHTO laboratory tests that include PTM 106 moisture‑density, T 208 unconfined compressive strength, M 145 soil classification, T 307 resilient modulus, and soaked CBR testing per T 193. For interstate and expressway projects a laboratory CBR may be used in place of a direct modulus measurement provided the value does not exceed twenty; any CBR greater than ten must be recommended by the District Geotechnical Engineer and approved by the Chief Geotechnical Engineer. Concrete and rigid‑pavement designs are further governed by Publication 408. Section 2.2 defines the Subgrade Soil Evaluation that establishes acceptable soil type and thickness, while Specification 203 limits excavation to Class 1 quantities and Specification 316 requires density acceptance sampling and testing. The subgrade and any accompanying subbase are treated as separate construction items and must be capable of supporting the compaction of roller‑compacted concrete or RCC layers. Rigid pavement designs on interstates and expressways must incorporate an Asphalt or Cement Treated Permeable Base over a 2A subbase; open‑graded subbase is prohibited. When computing effective k‑values, seasonal base elastic moduli of 15 000 psi for spring thaw, 30 000 psi for normal conditions, and 50 000 psi for frozen conditions are applied, and the ratio of subbase modulus to roadbed soil resilient modulus may not exceed four. Performance thresholds require that, for projects other than collectors or local roads, the roadbed soil resilient modulus be based on laboratory or in‑situ testing and that pavement plans specify a minimum acceptable modulus for all borrow material. Frost‑susceptible soils must be treated according to frost‑design guidance, and any subgrade improvement such as stabilization, rock capping, geogrids, or geotextiles must comply with Publication 408. Prior to rehabilitation the in‑situ stiffness of the existing subgrade is evaluated using Falling Weight Deflectometer testing, optionally supplemented by dynamic cone penetrometer or lightweight deflectometer measurements, and sample collection follows Appendix J procedures. The 1993 AASHTO Pavement Design Procedures for rigid pavements require a uniform and stable prepared earth surface; Chapter 6.2 details the determination of existing subgrade condition. For reinforced cement concrete pavement on local and collector routes the department’s standard design values in Chapter 8 are used. The structural contribution of the subgrade is expressed through a resilient modulus equal to one‑thousand‑five hundred times the CBR, as stipulated in Section 6.2. Designs assume a twenty‑year service life with an annual traffic growth rate of one percent and target terminal serviceability indices of 2.5 for collectors and 2.0 for locals, with reliability targets of ninety percent for collectors and eighty‑five percent for locals. Layer thicknesses are generated with the ACPA StreetPave12 program, which incorporates the subgrade parameters together with a six‑inch unbound granular subbase. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=23617d99 src=pub_242_change_10::tab:p144#1 -->
+<p>Table: TABLE 6.2TYPICAL CBR VALUES(BASED ON NCHRP PROJECT 1-37A).</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-subgrade-1-cap" tabindex="0"><table class="ct-table" id="ct-subgrade-1" aria-describedby="ct-subgrade-1-sum">
+<caption id="ct-subgrade-1-cap">TABLE 6.2TYPICAL CBR VALUES(BASED ON NCHRP PROJECT 1-37A)</caption>
+<thead>
+<tr><th scope="col">AASHTO SOIL CLASSIFICATION</th><th scope="col">TYPICALCBR RANGE**</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">A-1-a</th><td>60-80</td></tr>
+<tr><th scope="row">A-1-b</th><td>35-60</td></tr>
+<tr><th scope="row">A-2-4</th><td>20-40</td></tr>
+<tr><th scope="row">A-2-5</th><td>15-30</td></tr>
+<tr><th scope="row">A-2-6</th><td>10-25</td></tr>
+<tr><th scope="row">A-2-7</th><td>10-20</td></tr>
+<tr><th scope="row">A-3</th><td>15-35</td></tr>
+<tr><th scope="row">A-4</th><td>10-20</td></tr>
+<tr><th scope="row">A-5*</th><td>8-16</td></tr>
+<tr><th scope="row">A-6</th><td>5-15</td></tr>
+<tr><th scope="row">A-7-5*</th><td>2-8</td></tr>
+<tr><th scope="row">A-7-6</th><td>1-5</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-subgrade-1-sum">Rows list AASHTO soil classification codes. Columns give the typical California Bearing Ratio (CBR) range for each soil type.</p>
+<p class="ct-notes">Notes: * Material unsuitable as new embankment or subgrade as per Publication 408 ** Typical CBR Range values are provided only as a guideline for comparison with laboratory tested CBR values. In no case shall values from the table be directly used in performing pavement designs. See limitations on CBR design values below.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 144.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 84–99), Ch. 5 (pp. 124–126), Ch. 6 (pp. 141–150), Ch. 8 (pp. 160–167)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The evaluation of subgrade for pavement projects begins with in‑situ strength testing and systematic sampling. Falling Weight Deflectometer (FWD) measurements are taken to obtain stiffness data, and the results guide the selection of locations for further laboratory investigation. Complementary field tests include the dynamic cone penetrometer (DCP) and the light weight deflectometer (LWD), with procedural details specified in the project appendices. Collected samples must be handled according to the sampling protocol outlined in Appendix J.</p>
+<p>The principal material property used in design is the resilient modulus, M_r. Laboratory determination follows AASHTO T 307, while an empirical estimate can be derived from a California Bearing Ratio (CBR) test using the Heukelom‑Klomp relationship M_r = 1 500 × CBR. When the in‑situ density is low, the multiplier may be reduced to 1 000. The CBR value employed in this correlation is limited to a maximum of 20; values above 10 require chief engineer approval. For field‑derived data, M_r can also be back‑calculated from FWD measurements; the dynamic stiffness obtained is halved to produce a static modulus and then multiplied by a correction factor of 0.25 to align with laboratory values. Any back‑calculated M_r exceeding roughly 15 000 psi must be confirmed through additional testing. DCP resistance may be converted to CBR using the prescribed chart, after which the same Heukelom‑Klomp equation provides M_r.</p>
+<p>In flexible pavement design the resilient modulus is used directly. For rigid pavements the modulus is transformed into an effective modulus of subgrade reaction, k, which is proportional to M_r. The conversion incorporates seasonal adjustments through a base elastic modulus (E_SB) of 15 000 psi for spring‑thaw conditions, 30 000 psi for normal periods, and 50 000 psi for frozen conditions. Loss‑of‑support factors for each supporting layer are combined using a weighted average formula (LS₁·D₁)/(D₁+D₂)+(LS₂·D₂)/(D₁+D₂), and the resulting k value is constrained so that the subbase‑to‑soil modulus ratio does not exceed four. The DARWin software package performs these calculations.</p>
+<p>When the subgrade is to be strengthened, rock capping is modeled with a CBR of 20, while lime or cement stabilization employs a structural coefficient of 0.12 together with the project‑specific CBR. In reinforced concrete pavement design the resilient modulus of the subgrade (denoted MRSG) is taken as 1 500 times the CBR and entered into the ACPA StreetPave12 program, which evaluates the combined support of subgrade and subbase to determine the required slab thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126), Ch. 6 (pp. 141–150), Ch. 8 (pp. 161–167)</small></p>
+<!-- formulas-check:begin pub_242_change_10::f:2a7734d31256 x subgrade -->
+
+<p>The resilient modulus in psi is determined by the following relationship:</p>
+<!-- formula-anchor: eq-pub-242-change-10-2a7734d31256 -->
+
+<div class="fc-math" id="eq-pub-242-change-10-2a7734d31256" role="region" aria-label="Formula 1" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="\mathrm { M } _ { \mathrm { r } } \left( \mathrm { p s i } \right) = 1500 \times \mathrm { C B R }"><mrow><msub><mrow><mi mathvariant="normal">M</mi></mrow><mrow><mrow><mi mathvariant="normal">r</mi></mrow></mrow></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi></mrow><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0003D;</mo><mn>1500</mn><mo>&#x000D7;</mo><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">R</mi></mrow></mrow></math></div>
+<p>The resilient modulus in psi is computed from the California Bearing Ratio (CBR). As the CBR value increases, the resilient modulus rises.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-2" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-2">Symbols: Resilient modulus from CBR ([1] PDF p. 142)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="M_r"><mrow><msub><mi>M</mi><mi>r</mi></msub></mrow></math></td><td>Mr</td><td>psi</td><td>output</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="CBR"><mrow><mi>C</mi><mi>B</mi><mi>R</mi></mrow></math></td><td>CBR test results</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+</table></div>
+
+<p><small>[1] — PDF p. 142</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats: not stated in the publication near this formula.</p>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<p>See also:</p>
+<ul>
+<li><a href="pavement-design.html#eq-pub-242-change-10-2a7734d31256">Pavement Design</a></li>
+</ul>
+<details class="fc-calc"><summary>Calculator: Resilient modulus from CBR ([1] PDF p. 142)</summary><iframe src="_apps/pub-242-change-10-2a7734d31256.html" title="Calculator: Resilient modulus from CBR ([1] PDF p. 142)" loading="lazy"></iframe><p><a href="_apps/pub-242-change-10-2a7734d31256.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-24.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 206 words before and 1241 words after the formula.</p>
+<p>Found by the search:</p>
+<ul>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="M_r"><mrow><msub><mi>M</mi><mi>r</mi></msub></mrow></math> from PDF p. 142, beside the formula</li>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="CBR"><mrow><mi>C</mi><mi>B</mi><mi>R</mi></mrow></math> from PDF p. 142, 1 step / 107 words after the formula</li>
+</ul>
+</details>
+
+<!-- formulas-check:end -->
+
+<p>The subgrade must be identified and sized during the design phase by applying the Subgrade Soil Evaluation procedures, which dictate that an acceptable soil type and a suitable subbase thickness be selected for each project location. The subgrade is treated as a distinct construction item, and when existing conditions are judged deficient, the design incorporates an &ldquo;as directed&rdquo; undercut quantity to remediate poor zones. Determination of the subgrade’s structural capacity relies on a resilient modulus (M_r) that is derived from representative California Bearing Ratio (CBR) tests; the standard conversion of M_r = 1,500 × CBR is used as the input for slab‑thickness calculations. All CBR testing must be performed on soaked samples and reflect seasonal moisture extremes, with results reviewed in consultation with the District Geotechnical Engineer. Any CBR value exceeding ten requires a recommendation from the geotechnical engineer and formal approval by the Chief Geotechnical Engineer, while values below five trigger mandatory documentation of improvement measures such as significant undercutting or other subgrade strengthening techniques. Moreover, CBR results greater than twenty are prohibited in the Heukelom‑Klomp correlation, capping the allowable M_r at thirty thousand psi. For non‑collector and non‑local projects the resilient modulus must be confirmed by laboratory or field testing; if a back‑calculated M_r exceeds fifteen thousand psi, independent verification through additional methods such as falling weight deflectometer or dynamic cone penetrometer testing is required before it can be used in pavement analysis.</p>
+<p>The effective modulus of reaction (k) for the subgrade is derived from the confirmed resilient modulus and must be adjusted for the type and thickness of the subbase, loss‑of‑support factors, and depth to any rigid foundation. Seasonal design values are prescribed at fifteen thousand psi for spring‑thaw conditions, thirty thousand psi for normal summer/fall conditions, and fifty thousand psi for frozen winter conditions, with the ratio of subbase modulus to soil resilient modulus limited to four to avoid unrealistic stiffness assumptions. For Interstate and Expressway rigid pavements the base layer must consist of an Asphalt or Cement Treated Permeable Base over a 2A subbase; alternative ATPB/CTPB configurations are permissible, but open‑graded subbases are expressly prohibited.</p>
+<p>Reliability targets are embedded in the design criteria: collector roads require a 90 % reliability level and a terminal serviceability index of 2.5, while local roads target an 85 % reliability and a serviceability index of 2.0. These thresholds ensure that the subgrade performance meets the prescribed durability and functional standards for the intended traffic class. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–89), Ch. 6 (pp. 141–150), Ch. 8 (pp. 161–167)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>The subgrade specification must first identify the material to be used—whether native in‑situ soil or borrow fill—and require that both meet a minimum acceptable roadbed resilient modulus, allowing laboratory CBR values as an equivalent for certain facilities. This modulus is obtained from laboratory testing of representative samples taken under seasonal stress‑moisture conditions, with the designer coordinating with the district geotechnical engineer to determine the appropriate value. For each soil type the specification must list the AASHTO classification, gradation indices Cu and Cc, percent passing the #200 sieve, Atterberg limits (liquid limit, plastic limit, plasticity index) together with the calculated AASHTO Group Index, maximum dry density, and optimum moisture content. When subgrade strengthening is required, the specification must prescribe a stabilization method—cement, lime, or rock capping—and require laboratory determination of the appropriate additive rates; the necessary tests include gradation (hydrometer analysis), liquid and plastic limits, shrinkage limit, unconfined compressive strength, dry density, sulfate/chloride content, organic content, and pH for lime stabilization. In addition, the specification must identify the type of subbase material placed beneath the pavement—such as asphalt‑treated base (ATPB), cement‑treated base (CTPB) or a 2A subbase—and state its thickness in inches, assigning a loss‑of‑support factor to each layer to adjust the effective k‑value for potential erosion or pumping. The base elastic modulus used in design is selected according to seasonal conditions—15,000 psi for spring thaw, 30,000 psi for normal summer/fall, and 50,000 psi for frozen winter—and the ratio of subbase modulus to the underlying roadbed soil resilient modulus shall not exceed four. If bedrock lies within ten feet of the surface, its depth is incorporated into the k‑value calculation through weighted averages of loss‑of‑support factors and layer depths. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 141–150), Ch. 8 (pp. 161–162)</small></p>
+<p>Selection of subgrade materials and mixture proportions begins with a thorough characterization of the existing ground through representative sampling and in‑situ stiffness testing such as falling weight deflectometer, dynamic cone penetrometer and lightweight deflectometer. The results are expressed primarily by California Bearing Ratio (CBR) values; the lowest CBR controls the pavement design and any isolated low‑CBR zones are improved so that the subgrade is uniform across the project. When the in‑place CBR is five or less, a cost‑benefit analysis for projects larger than 25 000 square yards on Traffic Pattern Groups 1‑4 typically justifies strengthening measures. Strengthening may be achieved by mechanical means—pulverizing the existing material and recompacting it with added aggregate or reclaimed asphalt pavement to improve gradation—or by chemical stabilization using cement, lime or fly ash, each proportioned according to laboratory mix‑design tests that target the required resilient modulus while avoiding excessive brittleness. For very weak soils a rock cap modeled with CBR = 20 can be used, and the stabilized layer is represented in design calculations with a structural coefficient of 0.12 while retaining the native CBR beneath it. In addition to chemical or mechanical additives, geosynthetic reinforcement such as geogrids or Class‑4 geotextiles may be placed at the subgrade‑base interface to increase durability and load distribution for weak soils. All borrow material incorporated into the subgrade must satisfy minimum resilient modulus values established from laboratory or field testing to ensure structural capacity. For rigid‑pavement systems the subgrade is built by selecting an appropriate subbase type—either aggregate treated base (ATPB) or cement treated base (CTPB)—and a thickness that yields the required effective modulus of subgrade reaction. The elastic modulus assigned to the subbase varies with season: 15 000 psi for spring‑thaw conditions, 30 000 psi for normal summer/fall periods, and 50 000 psi when frozen. A loss‑of‑support factor is applied to correct the effective k‑value for potential erosion or pumping, and the resulting subbase‑to‑soil resilient‑modulus ratio is limited to four to protect against excessive deformation. By integrating these thickness, modulus, reinforcement, and proportioning criteria, the selected subgrade materials satisfy structural demands, provide long‑term durability, remain constructible with practical layer sizes and equipment, and deliver the performance required over the pavement’s design life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126), Ch. 6 (pp. 143–150), Ch. 8 (pp. 161–162)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>The subgrade does not rely on joints or conventional load‑transfer devices; instead its structural integrity is achieved through an integrated drainage network, reinforcement fabrics and carefully designed transitions. Continuous base drains are required along the pavement’s outer edge, on the low side of any superelevated sections, and on the median wherever subsurface water problems have been identified. Lateral underdrains must be placed at every cut‑to‑fill transition and at other critical locations flagged by maintenance personnel, while subgrade drains are installed in sag areas or wherever existing pavement shows signs of moisture damage. Reinforcement is provided primarily with geogrids positioned at the interface between the subgrade and the overlying aggregate to stabilize weak soils. A full‑width Class 4 Type A layer‑separation geotextile separates the subgrade from the subbase, preserving the functionality of each material, and when the California Bearing Ratio falls below three a Class 4 Type C stabilization geotextile is added to supply lateral restraint and reduce load stresses on the subgrade. Where abrupt changes in soil conditions occur, a gradual transition is achieved using granular fill or a rock‑capping layer 1 to 3 feet thick composed of R‑3 rock, AASHTO No. 1, or the best available rock; all strengthening treatments incorporate the separation fabric as part of the construction detail. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 6 (pp. 143–150)</small></p>
+<p>Subgrade design begins with a comprehensive assessment of the existing soil condition, recognizing that the quality of the subgrade is critical for pavement reconstruction. When weak or moisture‑sensitive soils are identified, an overlay is employed not only to shield the unsuitable material from construction traffic but also to raise the grade line away from high‑moisture zones. At the same time, every contact between the subgrade and adjacent features—shoulder widths, embankment slopes, guide‑rail locations, and vertical alignments at structures—is treated as an engineered interface; adjustments to these elements are coordinated so that the geometry of each interface supports uniform load distribution while acknowledging their impact on overall project cost. For the interfaces with overlying pavement layers, reliable transverse load transfer is achieved by dowelling all patch joints and anchoring the dowels throughout their embedded length with suitable binders such as epoxy, polyester, or vinylester. Joint spacing follows prescribed limits: reinforced concrete sections with perpendicular joints are spaced at 30 ft, while plain‑concrete sections may be limited to 15 ft, each joint being provided with appropriate seals and coated dowel bars. Precast units are placed on a prepared bedding course that rests on a subgrade and subbase whose type and thickness have been defined by the Subgrade Soil Evaluation guidelines; when the existing subgrade is deficient, an “as directed” undercut quantity is added to improve support. Uniform support for overlays is further ensured by removing or rehabilitating joints that have lost load‑transfer capability and stabilizing other cracks so that the overlay rests on a consistently supporting pavement layer. At material interfaces, reinforcement and separation measures are specified according to the strength of the underlying soil. Where the subgrade meets an aggregate base, a geogrid is installed in accordance with Publication 408 to strengthen the weak soil‑aggregate bond. When dissimilar materials such as subbase and subgrade must be kept distinct—particularly where the California Bearing Ratio falls below three—a Class 4 geotextile is used, employing Type A fabric for pure separation or Type C when combined separation and reinforcement are required. Abrupt changes in soil type, cut‑fill boundaries, or junctions where a new pavement abuts an existing section of different total depth are smoothed with gradual transitions composed of granular, non‑frost‑susceptible material, thereby maintaining drainage, preventing differential heave, and achieving uniform subgrade performance across all engineered interfaces. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 57–58), Ch. 4 (pp. 84–89), Ch. 6 (pp. 143–150)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>The subgrade design begins with a systematic survey to locate any zones of excess moisture or intersecting water tables. Those areas are treated before the reclaimed layer is placed, because uncontrolled water degrades material integrity and reduces structural capacity. Subsurface drainage is provided by installing lateral underdrains in wet subgrade sections and at every cut‑to‑fill transition, and by lowering water tables with appropriately sized drains that discharge to a positive outlet. High‑permeability base and subbase materials are placed on adequately sloped layers so that free water can be removed by gravity, while open‑graded subbase is prohibited; instead an asphalt‑ or cement‑treated permeable base may be used where a reliable outlet exists, otherwise a dense base with longitudinal edge drains is required.</p>
+<p>Frost susceptibility is addressed by either removing frost‑prone soils or covering them with a sufficiently thick layer of non‑frost‑susceptible granular material that insulates the roadbed from frost penetration. Uniformity of the subgrade is achieved through selective grading, blending, mixing and boulder removal, providing gradual transitions between differing soil types.</p>
+<p>Seasonal variations in moisture and temperature are reflected in the resilient modulus used for design. Spring values are typically ten to twenty percent lower than summer values, whereas frozen conditions can produce a modulus roughly twice that of the warm season. Laboratory testing on representative samples must simulate these stress‑moisture states, and soils with high fines content or elevated liquid limits are identified as moisture‑sensitive and more prone to frost heave, influencing compaction targets and optimum moisture contents.</p>
+<p>When calculating the effective subgrade reaction, a base elastic modulus of 15 000 psi is adopted for spring‑thaw conditions, and a loss‑of‑support factor is applied to account for possible erosion or pumping of the subbase. By integrating drainage, moisture control, climate‑responsive modulus values, and frost mitigation, the subgrade retains its strength throughout freeze‑thaw cycles and provides a stable foundation for the overlying pavement layers. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p>The following figure illustrates the design chart used to determine frost penetration depth.</p>
+<!-- concept-compliance:begin fig=ac5992d4 n=1 -->
+<figure class="cmp-figure" id="cmp-subgrade-1">
+<img src="assets/subgrade/ac5992d4eca9ce9a5aaa720aa292e9b3eaec15c302b69ef0d0af2da9701583c4.jpg" alt="Nomograph plotting frost penetration in inches against the design freezing index in degree days." aria-describedby="cmp-subgrade-1-ld">
+<figcaption>Design chart for determination of frost penetration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</figcaption>
+</figure>
+<div id="cmp-subgrade-1-ld" hidden>
+<p>A nomograph with a logarithmic x-axis and a semi-logarithmic y-axis. The horizontal axis represents the Design Freezing Index in Degree Days, ranging from 15 to 3000. The vertical axis represents Frost Penetration in Inches, ranging from 4 to 100.</p>
+<p>A single solid line indicates a positive correlation between the two variables.</p>
+</div>
+<details class="cmp-longdesc">
+<summary>Text description of this figure</summary>
+<p>A nomograph with a logarithmic x-axis and a semi-logarithmic y-axis. The horizontal axis represents the Design Freezing Index in Degree Days, ranging from 15 to 3000. The vertical axis represents Frost Penetration in Inches, ranging from 4 to 100.</p>
+<p>A single solid line indicates a positive correlation between the two variables.</p>
+</details>
+<!-- concept-compliance:end -->
+
+<p>The figure displays a log-log plot relating the design freezing index to frost penetration depth, showing that as the number of degree days increases, the resulting frost penetration in inches also increases.</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 124–126), Ch. 6 (pp. 141–150), Ch. 8 (pp. 161–162)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The verification of a completed subgrade proceeds through coordinated field and laboratory examinations that together confirm compliance with design stiffness, strength, compaction, and overall project requirements. In the field, a post‑construction Falling Weight Deflectometer test is performed to measure the rebuilt layer’s modulus and ensure it meets the stiffness values stipulated in the design. Complementary dynamic cone penetrometer and lightweight deflectometer tests are run to provide additional data on strength and deformation characteristics, while parallel sampling procedures defined by the project specifications guarantee that the material being tested represents the placed subgrade. Representative soil samples are then taken to a laboratory where a full suite of tests—including moisture‑density, unconfined compressive strength, classification, and either resilient modulus or California Bearing Ratio—are conducted. The CBR result is cross‑checked against accompanying data on gradation, percent passing #200, Atterberg limits, group index, maximum dry density, and optimum moisture content to confirm that the soil can achieve the assumed resilient modulus. Values falling outside the typical range for the identified soil type, specifically those above ten or below five, must be reviewed and approved by the District Geotechnical Engineer. Seasonal variations are addressed by obtaining modulus values under differing moisture conditions, and compaction adequacy is demonstrated by achieving maximum dry density at optimum moisture content. Together these steps ensure that the subgrade satisfies constructability, performance, and consistency with all project requirements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=4d613102 src=pub_242_change_10::tab:p143#1 -->
+<p>The table below provides typical ranges for compacted dry unit weight and optimum moisture content based on AASHTO soil classification.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-subgrade-2-cap" tabindex="0"><table class="ct-table" id="ct-subgrade-2" aria-describedby="ct-subgrade-2-sum">
+<caption id="ct-subgrade-2-cap">TABLE 6.1TYPICAL COMPACTED DRY DENSITY AND OPTIMUM MOISTURE CONTENT RANGES OF SOILS (BASED ON FHWA NHI-05-037)</caption>
+<thead>
+<tr><th scope="col">AASHTO SOILCLASSIFICATION</th><th scope="col">COMPACTEDDRY UNIT WEIGHT(lb/ft³)</th><th scope="col">OPTIMUMMOISTURE CONTENT(%)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">A-1</th><td>115-134</td><td>5-15</td></tr>
+<tr><th scope="row">A-2</th><td>109-134</td><td>9-18</td></tr>
+<tr><th scope="row">A-3</th><td>100-119</td><td>5-12</td></tr>
+<tr><th scope="row">A-4</th><td>94-125</td><td>10-20</td></tr>
+<tr><th scope="row">A-5</th><td>84-100</td><td>20-35</td></tr>
+<tr><th scope="row">A-6</th><td>94-119</td><td>10-30</td></tr>
+<tr><th scope="row">A-7</th><td>81-115</td><td>15-35</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-subgrade-2-sum">Rows list AASHTO soil classifications, columns give ranges for compacted dry unit weight and optimum moisture content.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 143.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 124–126), Ch. 6 (pp. 141–143)</small></p>
+<p>The subgrade is required to deliver sufficient bearing capacity so that the reinforced concrete pavement achieves a 20‑year service life, limits slab cracking to no more than 15 % at the end of that period, and provides ride quality expressed by terminal serviceability values of 2.5 for collector roads and 2.0 for local roads. These performance targets are verified through a series of laboratory and field measurements. The primary index is the California Bearing Ratio (CBR); subgrade CBR values must exceed five to avoid mandatory improvement, values above ten require approval by the chief geotechnical engineer, and any value greater than twenty is excluded from use in the Heukelom‑Klomp correlation. The resilient modulus (Mr) is derived from CBR using the relationship Mr = 1,500 × CBR and is entered into the ACPA StreetPave12 software to confirm that the pavement meets reliability levels of 90 % for collector roads and 85 % for local roads. Additional verification of Mr is obtained by back‑calculating from Falling Weight Deflectometer data or converting Dynamic Cone Penetration test results, with any back‑calculated modulus exceeding fifteen thousand psi requiring confirmation by an independent test. In‑situ density of the subgrade is also checked against its maximum dry density to ensure proper compaction. By satisfying these measurement criteria—CBR testing, Mr determination and verification, density checks, and software reliability assessment—the pavement’s serviceability, distress resistance, and ride quality are expected to be maintained throughout the design life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p>The relationship between Dynamic Cone Penetration test results and California Bearing Ratio values is illustrated in the following figure.</p>
+<!-- concept-compliance:begin fig=2a356ef0 n=2 -->
+<figure class="cmp-figure" id="cmp-subgrade-2">
+<img src="assets/subgrade/2a356ef00d335348fdb7092c5836f8112e9c95eb197a6811d37644d2e4ff60e5.jpg" alt="Line chart showing estimated CBR decreasing as measured DCP penetration rate increases." aria-describedby="cmp-subgrade-2-ld">
+<figcaption>A plot showing the inverse relationship between measured Dynamic Cone Penetrometer (DCP) penetration rates and estimated California Bearing Ratio (CBR). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</figcaption>
+</figure>
+<div id="cmp-subgrade-2-ld" hidden>
+<p>A line graph plots Estimated CBR (%) on the vertical axis against Measured DCP (mm/blow) on the horizontal axis. The vertical axis ranges from 0 to 50, and the horizontal axis ranges from 0 to 160.</p>
+<p>The curve demonstrates an inverse relationship: as the measured DCP penetration rate increases, the estimated CBR decreases sharply at first and then levels off.</p>
+</div>
+<details class="cmp-longdesc">
+<summary>Text description of this figure</summary>
+<p>A line graph plots Estimated CBR (%) on the vertical axis against Measured DCP (mm/blow) on the horizontal axis. The vertical axis ranges from 0 to 50, and the horizontal axis ranges from 0 to 160.</p>
+<p>The curve demonstrates an inverse relationship: as the measured DCP penetration rate increases, the estimated CBR decreases sharply at first and then levels off.</p>
+</details>
+<!-- concept-compliance:end -->
+
+<p>The figure displays a curve where the Estimated CBR (%) decreases as the Measured DCP (mm/blow) increases, illustrating an inverse correlation between these two parameters.</p>
+<!-- concept-tabular:begin key=04f2c7b2 src=pub_242_change_10::tab:p146#1 -->
+<p>The table below presents estimated CBR values corresponding to DCP rates.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-subgrade-3-cap" tabindex="0"><table class="ct-table" id="ct-subgrade-3" aria-describedby="ct-subgrade-3-sum">
+<caption id="ct-subgrade-3-cap">INTENTIONALLY BLANK (table)</caption>
+<thead>
+<tr><th id="ct-subgrade-3-h0-0" scope="col" colspan="2">DCP Rate</th><th id="ct-subgrade-3-h0-2" scope="col" rowspan="2">Est.CBR%</th></tr>
+<tr><th id="ct-subgrade-3-h1-0" scope="col">in/blow</th><th id="ct-subgrade-3-h1-1" scope="col">mm/blow</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">9.00</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">229</td><td headers="ct-subgrade-3-h0-2">0.5</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">6.00</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">152</td><td headers="ct-subgrade-3-h0-2">1</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">4.50</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">114</td><td headers="ct-subgrade-3-h0-2">2</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">3.00</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">76</td><td headers="ct-subgrade-3-h0-2">3</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">2.50</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">64</td><td headers="ct-subgrade-3-h0-2">4</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">2.00</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">51</td><td headers="ct-subgrade-3-h0-2">5</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">1.75</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">44</td><td headers="ct-subgrade-3-h0-2">6</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">1.50</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">38</td><td headers="ct-subgrade-3-h0-2">7</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">1.25</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">32</td><td headers="ct-subgrade-3-h0-2">9</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">1.00</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">25</td><td headers="ct-subgrade-3-h0-2">12</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">0.90</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">23</td><td headers="ct-subgrade-3-h0-2">14</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">0.80</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">20</td><td headers="ct-subgrade-3-h0-2">16</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">0.70</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">18</td><td headers="ct-subgrade-3-h0-2">19</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">0.60</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">15</td><td headers="ct-subgrade-3-h0-2">23</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">0.50</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">13</td><td headers="ct-subgrade-3-h0-2">28</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">0.40</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">10</td><td headers="ct-subgrade-3-h0-2">36</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">0.35</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">9</td><td headers="ct-subgrade-3-h0-2">42</td></tr>
+<tr><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-0">0.30</td><td headers="ct-subgrade-3-h0-0 ct-subgrade-3-h1-1">8</td><td headers="ct-subgrade-3-h0-2">49</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-subgrade-3-sum">Rows list in/blow; columns give DCP Rate (mm/blow), Est.CBR%.</p>
+<p class="ct-notes">Notes: Log (CBR) = 2.20 - 0.71Log (DCP)^1.5 + 0.075 where: CBR = California Bearing Ratio (%) DCP = Dynamic Cone Penetration Rate (mm/blow) Transportation Research Institute Technion Institute of Technology Pub. No. 87-065, Moshe &amp; Livneh (1987)</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 146.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 143–150), Ch. 8 (pp. 166–167)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=0b773746 src=pub_242_change_10::tab:p167#1 -->
+<p>Table: Minimum Depths for RCC on Local Roads (inches). It relates to the section <a href="#design-inputs-and-requirements">Design inputs and requirements</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-subgrade-4-cap" tabindex="0"><table class="ct-table" id="ct-subgrade-4" aria-describedby="ct-subgrade-4-sum">
+<caption id="ct-subgrade-4-cap">Minimum Depths for RCC on Local Roads (inches)</caption>
+<thead>
+<tr><td></td><th id="ct-subgrade-4-h0-1" scope="col" colspan="6">Subgrade Resilient Modulus, MrsG (psi)</th></tr>
+<tr><th id="ct-subgrade-4-h1-0" scope="col">Number of one-way ADTT</th><th id="ct-subgrade-4-h1-1" scope="col">7,500</th><th id="ct-subgrade-4-h1-2" scope="col">9,000</th><th id="ct-subgrade-4-h1-3" scope="col">10,500</th><th id="ct-subgrade-4-h1-4" scope="col">12,000</th><th id="ct-subgrade-4-h1-5" scope="col">13,500</th><th id="ct-subgrade-4-h1-6" scope="col">15,000</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-subgrade-4-h2-0" scope="row">1</th><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-1 ct-subgrade-4-h2-0">5.0</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-2 ct-subgrade-4-h2-0">4.5*</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-3 ct-subgrade-4-h2-0">4.5*</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-4 ct-subgrade-4-h2-0">4.5*</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-5 ct-subgrade-4-h2-0">4.5*</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-6 ct-subgrade-4-h2-0">4.5*</td></tr>
+<tr><th id="ct-subgrade-4-h3-0" scope="row">2</th><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-1 ct-subgrade-4-h3-0">5.0</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-2 ct-subgrade-4-h3-0">5.0</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-3 ct-subgrade-4-h3-0">5.0</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-4 ct-subgrade-4-h3-0">4.5*</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-5 ct-subgrade-4-h3-0">4.5*</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-6 ct-subgrade-4-h3-0">4.5*</td></tr>
+<tr><th id="ct-subgrade-4-h4-0" scope="row">3</th><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-1 ct-subgrade-4-h4-0">5.0*</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-2 ct-subgrade-4-h4-0">5.0*</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-3 ct-subgrade-4-h4-0">5.0</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-4 ct-subgrade-4-h4-0">5.0</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-5 ct-subgrade-4-h4-0">4.5*</td><td headers="ct-subgrade-4-h0-1 ct-subgrade-4-h1-6 ct-subgrade-4-h4-0">4.5*</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-subgrade-4-sum">Rows list the Number of one-way ADTT, columns give Subgrade Resilient Modulus values for Minimum Depths.</p>
+<p class="ct-notes">Notes: *When using a supported edge, subtract 1 inch except when marked with an *, then only subtract 0.5 inch.</p>
+
+<p><em>Source: pub_242_change_10, Table 8.5.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:begin key=c7a7b1e4 src=pub_242_change_10::tab:p277#1 -->
+<p>The table below lists standard test designations and titles for soil and asphalt materials. It relates to the section <a href="#design-inputs-and-requirements">Design inputs and requirements</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-subgrade-5-cap" tabindex="0"><table class="ct-table" id="ct-subgrade-5" aria-describedby="ct-subgrade-5-sum">
+<caption id="ct-subgrade-5-cap">INTENTIONALLY BLANK (table) (2)</caption>
+<thead>
+<tr><th scope="col">TEST DESIGNATION</th><th scope="col">TITLE</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">AASHTO T 59</th><td>Standard Method of Test for Emulsified Asphalts</td></tr>
+<tr><th scope="row">AASHTO M 320</th><td>Standard Specification for Performance-Graded Asphalt Binder</td></tr>
+<tr><th scope="row">PTM No. 100</th><td>Standard Method of Test for Materials Finer thanNo. 200 Sieve in Mineral Aggregates by Washing</td></tr>
+<tr><th scope="row">PTM No. 616</th><td>Standard Method of Test for Sieve Analysisof Fine and Coarse Aggregates</td></tr>
+<tr><th scope="row">AASHTO T 176</th><td>Standard Method of Test for Plastic Fines in GradedAggregates and Soils by Use of the Sand Equivalent Test</td></tr>
+<tr><th scope="row">AASHTO T 209</th><td>Standard Method of Test for Theoretical Maximum SpecificGravity (Gmm) and Density of Asphalt Mixtures</td></tr>
+<tr><th scope="row">AASHTO T 166</th><td>Standard Method of Test for Bulk Specific Gravity (Gmb) ofCompacted Hot-Mix Asphalt (HMA) Using Saturated Surface -Dry Specimens</td></tr>
+<tr><th scope="row">AASHTO T 283</th><td>Standard Method of Test for Resistance of Compacted AsphaltMixtures to Moisture-Induced Damage</td></tr>
+<tr><th scope="row">PTM No. 106</th><td>The Moisture-Density Relations of Soils(using a 5.5-pound Rammer and a 12-inch Drop)</td></tr>
+<tr><th scope="row">ASTM D558-04</th><td>Standard Test Methods for Moisture-Density (Unit Weight)Relations of Soil-Cement Mixtures</td></tr>
+<tr><th scope="row">ASTM D698</th><td>Standard Test Methods for Laboratory Compaction Characteristicsof Soil Using Standard Effort (12 400 ft-lb/ft³)</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-subgrade-5-sum">Rows list test designations, columns give titles for standard methods of testing materials.</p>
+<p class="ct-notes">Notes: 4. Apparatus. In the design process, use a calibrated gyratory compactor, indirect tensile testing device, balance, oven, and other equipment.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 277.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-21.2: formula-block display math (md->html reverse builder; per-page inject) */
+div.fc-math { overflow-x: auto; margin: 1rem 0; }
+
+/* FR-MH-21.12(a): formula-block calculator disclosure (md->html reverse builder; per-page inject) */
+details.fc-calc { margin: 1rem 0; }
+details.fc-calc > summary { cursor: pointer; }
+details.fc-calc iframe { display: block; box-sizing: content-box; width: calc(100% - 2px);
+  height: 28rem; margin-top: .5rem; border: 1px solid var(--border); }
+</style>
+<script>
+window.addEventListener("message", function (e) {
+  if (!e.data || e.data.type !== "fc-calc-height") return;
+  var frames = document.querySelectorAll("details.fc-calc iframe");
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].contentWindow === e.source) frames[i].style.height = e.data.height + "px";
+  }
+});
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>
