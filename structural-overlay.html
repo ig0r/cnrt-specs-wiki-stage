@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structural Overlay</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html" class="active" aria-current="page">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="rehabilitation.html">Rehabilitation</a><span class="crumb-sep">›</span><a href="overlay.html">Overlay</a><span class="crumb-sep">›</span><span class="crumb-current">Structural Overlay</span></nav>
+<article><h1>Structural Overlay</h1>
+<div class="meta"><div class="part-of">Part of: <a href="overlay.html">Overlay</a> <span class="edge edge-taxonomic" title="Structural Overlay is a topic under Overlay.">is-subtopic-of</span></div><div class="edge-reading">Structural Overlay is a topic under Overlay.</div><div><a class="tag" href="index.html?q=structural-overlay">structural-overlay</a><a class="tag" href="index.html?q=structural-overlays">structural-overlays</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Structural overlay is a pavement‑rehabilitation technique used when the existing surface lacks adequate structural capacity or provides an unstable, non‑uniform platform, so that an additional load‑bearing layer of asphalt, bonded concrete, or unbonded Portland cement concrete is placed to restore serviceability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The added thickness is set equal to the calculated pavement thickness required for future traffic after unstable slabs are stabilized and all surface defects larger than four square inches and deeper than one inch are patched, ensuring a clean, dry substrate before the overlay is installed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. An interlayer—typically an asphalt paving membrane or geotextile fabric—is incorporated to act as a waterproofing and stress‑relieving barrier that protects the underlying structure from moisture intrusion and mitigates tensile fatigue cracking [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Placement must observe strict temperature limits (concrete 65–90 °F, existing surface below 120 °F), achieve a minimum compacted first lift of 1.5 in., and be verified by bond‑strength testing (average ≥175 psi) and compressive‑strength testing (minimum 3,600 psi) before opening to traffic [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Structural overlay is employed when the existing pavement lacks sufficient structural capacity to safely support current or anticipated traffic loads, requiring an additional load‑bearing layer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It also addresses situations where the pavement no longer provides a uniform, stable platform because slabs or slab fragments move or rock under normal loading, creating non‑uniform support for any new surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The design therefore adds a thickness of asphalt, bonded concrete, or unbonded Portland cement concrete that matches the calculated required pavement thickness for future traffic, restoring and enhancing load‑carrying ability while extending service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Prior to placement, unstable units must be stabilized and surface defects larger than 4 in² and deeper than 1 in must be patched with approved asphalt or cementitious material and compacted to a flat, tight surface to prevent premature failure of the overlay [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. An interlayer, often an asphalt paving membrane, is incorporated to act as waterproofing and stress‑relieving barrier, shielding the underlying structure from moisture intrusion and mitigating tensile stresses that cause fatigue cracking, thereby improving durability and load‑bearing capacity [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 6 (pp. 137–139), Ch. 10 (p. 186); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 309), SECTION 500—RIGID PAVEMENTS (pp. 460–462)</small></p>
+<p>The overlay design must first satisfy functional requirements by improving the removal of surface and subsurface water to ensure adequate drainage[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It also has to provide a level and stable platform, which is achieved through scratch‑and‑leveling courses or milling of the existing surface before placement of the new layer[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Structural objectives are met by providing sufficient load‑bearing capacity; this is accomplished by increasing binder‑course thickness in accordance with non‑destructive testing or other acceptable design procedures[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For an unbonded Portland cement concrete overlay on an asphaltic concrete pavement, the total overlay thickness is set equal to the calculated Pavement Thickness for Future Traffic using rigid‑pavement average initial truck factors for ESAL calculations while treating the existing asphalt as a support layer[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Additional structural criteria require a minimum compacted first‑lift thickness of 1.5 inches for asphalt systems, joint aspect ratios near unity and not greater than 1.5, panel dimensions limited to eighteen times the overlay thickness, saw cuts extending at least one‑third of slab depth, and dowel basket movement restrained to a quarter inch[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Uniform load transfer is further ensured by stabilizing any unstable slabs or slab fragments that move under normal traffic loads before interlayer installation and by patching every surface defect larger than four square inches and deeper than one inch to a flat, tight condition[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Durability objectives include enhancing surface friction to maintain safe skid resistance and improving shoulder condition to supply lateral support and reduce edge stresses[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The concrete mix must incorporate No. 67 coarse aggregate when the overlay thickness is under three inches, add macrofibers at the dosage specified to achieve the required residual strength (f150), and be designed to limit chloride ion penetration to no more than 2,800 coulombs by AASHTO T 277 or equivalent resistance limits of 15.6 kΩ·cm for 4×8 in. cylinders and 12.3 kΩ·cm for 6×12 in. cylinders after a curing period of fifty‑six days or less[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Temperature control during placement is required, with concrete placed between 65 °F and 90 °F while the existing pavement surface is cooled below 120 °F, geotextile fabric surfaces not exceeding 120 °F, and asphalt material maintained between 290 °F and 320 °F to ensure proper curing without damaging interlayers[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Curing procedures demand application of curing compounds at a rate of one gallon per 125 ft² within thirty minutes after bleed‑water dissipation, protection of the fresh concrete from rapid temperature changes greater than forty degrees Fahrenheit per hour, and restriction of traffic to construction equipment only until the overlay attains the required strength[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Structural performance is verified by bond‑strength testing at seven days, requiring an average of three ASTM C1583 specimens of at least 175 psi with no individual specimen below 160 psi, and the overlay may not be opened to traffic until cylinder compressive strength reaches a minimum of 3,600 psi[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Serviceability is further supported by limiting edge slump adjacent to shoulders to one‑quarter inch (and to one‑eighth inch next to lanes), maintaining a smooth surface free of debris, oil, vegetation and sealed cracks, and ensuring that the finished overlay provides the intended ride quality and durability over its design life[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Safety objectives are satisfied by achieving adequate skid resistance, controlling edge slump, protecting the fresh overlay from temperature shocks, and restricting traffic during construction to prevent premature damage[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=9277433c src=408_2020_11::tab:p451#1 -->
+<p>The table below specifies the required residual strength values for asphalt concrete overlays based on remaining thickness.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-structural-overlay-1-cap" tabindex="0"><table class="ct-table" id="ct-structural-overlay-1">
+<caption id="ct-structural-overlay-1-cap">TABLE A</caption>
+<tbody>
+<tr><th scope="row">Remaining inches of Asphalt Concrete</th><td>3-4.5</td><td>4.5-6</td></tr>
+<tr><th scope="row">Residual Strength in psi</th><td>200-275</td><td>175-250</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 451.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 10 (p. 186); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 451–462)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Structural overlays are suitable for both asphalt‑concrete and Portland‑cement‑concrete (PCC) pavements when assessment shows insufficient load‑bearing capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. They may also be applied to existing rigid concrete pavements provided that surface preparation requirements such as scarifying, cleaning, and limited defect repair are met [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For asphalt‑surfaced pavements the overlay can be a conventional asphalt layer, a bonded or unbonded concrete layer, or a crack‑and‑seat treatment combined with structural asphalt, depending on whether the existing surface is to contribute structurally [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the intent is to add strength without relying on the existing asphalt, an unbonded PCC overlay is used and its thickness is set equal to the calculated pavement thickness for future traffic based on ESAL calculations for rigid pavements [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Moderate‑thickness bonded concrete overlays for asphalt surfaces typically range from four to eight inches, while thin bonded overlays are generally between about two‑and‑a‑half and four inches [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If the required overlay thickness is less than three inches, the mix design must employ No. 67 coarse aggregate instead of No. 57, incorporate synthetic or steel macrofibers at a dosage sufficient to achieve the prescribed residual strength (f150), and meet low‑chloride ion penetration criteria after 56 days of curing per AASHTO T 277/T 358 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For rigid pavements, concrete placement temperature must be maintained between 65 °F and 90 °F, the pavement surface temperature must be below 120 °F before placement, and insulating blankets are required when ambient temperatures are forecast at or below 45 °F [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Joint preparation for rigid overlays requires joint backing material within a quarter‑inch of existing joint faces; joints faulted beyond that limit may be milled and a geotextile interlayer placed, optionally with an approximately one‑inch asphalt interlayer using a Superpave mix [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Surface defects larger than four square inches and deeper than one inch on rigid pavements must be repaired prior to overlay placement, as must unstable slabs or slab fragments that move under traffic loads [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Structural overlays are classified within pavement rehabilitation projects, serving to extend service life and improve functional performance by addressing fatigue cracking, rutting, and other distress, and may be combined with partial recycling, rubblization, or other complementary treatments [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The overlay design must consider drainage and base support deficiencies that can be remedied through surface repair, leveling, and sealing before the structural layer is placed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 6 (pp. 137–139), Ch. 10 (p. 186); [2] — SECTION 500—RIGID PAVEMENTS (pp. 446–462)</small></p>
+<p>When the existing pavement structure exhibits severe base failure, inadequate drainage, or cannot provide a stable and properly leveled surface, an overlay is considered unsuitable and designers must look beyond structural overlays. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Likewise, if the pavement has failed outright or become functionally obsolete such that the underlying base and subgrade cannot be remedied by adding a layer, total reconstruction—often after rubblization—is preferred. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For concrete overlays, the construction environment must meet strict temperature criteria; the fresh concrete must be placed while its temperature is between 65 °F and 90 °F and the receiving surface must be cooled to below 120 °F immediately before placement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When the forecast ambient air temperature is 45 °F or lower, adequate insulating blankets are required to prevent rapid heat loss during curing, and if such temperature control cannot be assured, an alternative rehabilitation method should be selected. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The bonded interface must also achieve a minimum average pull‑off strength of 175 psi across three tests with no individual test below 160 psi; failure to meet this threshold renders the overlay defective and calls for another design approach. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] In addition, the existing pavement must be capable of uniformly supporting the new layer; slabs that move or rock under normal traffic loads, surface defects larger than four square inches and deeper than one inch, and joints with faulting exceeding prescribed limits all require extensive repair before an overlay can be placed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Specifically, joints with more than a quarter‑inch of faulting for geotextile interlayers or more than a half‑inch for asphalt must be milled, ground, or provided with a scratch course, and when these repairs become impractical the guides direct designers toward alternative rehabilitation strategies. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When any of these environmental, bond‑strength, slab‑stability, defect‑size, joint‑faulting, base‑failure, drainage, or functional‑obsolescence conditions are present, a structural overlay is deemed inappropriate and other design options such as full reconstruction are recommended. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 6 (pp. 137–139); [2] — SECTION 500—RIGID PAVEMENTS (pp. 455–462)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The design of a structural overlay must be based on detailed site data that describe the existing pavement’s drainage, slope and curvature, ensuring a dry, clean surface free of dirt, gravel, vegetation, oil and loose debris, with all cracks sealed and potholes repaired before work begins. Traffic considerations are limited to construction vehicles only; no regular traffic may travel over the interlayer system once placed, and the pre‑placement meeting must review the sequence of paving operations and identify any sharp curves or slopes that affect placement. Material information includes the specific asphalt or tack coat type, its temperature range (minimum 290 °F, not exceeding 320 °F), and the manufacturer‑approved application rates for the chosen reinforcement (e.g., 0.22–0.28 gal/yd² for geotextile fabric) together with required overlap widths. Environmental constraints require that placement occur only under weather conditions approved by the manufacturer, with the interlayer stored dry, covered and protected from UV, precipitation and chemicals. Geotechnical requirements call for a drainable surface without depressions, a minimum compacted overlay thickness of 1.5 in., and, when a leveling course is used, a thickness at least twice the nominal maximum aggregate size; surface temperature limits (40–140 °F) apply for certain grids. Existing‑condition data therefore encompass the current distress types, crack‑filling cure times, and any necessary repairs identified by the technical representative. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311)</small></p>
+<p>The design of a structural overlay is subject to a layered hierarchy of specifications that begins with federal policy and proceeds through state manuals and agency‑level standards, each defining allowable materials, analysis methods and procedural constraints. At the national level any federally funded project must comply with the Federal‑aid Highway Program pavement management and design policy issued by FHWA, while overlays placed under the Superpave Restricted Performance Specification are required to meet the binder‑course performance criteria set out in Publication 408, Section 413 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Pennsylvania, every overlay is required to follow the PennDOT Pavement Policy Manual (Publication 242) and to be generated with the DARWin software; the design package must include a completed Form D‑4332 for district engineer approval and any deviation from the manual must be submitted as a waiver to the Board of Directors, with FHWA sign‑off required after BODD’s quality‑control review for projects receiving federal aid [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A further project constraint is the 30,000‑square‑yard threshold that determines whether the type‑determination procedure applies, and reconstruction activities trigger a requirement for soil reports before overlay work can proceed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Site preparation must address drainage improvement, base repair, scratch‑and‑leveling or milling, and the existing surface must be stable under rolling, properly leveled, sealed and patched prior to placement of the new structural layer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The design also calls for an appropriate binder‑course thickness that is derived from non‑destructive testing or other accepted procedures, ensuring that the overlay will adequately support anticipated traffic loads [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When an unbonded Portland cement concrete (PCC) overlay is placed over asphalt concrete, DARWin treats the underlying AC as a non‑structural support; consequently the required PCC thickness equals the Pavement Thickness for Future Traffic defined in Table 10.8 and equivalent single‑axle load calculations must employ the rigid‑pavement average initial truck factors listed in Table 7.1 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Concrete overlays are governed by temperature limits that require placement when concrete temperature is between 65 °F and 90 °F and surface temperature does not exceed 120 °F; if forecast air temperature falls to 45 °F or lower, insulating blankets must be used and may only be removed after the concrete temperature change is less than 40 °F per hour or compressive strength has passed three thousand pounds per square inch [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Overlay thickness for Portland‑cement concrete is limited to four through eight inches, panel dimensions may not exceed eighteen times the overlay thickness and the aspect‑ratio of any panel must stay below one point five, with joint layout approached toward a unity ratio whenever feasible [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Saw cuts are required near edges to at least one‑third of slab thickness and elsewhere to one‑quarter, extending through the full depth plus a half inch without damaging dowel load transfer devices, and each cut must be no narrower than one‑eighth inch [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Surface preparation for concrete overlays follows Section 501.3 as modified by Sections 545.3 and 540.3: existing asphalt or concrete slabs are milled or scarified to plan depths, cleaned of standing water, and brought to a dry condition meeting the clean‑dry criteria of Sections 469.3(d) and 450; defects larger than four square inches by one inch deep must be patched with an approved asphalt‑or cementitious repair material and cracks wider than three‑quarters of an inch are filled with department‑approved grout, after which the substrate must achieve a seven‑day bond strength of at least 175 psi average and no less than 160 psi on any individual ASTM C1583 test [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For overlays thinner than seven inches the mix shall be Class AA cement concrete incorporating virgin polypropylene fibers that satisfy ASTM C1116 (Type III 4.13) and the performance criteria of ASTM C1018, with fiber dosage limited to five pounds per cubic yard unless a field demonstration proves workability; macro‑fibers must be added to obtain a residual strength ratio of twenty percent as determined by the Illinois‑modified ASTM C1609 test at fourteen days [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When overlay thickness is less than three inches No. 67 coarse aggregate replaces No. 57, and the mix must meet permeability limits of no more than 2,800 coulombs on AASHTO T277 or chloride ion resistance values of 15.6 kΩ·cm for 4 × 8‑inch cylinders and 12.3 kΩ·cm for 6 × 12‑inch cylinders as measured by AASHTO T358; a compressive strength of three thousand six hundred psi, verified by cylinder testing in accordance with PTM No. 604, is required before traffic may be allowed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If a geotextile interlayer is used it shall be stored and labeled per ASTM D4873, laid flat with overlaps of eight inches plus or minus two inches (minimum one inch where specified), limited to three layers, extended at least four inches beyond the pavement edge, kept clean and damp but not saturated, and installed at a rate of 0.22 to 0.28 gallons per square yard; asphalt tack coats beneath the overlay must be maintained between 290 °F and 320 °F [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Quality‑control provisions mandate an approved comprehensive QC plan submitted before work begins, manufacturer installation instructions supplied to the project team, and a qualified technical representative present for every phase; the overlay is divided into lots not exceeding three thousand square yards per traffic lane with ramps placed in separate lots, and for each lot the inspector selects coring locations and cores are taken in his presence according to PTM No. 606, while intersections or areas under three thousand square yards require two cores or nondestructive thickness measurements per PTM No. 605, any alternative testing needing written approval from the District Executive [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After finishing, curing operations must commence within thirty minutes of bleed‑water dissipation using the specified white PAMS compound or insulating blankets when air temperature is forty degrees Fahrenheit or lower; edge slump limits are imposed at one quarter inch on outer shoulders and one eighth inch adjacent to adjoining lanes, and all concrete paving job‑mix formulas must be submitted for District Materials Engineer approval at least two weeks prior to placement, with the maturity method available to correlate degree‑hours of cure to strength in accordance with PTM No. 640 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=783e23c1 src=408_2020_11::tab:p459#1 -->
+<p>The table below specifies the mechanical properties and test methods for non-woven geotextile interlayers.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-structural-overlay-2-cap" tabindex="0"><table class="ct-table" id="ct-structural-overlay-2">
+<caption id="ct-structural-overlay-2-cap">(a) Non-Woven Geotextile Interlayer. Section 735 Class 4 Separation, Type A modified as follows:</caption>
+<thead>
+<tr><th scope="col">Mechanical Properties</th><th scope="col">Test Method</th><th scope="col">Minimum Average Roll Value(except as otherwise indicated)</th></tr>
+</thead>
+<tbody>
+<tr><td>Color</td><td>Visual Inspection</td><td>Uniform (all same color fibers)</td></tr>
+<tr><td>Geotextile Type</td><td>EN 13249, Annex F(Certification)</td><td>Nonwoven, needle-punched, no thermaltreatment to include calendaring</td></tr>
+<tr><td>Weight Per Unit Area</td><td>ASTM D5261</td><td>14.0 oz/sq.yd</td></tr>
+<tr><td>Thickness Under Load (pressure)0.29 psi2.9 psi29 psi</td><td>ASTM D5199</td><td>0.12 inches0.10 inches0.04 inches</td></tr>
+<tr><td>Wide Width Tensile Strength</td><td>ASTM D4595</td><td>685 lb/ft s</td></tr>
+<tr><td>Wide Width Elongation</td><td>ASTM D4595</td><td>130% (maximum)</td></tr>
+<tr><td>Water Permeability (in normal directionunder 2.9 psi load)</td><td>ASTM D5493</td><td>0.02 feet/minute</td></tr>
+<tr><td>In-plane Water Permeability(transmissivity) Under Load(pressure)2.9 psi29 psi</td><td>ASTM D4716</td><td>0.10 feet/minute0.04 feet/minute</td></tr>
+<tr><td>Alkali Resistance</td><td>EN 13249, Annex B(Certification)</td><td>96% Polypropylene/Polyethylene</td></tr>
+<tr><td>UV Resistance at 500 hours</td><td>ASTM D4355</td><td>Retained strength 70% average with novalue less than 60%</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 459.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 6 (pp. 137–139), Ch. 10 (p. 186); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 446–462)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>Design of structural overlays is carried out using the DARWin pavement‑design software in accordance with the requirements of Publication 242, and the resulting design package must contain at least one structural asphalt or concrete overlay together with full‑depth designs for asphalt, concrete, and reclamation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Certified engineers submit the completed package on Form D‑4332 for Federal or PennDOT oversight review, thereby demonstrating compliance with sound engineering practice [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When an unbonded Portland cement concrete (PCC) overlay is placed over existing asphalt concrete, DARWin treats the underlying asphalt solely as a support layer and derives the required overlay thickness directly from the Pavement Thickness for Future Traffic value found in Table 10.8, while future traffic loading is evaluated using the rigid‑pavement average initial truck factors listed in Table 7.1 to compute equivalent single axle loads (ESALs) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The construction sequence begins with a pre‑placement meeting during which the manufacturer’s technical representative reviews installation instructions and specifies the tack coat type, application width, rate, and surface‑preparation requirements [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Existing pavement must be dry, clean, free of debris, oil, vegetation, and any cracks or potholes must be sealed; unstable slabs are stabilized by patching, slab‑jacking, or base replacement before any interlayer is placed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A geotextile separation layer may be laid flat on the repaired surface with edges overlapped by eight inches plus or minus two inches, providing a stable interface for the overlay [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. An asphalt interlayer of nominal one‑inch thickness is designed according to the Superpave mixture‑design procedure (Section 410, Bulletin 27) and applied at a rate of 0.22 to 0.28 gallons per square yard while maintaining a temperature between 290 °F and 320 °F; the first lift must achieve a minimum compacted thickness of 1.5 inches [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For thin bonded concrete overlays over asphalt, the maturity method prescribed in PTM No. 640 is used to correlate degree‑hours of cure with compressive strength, allowing removal of insulating blankets once the concrete reaches 3,000 psi or the maturity index indicates sufficient strength, and blankets are required when ambient temperature is 45 °F or lower and surface temperature changes do not exceed 40 °F per hour [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The overlay thickness multiplied by the total placement area provides a straightforward volume calculation for cement‑concrete, which includes all construction activities for the slab except pre‑overlay repairs [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Joint spacing is limited to no more than eighteen times the overlay thickness and panel aspect ratios are constrained to 1.5, with saw cuts made at depths of at least one‑third of slab thickness near edges and one‑quarter elsewhere; early‑entry sawing windows are determined using FHWA’s HIPERPAV or an equivalent approved program [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Concrete mix design for overlays less than seven inches thick follows the Class AA specifications and incorporates polypropylene macrofibers to achieve a target residual flexural strength (f150) as measured by ASTM C1609‑12 at 14 days, with fiber dosage limited to five pounds per cubic yard unless field demonstration shows the mix remains workable [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For overlays thinner than three inches, No. 67 coarse aggregate replaces No. 57, and the mixture must satisfy chloride‑ion penetration limits of no more than 2,800 coulombs (AASHTO T 277) or resistivity not exceeding 15.6 kΩ·cm for 4×8 in cylinders and 12.3 kΩ·cm for 6×12 in cylinders (AASHTO T 358), achieving Low, Very Low, or Negligible categories within a 56‑day curing period [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Quality control divides the finished overlay into lots of no more than three thousand square yards per traffic lane; the inspector selects one random coring location per lot in accordance with PTM No. 1 and drills cores according to PTM No. 606 in the presence of the inspector, while intersections or smaller areas require two cores or nondestructive thickness measurements per PTM No. 605, after which core holes are cleaned and filled with the same concrete mix or a premixed non‑shrink grout [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The unit price for the overlay includes all required materials, placement, installation, and sweeping activities, reflecting the comprehensive scope of design and construction procedures outlined across the guides [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 6 (pp. 137–139), Ch. 10 (p. 186); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 446–463)</small></p>
+<p>The design of a structural overlay assumes that the existing asphalt pavement functions only as a support layer and contributes no direct structural capacity, so the required thickness is determined solely from the future traffic loading criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Accordingly, the overlay thickness is set equal to the pavement thickness prescribed for the anticipated equivalent single axle loads, using the values tabulated in the design tables for rigid pavements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The traffic input for the analysis employs the average initial truck factors for ESALs as listed for rigid‑pavement designs. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In addition to these load calculations, a series of material and construction criteria must be satisfied before the overlay can be placed, providing the reliability framework required for serviceability and safety. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Concrete for the overlay must be placed when its temperature is between 65 °F and 90 °F, while the temperature of the existing pavement surface at the time of placement may not exceed 120 °F. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The substrate must be dry, clean, and free of debris, oil, vegetation, and any repaired potholes, with all cracks sealed prior to installing an interlayer. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Surface defects larger than four square inches and deeper than one inch must be stabilized or patched before a geotextile fabric is laid. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When a geotextile interlayer is used its temperature at placement may not exceed 120 °F, its edges must overlap by eight inches plus or minus two inches, extend at least four inches beyond the pavement edge, be limited to three layers, and be saturated with tack coat applied at a rate of 0.22 to 0.28 gallons per square yard extending six inches on each side; overlaps between adjacent sheets must be no less than one inch. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The overlay thickness is limited to the range of four to eight inches, and sections thinner than three inches are required to use No. 67 coarse aggregate instead of No. 57 and to incorporate macro‑fibers in an amount that achieves the residual strength f150 specified after a fourteen‑day ASTM C1609 test. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For overlays less than seven inches thick, the concrete must be classified as Class AA and reinforced with virgin polypropylene fibers meeting ASTM C1116 specifications, each fiber 1.0 to 2.5 inches long with an aspect ratio not greater than 150, added in a dosage sufficient to obtain at least a twenty‑percent residual strength ratio (R150,3) while not exceeding five pounds per cubic yard unless a field demonstration proves the mix remains workable. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The mixture must also satisfy chloride‑ion penetration limits after no more than fifty‑six days of curing, achieving low, very low, or negligible penetration as measured by AASHTO T 277 (≤2,800 coulombs) or AASHTO T 358 (minimum resistances of 15.6 kΩ·cm for 4 × 8‑in. cylinders and 12.3 kΩ·cm for 6 × 12‑in. cylinders). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The overlay must reach a minimum compressive strength of 3,600 psi before it is opened to traffic, and the bond strength between new concrete and the existing pavement must average at least 175 psi with no individual test falling below 160 psi after seven days as measured by ASTM C1583. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Panel geometry is constrained so that the longer dimension does not exceed eighteen times the overlay thickness, the length‑to‑width ratio does not surpass 1.5, and an aspect ratio close to unity is preferred; saw cuts must penetrate at least one‑third of slab depth within twelve inches of panel edges and at least one‑quarter elsewhere, with joint spacing following the approved plan. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Curing requirements include applying a curing compound at a minimum rate of one gallon per 125 ft², beginning cure within thirty minutes after bleed water has dissipated, and limiting surface temperature change to no more than forty degrees Fahrenheit in any one‑hour period; when ambient temperature is 45 °F or lower, insulation blankets must remain until the average compressive strength reaches three thousand psi, and removal of the blankets must also respect the forty‑degree per hour limit. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] If an asphalt interlayer is placed, the first lift must be compacted to at least one and a half inches thickness, and tack coat temperatures for performance‑grade liquid asphalt binders must be maintained between 290 °F and 320 °F. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (p. 186); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 446–462)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>The guidance on structural overlays specifies only a few dimensional limits. When the overlay thickness does not exceed three inches, the mix must employ No. 67 coarse aggregate rather than No. 57, and macrofibers are to be incorporated at a rate sufficient to achieve the required design residual strength (f150). If the overlay is thinner than seven inches, the concrete layer must contain polypropylene fibers; these fibers may be monofilament or bundled monofilament with lengths ranging from one inch up to two‑and‑a‑half inches and an aspect ratio that does not exceed 150. No explicit thicknesses or size requirements are provided for any underlying pavement components—including the existing pavement, base, subbase, treated‑soil, slab, shoulder, edge‑support—or for other forms of reinforcement beyond the stated fiber specifications. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<p>Thicknesses are chosen so that the longest panel dimension does not exceed eighteen times the overlay thickness, linking thickness directly to joint layout. The layer configuration follows the selected interlayer—either a geotextile placed flat with an eight‑inch overlap (no more than three layers) or a one‑inch asphalt interlayer applied as a nominal depth. Joint spacing must follow the project plan; if none is provided, a layout is developed that yields panels whose aspect ratio is close to one and never greater than 1.5, avoids longitudinal joints in wheel paths, and respects the 18 × thickness size limit. Transitions are constructed at the overlay limits, and where existing treated base or concrete lies directly beneath, a geotextile debonding layer is installed; cross‑slope and tie‑in requirements are not addressed in this section. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 460–462)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>The structural overlay shall be constructed using a Class AA Portland‑cement concrete deck that conforms to ASTM C1116 Type III requirements and is placed over the existing asphalt pavement. The mix must be proportioned to achieve a minimum compressive strength of 3,600 psi and to develop an average tensile bond strength of at least 175 psi, with no individual test result falling below 160 psi as measured by ASTM C1583. Air‑content limits are those prescribed in Section 704.1(c)3. Coarse aggregate selection depends on overlay thickness: sections thinner than three inches shall use No. 67 aggregate, while thicker sections may employ any approved aggregate. When synthetic or steel macrofibers are incorporated, the dosage must be sufficient to meet the residual flexural strength (f150) indicated in Table A and verified by ASTM C1609‑12 at 14 days; alternatively, virgin synthetic polypropylene fibers supplied as monofilament or bundled monofilament with lengths between one inch and two‑and‑a‑half inches and an aspect ratio not exceeding 150 shall be added to achieve a residual strength ratio of twenty percent (R150,3) without exceeding five pounds per cubic yard unless a field demonstration confirms acceptable workability and absence of fiber clumping. The concrete mixture must also satisfy chloride‑ion penetration criteria classified as Low, Very low, or Negligible, with limits of 2,800 coulombs per AASHTO T277 or resistance values not less than 15.6 kΩ·cm for 4‑by‑8‑in cylinders and 12.3 kΩ·cm for 6‑by‑12‑in cylinders as required by AASHTO T358. Prior to placement, all surface cracks wider than three‑quarters of an inch shall be cleaned and filled with a non‑shrink grout or other Department‑approved bonding material, and any shallow surface defects must be repaired using an approved patching material that may be asphalt‑based, cementitious, or otherwise acceptable. A separation interlayer is required beneath the concrete; this may consist of a geotextile fabric laid flat with an eight‑inch overlap (± 2 in) extending beyond the pavement edge, or a one‑inch nominal depth of Superpave asphalt mix as described in Section 410.3. When reinforcement fabric is used, a performance‑grade liquid asphalt binder must be applied over it at a temperature between 290 °F and 320 °F, with application rates of 0.22–0.28 gal per square yard for geotextile fabric, 0.02–0.05 gal per square yard for fiberglass mesh, or 0.19–0.28 gal per square yard for a composite reinforcing grid, each covering the reinforcement width plus six inches on either side. After finishing and texturing, curing shall commence within thirty minutes of bleed‑water dissipation by applying a white poly‑alpha‑methylstyrene liquid membrane forming compound uniformly at a minimum rate of one gallon per 125 ft² for slabs six inches thick or less and one gallon per 150 ft² for slabs greater than six inches, or according to the manufacturer’s recommendation whichever is greater. When ambient temperature is 45 °F or lower, insulating blankets shall be provided until the concrete reaches approximately 3,000 psi compressive strength. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 446–463)</small></p>
+<p>When a structural overlay is planned, engineers first assess the condition of the existing pavement, including drainage, base integrity, surface friction and shoulder support, to ensure that durability and proper load transfer can be achieved. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The thickness of the additional binder course required to raise the structural capacity is sized using non‑destructive testing or other accepted design procedures, and the decision to employ an asphalt or a bonded‑concrete overlay follows from that assessment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Prior to placing any new material, the existing surface must be stable, properly leveled, sealed, patched, dry, clean and free of debris so that constructability criteria are satisfied. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For asphalt‑based overlays the mixture is selected in accordance with the manufacturer’s installation instructions and must be approved by a qualified technical representative. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When reinforcement is incorporated, the binder is applied at volumetric rates that depend on the reinforcement type—between 0.22 and 0.28 gallons per square yard for geotextile fabric, between 0.02 and 0.05 gal/yd² for fiberglass mesh grid, and between 0.19 and 0.28 gal/yd² for composite reinforcing grid—to achieve the intended structural contribution. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The asphalt binder temperature is maintained no lower than 290 °F, the minimum required for performance‑grade binders, and not higher than 320 °F to preserve tackiness while protecting the interlayer system. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Overlap joints are laid with at least one‑inch coverage, and all material is allowed to cure before any construction traffic, thereby meeting durability and performance objectives. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When the overlay is a cement‑concrete layer, the mix design is tailored to the specified thickness and performance goals. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] If the concrete overlay depth is less than three inches, No. 67 coarse aggregate replaces the standard No. 57 aggregate to provide the required strength. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For overlays thinner than seven inches, Class AA cement concrete reinforced with virgin polypropylene fibers is mandated; the fibers must be monofilament or bundled, 1 to 2½ in long, with an aspect ratio not exceeding 150, and are added in sufficient quantity to obtain a residual strength ratio of 20 percent. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The fiber dosage may not exceed five pounds per cubic yard unless field testing confirms that workability is maintained without clumping, and macro‑fibers are incorporated at a rate that yields the design residual strength (f150) as verified by ASTM C1609‑12 after fourteen days. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All concrete mixtures must achieve low, very low, or negligible chloride ion penetration within fifty‑six days in accordance with AASHTO T 277 or T 358; moderate penetration is permissible only if the measured coulomb charge does not exceed 2,800 C or the resistivity meets the limits of 15.6 kΩ·cm for 4×8‑in cylinders and 12.3 kΩ·cm for 6×12‑in cylinders. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] By following these evaluation, preparation, mixture proportioning and quality‑control steps, the overlay satisfies structural capacity, durability against environmental attack, constructability requirements, and long‑term performance expectations. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>Prior to placing the overlay the existing pavement must be prepared by cleaning transverse joints, removing any exposed reinforcement or steel plates, and installing joint‑backing material so that its top is no more than a quarter inch below the surface. The original dowel bar assemblies are protected and, when load‑transfer devices are required, they are placed in anchored baskets that restrict vertical or horizontal movement to a quarter inch. When a geotextile interlayer is used it is laid flat with its edges overlapped eight inches plus or minus two inches, extended at least four inches beyond the pavement edge and limited to three layers in any location. Joint layout follows the approved plan; if spacing is not specified panels shall not exceed fifteen feet in length nor more than eighteen times the overlay thickness, and the longer‑to‑shorter dimension ratio shall be no greater than 1.5. Transverse joints are saw‑cut directly over existing transverse joints to a depth equal to the full overlay thickness plus one‑half inch, with a cut width at least as wide as the underlying joint; intermediate transverse cuts are placed so that no panel exceeds fifteen feet. Additional joints are cut after the concrete has hardened using a green‑cut saw to a depth of at least one‑third the slab thickness within twelve inches of the edges and at least one‑fourth the thickness elsewhere, with a minimum width of one‑eighth inch. Longitudinal joints are located, referenced and then sawed to create a quarter‑inch‑wide sealant reservoir that extends through the full overlay thickness plus one‑half inch; longitudinal joints are avoided in wheel paths and are replaced by concrete‑overlay transitions at the limits of the overlay. Transitions are constructed at the overlay edges; where a treated base course or existing concrete lies directly beneath, a geotextile debonding layer is placed as specified. Edge faces along both sides of the overlaid pavement are finished vertically and free of honeycomb. Reinforcement may be provided by macro‑fibers—synthetic or steel—added at a dosage that achieves the residual strength f150 required in Table A, with the mix designed for low chloride ion penetration; if the overlay thickness is less than three inches No. 67 coarse aggregate replaces No. 57. For overlays thinner than seven inches polypropylene fibers of one to two‑and‑a‑half inch length, aspect ratio not exceeding 150, are used at a rate that yields a residual strength ratio of about twenty percent but does not exceed five pounds per cubic yard unless demonstrated otherwise. When an asphalt paving interlayer system is employed, reinforcement fabrics or grids (geotextile, fiberglass mesh, or composite grid) are saturated with the specified amount of asphalt and extend six inches beyond their edges, with overlaps at joints trimmed or filled to provide at least one inch of asphalt coverage. The first lift of an asphalt interlayer must be compacted to a minimum thickness of 1.5 inches, and the surface on which it is placed must be clean, dry and free of debris. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 446–462)</small></p>
+<p>The interface between a new structural overlay and the existing pavement can be designed either as an unbonded bearing contact or as a bonded composite, depending on the selected overlay type.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When a Portland cement concrete (PCC) overlay is placed over an asphalt concrete (AC) pavement without bonding, the design treats the existing AC layer solely as a support and assumes no direct structural contribution across the interface; consequently the required overlay thickness equals the pavement thickness calculated for future traffic using rigid‑pavement average initial truck factors.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In contrast, when a bonded concrete overlay is intended to act in composite with the underlying surface, the guides prescribe a detailed preparation sequence that includes repairing unstable slabs, cleaning the surface of loose material, oil, grease and standing water, and uniformly scarifying the old surface with a self‑propelled mechanical scarifier.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After scarification, shot‑blasting or water‑blasting is applied to produce a roughened substrate suitable for bonding, and any cracks wider than three‑quarters of an inch are filled with approved non‑shrink grout before paving.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Joint backing or other approved filling material must be installed within ±¼ inch of each transverse joint face so that it cannot be displaced during overlay placement.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Where the overlay terminates over treated base or existing concrete, a geotextile debonding layer is placed; this same geotextile may also serve as reinforcement, with its edges overlapped by eight inches (± 2 in) and extended at least four inches beyond the pavement edge, limited to three layers in any location and secured according to manufacturer instructions while maintaining drainage.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] As an alternative to a geotextile, a one‑inch thick Superpave asphalt interlayer may be used, provided the surface temperature is kept below 120 °F during placement.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Prior to concrete placement, a tack coat of asphalt is applied at a rate of 0.22 to 0.28 gallons per square yard, sprayed at 290 °F–320 °F so that it fully saturates any reinforcement fabric and extends six inches beyond the edges of the geotextile or other interlayer.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The concrete overlay thickness typically ranges from 2.5 to 8 inches; thin overlays are specified at 2.5–4 inches and thicker sections at 4–8 inches, all bonded directly to the existing asphalt‑surfaced pavement.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Panel dimensions are limited to a maximum of eighteen times the overlay thickness, with an aspect ratio (longer dimension/shorter dimension) not exceeding 1.5, and joints are laid out to keep this ratio as close to unity as feasible.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Saw cuts are made at least one‑third of the slab thickness within twelve inches of edges, with a cut depth equal to the full overlay thickness plus a half‑inch, taking care not to damage existing dowel load transfer devices.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After curing, a sealant reservoir one quarter inch wide is sawed to the same depth over each longitudinal joint and all joints are sealed after cleaning; bond strength of the prepared interface is verified at seven days using ASTM C1583, requiring an average shear stress of at least 175 psi and no individual result below 160 psi before acceptance.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] No traffic is permitted until the overlay reaches a minimum compacted thickness of 1.5 inches, ensuring that the designed interface has achieved its intended structural performance.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=bca136eb src=408_2020_11::tab:p461#1 -->
+<p>The table below specifies maximum nominal panel dimensions for unbonded concrete overlays based on thickness.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-structural-overlay-3-cap" tabindex="0"><table class="ct-table" id="ct-structural-overlay-3">
+<caption id="ct-structural-overlay-3-cap">548.3 CONSTRUCTION— (table)</caption>
+<thead>
+<tr><th scope="col">Unbonded OverlayThickness</th><th scope="col">Maximum Nominal PanelDimensions</th></tr>
+</thead>
+<tbody>
+<tr><td>&gt; 6 inches to &lt; 8 inches</td><td>6 ft × 6 ft</td></tr>
+<tr><td>≥ 8 inches to ≤ 10 inches</td><td>12 ft × 12 ft</td></tr>
+<tr><td>&gt; 10 inches</td><td>12 ft × 15 ft</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 461.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 10 (p. 186); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 446–463)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>Prior to installing a structural overlay the existing pavement surface must be prepared so that water cannot become trapped and moisture is minimized. After scarification, milling or blasting the surface is inspected and any standing water is removed using department‑approved drainage measures; no standing water may remain after the milling operation. The substrate temperature must be below 120 °F before concrete placement, and the concrete itself is placed only when its temperature lies between 65 °F and 90 °F.</p>
+<p>If a geotextile or asphalt paving interlayer is used, it is stored wrapped, elevated and covered to keep it dry until installation. The interlayer must be laid on a drainable surface free of depressions, with the fabric terminated in a drainable layer or at a daylighted location so that water can flow freely. Before the overlay is placed the geotextile is dampened but not saturated, and any rain that wets the material must be allowed to dry.</p>
+<p>Environmental conditions are controlled during placement and curing. When ambient air temperature is forecast to be 45 °F or lower (or 40 °F according to some specifications), adequate insulating blankets are applied to prevent rapid heat loss. The blankets remain until the concrete surface temperature rise does not exceed 40 °F in any one‑hour period, which may be satisfied when the ambient temperature rises above 45 °F, when compressive strength exceeds 3,000 psi (or 3,600 psi) or when a maturity method indicates sufficient strength. Fog‑misting, protective covers or blankets may also be employed immediately before placement to achieve the required moisture and temperature condition, provided that no standing water is introduced.</p>
+<p>Throughout the operation the surface is kept free of moisture; fog‑misting or protective covers are used only to adjust temperature without adding water, and final cleaning of the prepared surface is completed within thirty minutes after overlay placement using oil‑free, dry compressed air. By maintaining drainage paths, controlling moisture on both substrate and interlayer, and regulating temperature with blankets and monitoring, the structural overlay design addresses drainage, moisture, climate and other environmental influences. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 446–462)</small></p>
+<p>Structural overlays are required to be planned with comprehensive safety and user‑access considerations, beginning with the implementation of temporary traffic control in accordance with Publication 213 and, when practicable, coordinated detours through the District Traffic Unit to protect motorists during construction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The design must incorporate effective drainage measures that remove both surface and subsurface water, repair or replace any failed base areas, and provide a level and stable platform achieved through scratch‑and‑leveling courses or milling of the existing surface. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Sufficient binder thickness is added to supply the necessary structural capacity while the finished surface must achieve adequate skid resistance and maintain shoulder condition capable of supporting edge loads. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Temperature control is a safety prerequisite; fresh concrete for the overlay must be placed when its temperature lies between 65 °F and 90 °F and the existing pavement surface does not exceed 120 °F, thereby protecting both the new material and the underlying structure. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Prior to placement any traffic‑lane defects larger than four square inches or deeper than one inch must be repaired with an appropriate patching material to create a uniform bearing surface before an interlayer is installed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When a geotextile interlayer is specified it shall be laid flat, overlapped on each side by approximately eight inches (allowable variation of plus or minus two inches), extended at least four inches beyond the pavement edge, limited to three layers, and protected from construction traffic, sharp turns and braking; its temperature also must not exceed 120 °F before overlay placement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Geometric control of concrete panels is governed by several limits: the length of any panel created between cut intermediate transverse joints may not exceed fifteen feet, overall panel dimensions are restricted to no more than eighteen times the overlay thickness, and the aspect ratio shall not exceed 1.5, with a preference for values approaching unity. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Longitudinal joints must be avoided in wheel paths, joint locations shall be accurately marked before paving, and edge slump is limited to a maximum of one‑quarter inch within the outer six inches adjacent to the shoulder to prevent excessive deformation at the pavement edge. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Saw cuts, when required, shall be cut to a depth equal to one‑third of the slab thickness with a minimum width of one‑eighth inch and spaced according to the D/3 to D/4 rule. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Curing insulation blankets may be employed when ambient air temperature is 45 °F or lower; they must be removed once the temperature rises above that threshold or when compressive strength exceeds 3,000 psi, and removal shall be performed so that the concrete surface temperature does not change faster than forty degrees Fahrenheit in any one‑hour period. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The guides do not prescribe additional accessibility criteria beyond these safety and geometric provisions, indicating that user‑access requirements are satisfied through the combined emphasis on traffic control, shoulder support, and surface friction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57); [2] — SECTION 500—RIGID PAVEMENTS (pp. 446–462)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The verification of a completed structural overlay proceeds from an approved quality‑control plan that the Representative reviews before any work begins. Surface preparation is inspected and documented; the prepared pavement must be clean, dry and below 120 °F prior to placement. If an interlayer such as geotextile or asphalt is used, its edges are required to overlap by eight inches give or take two, no more than three layers may be placed, and a free edge must extend at least four inches beyond the existing pavement. Dowel basket assemblies are installed according to a QC plan and fastened so that any vertical or horizontal movement does not exceed one‑quarter inch.</p>
+<p>Panel layout follows the design limits: each panel’s longer dimension shall not exceed eighteen times the overlay thickness, the length‑to‑width ratio shall be as close to unity as practicable but never greater than 1.5, and joint spacing is set by a D/3 depth within twelve inches of the pavement edge and at least D/4 elsewhere, with saw cuts made to a minimum width of one‑eighth inch. Sawing is performed with a green‑cut saw once the concrete can be cut without raveling.</p>
+<p>Curing operations are initiated within thirty minutes after bleed water has dissipated; curing compounds are applied as specified and insulating blankets are used when air temperature falls to 45 °F or lower, being removed only when slab surface temperature change is under forty degrees per hour or compressive strength exceeds three thousand psi. For overlays that include an asphalt interlayer, the material temperature is confirmed by the manufacturer’s technical representative against the field QC plan and the first lift must achieve a compacted thickness of at least one‑and‑a‑half inches; any wrinkles larger than one inch are trimmed and overlapped.</p>
+<p>Concrete mix compliance is checked against the design basis. When the overlay thickness is less than three inches, No. 67 coarse aggregate replaces the standard No. 57 aggregate. Macro‑fibers are dosed to meet the required residual strength (f150) and their performance is validated by ASTM C1609‑12 testing at fourteen days. The mixture’s permeability must satisfy the chloride ion penetration limits set out in AASHTO T277 or T358, not exceeding 2 800 coulombs or the resistance values of 15.6 kΩ·cm for 4×8 in cylinders and 12.3 kΩ·cm for 6×12 in cylinders.</p>
+<p>After placement, a seven‑day bond‑strength test is performed in accordance with ASTM C1583 on three randomly selected locations; the average result must be at least 175 psi and no individual measurement may fall below 160 psi, otherwise the area is deemed defective and further testing is required. Compressive strength cylinders are cured and tested per PTM No. 604, and traffic may be opened only when a minimum of three‑thousand‑six‑hundred psi is recorded together with the acceptable bond strength. Edge slump is inspected, allowing no more than one‑quarter inch in the outer six inches adjacent to the shoulder and no more than one‑eighth inch next to an adjoining lane.</p>
+<p>To confirm thickness and uniformity, the pavement is divided into lots not exceeding three thousand square yards per traffic lane; for each lot the inspector selects a random coring location, drills a core according to PTM No. 606 in the presence of the inspector, cleans the core face and refills it with the same mix or a non‑shrink grout, thereby verifying that the as‑constructed overlay meets the design thickness.</p>
+<p>When all of these acceptance criteria—QC plan approval, proper interlayer installation, dowel anchorage, panel geometry, joint cutting, curing, temperature control, material specifications, bond strength, compressive strength, edge slump, and core verification—are satisfied, the Representative signs off that the structural overlay complies with the project requirements, is constructible, will perform as intended, and aligns with the contract documents. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 446–462)</small></p>
+<p>The structural overlay is expected to deliver a durable, load‑bearing surface that can be placed in service only after the concrete attains a minimum compressive strength of 3,600 psi, verified by cylinder testing, and after the bond between the existing pavement and the new concrete meets a minimum average pull‑off strength of 175 psi (with no individual test below 160 psi) as measured by ASTM C1583 at seven days; these strength criteria are used to confirm resistance to fatigue cracking and other distress. Proper curing—applying curing compounds within 30 minutes of bleed water dissipation, maintaining temperature control, and limiting surface temperature change to less than 40 °F per hour—supports the achievement of those strengths and thus the intended service life. Opening to traffic is authorized only when both the compressive‑strength and bond‑strength thresholds are satisfied, providing a quantitative basis for performance verification. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 455–457)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=5fb1890a src=408_2020_11::tab:p306#2 -->
+<p>The table below specifies uniform asphalt residual rates by surface type. It relates to the section <a href="#design-inputs-and-requirements">Design inputs and requirements</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-structural-overlay-4-cap" tabindex="0"><table class="ct-table" id="ct-structural-overlay-4" aria-describedby="ct-structural-overlay-4-sum">
+<caption id="ct-structural-overlay-4-cap">TABLE BUniform Asphalt Residual Rates by Surface Type</caption>
+<thead>
+<tr><th scope="col">Surface Type</th><th scope="col">Uniform Asphalt Residual Rates (RR)(gallons per square yard)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">New Asphalt Paving</th><td>0.03 to 0.05</td></tr>
+<tr><th scope="row">Existing Asphalt Paving</th><td>0.04 to 0.07</td></tr>
+<tr><th scope="row">Milled Surface(Asphalt &amp; Portland Cement Concrete)</th><td>0.04 to 0.08</td></tr>
+<tr><th scope="row">Portland Cement Concrete</th><td>0.04 to 0.07</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-structural-overlay-4-sum">Rows list different surface types for asphalt paving. Columns provide the corresponding uniform asphalt residual rates in gallons per square yard.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 306.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:begin key=5b7a1526 src=pub_242_change_10::tab:p185#1 -->
+<p>The table below specifies the minimum and maximum thicknesses for various concrete overlay types. It relates to the section <a href="#structural-details-and-interfaces">Structural details and interfaces</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-structural-overlay-5-cap" tabindex="0"><table class="ct-table" id="ct-structural-overlay-5" aria-describedby="ct-structural-overlay-5-sum">
+<caption id="ct-structural-overlay-5-cap">TABLE 10.10MINIMUM AND MAXIMUM THICKNESS FOR CONCRETE OVERLAYS</caption>
+<thead>
+<tr><th scope="col">OVERLAY TYPE</th><th scope="col">MINIMUM THICKNESS</th><th scope="col">MAXIMUMTHICKNESS</th><th scope="col">TYPICAL JOINTSPACING*</th><th scope="col">APPLICABLESTANDARDSPECIFICATION</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Bonded Concrete Over Concrete</th><td>2.0 in</td><td>5.0 in**</td><td>Match existingpavement</td><td>545</td></tr>
+<tr><th scope="row">Thin Bonded Concrete Over Asphalt or AC/PCC (composite)</th><td>2.5 in</td><td>4.0 in</td><td>3 ft × 3 ft</td><td>541</td></tr>
+<tr><th scope="row">Bonded Concrete Over Asphalt or AC/PCC (composite)</th><td>4.0 in</td><td>8.0 in**</td><td>6 ft × 6 ft for pavementsthinner than 8 in, 12 ft ×12 ft for all others</td><td>540</td></tr>
+<tr><th scope="row">Unbonded Concrete Over Concrete, Asphalt, or AC/PCC (composite)</th><td>5.0 in</td><td>13.0 in</td><td>6 ft × 6 ft for pavementsthinner than 8 in, 12 ft ×12 ft *** for 8 to 10 in,and 12 ft × 15 ft forgreater than 10 in</td><td>501/506/548</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-structural-overlay-5-sum">Rows list different types of concrete overlays, columns provide specifications for thickness, joint spacing, and applicable standards.</p>
+<p class="ct-notes">Notes: Notes: *Joint spacing of 2 feet by 2 feet and 4 feet by 4 feet will result in longitudinal joints in the wheel path and is not **The maximum thickness may be exceeded; however, a different pavement design method may be required. Contact recommended. Joint spacing based on standard 12 ft lane width. For other configurations, consult with PDAU. PDAU for assistance. *** This joint spacing is not included in the current standards. Use of this will require a special provision for the project.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 185.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

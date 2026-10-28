@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crack and Seat</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html" class="active" aria-current="page">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="rehabilitation.html">Rehabilitation</a><span class="crumb-sep">›</span><span class="crumb-current">Crack and Seat</span></nav>
+<article><h1>Crack and Seat</h1>
+<div class="meta"><div class="part-of">Part of: <a href="rehabilitation.html">Rehabilitation</a> <span class="edge edge-taxonomic" title="Crack and Seat is a topic under Rehabilitation.">is-subtopic-of</span></div><div class="edge-reading">Crack and Seat is a topic under Rehabilitation.</div><div><a class="tag" href="index.html?q=crack-and-seat">crack-and-seat</a><a class="tag" href="index.html?q=crack-and-seat">crack-and-seat</a><a class="tag" href="index.html?q=cracking-and-seating">cracking-and-seating</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>In my review, crack‑and‑seat is a rehabilitation technique applied to jointed concrete pavements that have become severely faulted, pumped, or rocking such that conventional patching is no longer economical, with the goal of restoring functional performance while providing a structural enhancement that extends service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The method works by intentionally fracturing the existing slab into roughly twelve‑ to twenty‑four‑inch fragments and then compacting (seating) those pieces into a clean, stable base or subbase using a minimum fifty‑ton pneumatic‑tire roller, thereby creating a uniform support layer that reduces differential movement at joints, cracks and punchouts and limits reflective cracking in any subsequent overlay [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. This controlled breaking and seating of the concrete yields a more consistent backing for overlays, improving ride quality, load distribution, and durability compared with leaving the distressed slab untouched [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Crack‑and‑seat is applied to concrete pavements that are so severely cracked, faulted or have free‑moving slabs that patching is no longer economical. By fracturing the slab into smaller pieces and seating them in the base or subbase, the method creates a uniform, stable support and limits differential movement at joints, cracks and punchouts. This stabilization reduces the likelihood of reflective cracking developing through any subsequent overlay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98)</small></p>
+<p>The Crack‑and‑Seat technique is employed primarily to restore the functional performance of a distressed concrete pavement while delivering a structural enhancement that extends its service life. By intentionally cracking and seating the existing slab, large free‑moving sections are broken into smaller units, which reduces differential movement at joints, cracks and punchouts and consequently limits reflective cracking in any overlay applied thereafter. This creates a more uniform, stable support layer that improves ride quality and load distribution, effectively repairing the distressed condition and prolonging the pavement’s useful period. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 6 (pp. 137–139)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The crack‑and‑seat technique is used on jointed concrete pavements where slabs are rocking, pumping or faulted—i.e., at transverse joints and cracks that have become free‑moving. The distress is extensive enough that slab movement or faulting is present across the pavement surface, making conventional patching uneconomical and indicating a severe condition of differential movement. Because such movement can lead to reflective cracking in any overlay and degrade rideability, the method breaks the slabs into smaller pieces and seats them to provide a uniform support layer, thereby reducing safety and operational impacts. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98)</small></p>
+<p>Crack‑and‑seat is used when a concrete pavement has become unstable because slabs are moving, faulting or pumping—symptoms that arise from inadequate subgrade support and drainage problems that allow water infiltration to undermine the base. By intentionally fracturing the slab into smaller pieces and seating them in the underlying base, the method reduces the size of free‑moving slabs, limits differential movement at joints and cracks, and therefore lessens reflective cracking in the overlay. The process provides a more uniform, stable support layer that is superior to simply placing an unbonded overlay on a poorly supported pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Crack‑and‑seat is employed when an existing jointed plain concrete pavement (JPCP) or jointed reinforced concrete pavement (JRCP) has become severely faulted, pumped, rocking, or otherwise distressed to the point that patching is no longer economical and the slabs are moving freely. The technique breaks the pavement into pieces roughly 12 to 24 inches long and seats them in the underlying base or subbase to provide a more uniform support layer for an overlay. Application is limited to rigid concrete slabs that can be fully exposed by removing any overlying asphalt, allowing traffic to be closed while the pavement is fractured and the pieces are seated. The underlying subgrade must be stable enough to accept the seated pieces, and the use of sonic vibratory equipment is prohibited where it could cause soil liquefaction. Any drainage deficiencies should be corrected, typically by installing additional subgrade drains, before or during the treatment. Work must avoid areas where utilities or utility sleeves lie within 10 ft horizontally or vertically of the slab, and it must be performed at least 40 ft away from bridge approaches, tunnel portals, or other structures. Seating operations require a minimum‑50‑ton pneumatic roller and must be carried out on dry pavement; wet conditions are prohibited. For field‑load verification testing associated with the treatment, air temperatures should be between approximately 45 °F and 90 °F and the surface must not be frozen. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<p>Crack and seat is not appropriate when the rehabilitation plan calls for an unbonded concrete overlay because the cracking adds cost without improving performance.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Likewise, if a flexible asphalt overlay will be placed over an existing jointed plain concrete pavement that is to remain unbonded, the crack‑and‑seat operation is unnecessary and another method such as direct placement of the asphalt or rubblizing should be considered.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When subgrade conditions are poor or moisture levels are high, rubblizing can provide a more reliable support than cracking and seating, so the latter should be avoided.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Site constraints that place utilities, culverts, cross‑pipes or sleeves within ten feet horizontally or vertically of the slab also preclude safe full‑depth fracturing, making crack‑and‑seat unsuitable.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Proximity to bridge decks, tunnel portals, or other structure approaches within forty feet likewise requires an alternative rehabilitation technique.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Fixed objects such as manholes, inlets or similar appurtenances located less than three feet from the pavement also prohibit the use of crack‑and‑seat.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The method further depends on equipment capable of applying a controlled variable force without causing surface spalling, punched holes, or shattering; if such equipment is not available, another repair approach must be selected.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Finally, the sonic vibratory fracturing variant of crack‑and‑seat should not be used where the subgrade is susceptible to liquefaction, and a different technique should be employed in those locations.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>To determine whether crack‑and‑seat is required, a visual inspection of the concrete slabs is first undertaken to look for signs of slab movement such as rocking, faulting or pumping; the detection of any of these conditions signals that slab stabilization or jacking may be needed and raises the likelihood that crack‑and‑seat will be appropriate [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Following this visual assessment, a Falling Weight Deflectometer (FWD) test must be performed on the existing Portland cement concrete pavement before any overlay design is prepared in order to quantify structural deficiency and overall load‑bearing capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The FWD results are then used to identify those sections whose structural response falls below acceptable thresholds, thereby indicating where fracturing and seating should be applied so that only inadequately supported areas receive treatment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the pavement condition is sufficiently distressed that conventional patching would be uneconomical, the combination of observed slab movement and deficient FWD measurements provides justification for proceeding with crack‑and‑seat rehabilitation to achieve a stable, uniform level of support [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 96–98); [2] — SECTION 500—RIGID PAVEMENTS (p. 415)</small></p>
+<p>Crack‑and‑seat is used when a concrete pavement has deteriorated so far that patching is no longer economical—typically when slabs are rocking, pumping, faulted or otherwise free‑moving, causing extensive differential movement at joints and cracks. In this condition the pavement is fractured into roughly 12‑ to 24‑inch pieces and rolled into the base or subbase to create a stable, uniform support before applying an overlay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>The Crack‑and‑Seat process begins by fracturing the existing unreinforced concrete slab into fragments that are generally twelve to twenty‑four inches long and whose overall dimensions do not exceed thirty inches. When full‑depth cracking is allowed, the slab is saw‑cut across the lane width into sections no longer than twenty feet with a cut depth set to within one inch of two‑thirds of the slab thickness; where full‑depth cuts are prohibited the panels are limited to five‑foot by six‑foot units. Prior to seating, any unsuitable material is removed and the resulting void beneath the broken pieces is backfilled with Subbase No. 2A, after which the top of the fractured slab is patched using a Flexible Base Replacement product. Seating of the broken fragments is accomplished with a pneumatic‑tire roller that must have a minimum operating weight of fifty tons, be equipped with four to seven rubber tires inflated to at least one hundred pounds per square inch, and be driven in a pattern that provides three direct passes over every point of the surface. After the pieces are rolled into the underlying base or subbase to achieve a stable, uniform support, a continuous pavement‑base drain is installed and any deficient areas of the base are repaired with either a standard Base Course or a Superpave Base Course as required. A leveling course at least one inch thick—often placed over a bond‑breaker when needed—is then spread to correct cross‑slope before the final overlay is placed. The overlay may be an unbonded concrete layer designed according to the applicable design procedures, or an asphalt layer whose thickness is dictated by the structural design; asphalt material is expressly permissible for Crack‑and‑Seat projects. Full‑depth asphalt shoulders are provided where specified, while concrete shoulders are retained when the original pavement had concrete shoulders; otherwise the shoulder type matches the existing configuration. Any necessary patching before the overlay is performed with flexible base‑course replacement rather than new concrete patches, and all damage to adjacent utilities, bridge decks, or approach slabs incurred during fracturing must be repaired at no additional cost. A Falling Weight Deflectometer test is conducted after the seating operation to verify structural capacity prior to placement of the overlay, and the entire work is quantified on a per‑square‑yard basis. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 84–98); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<p>The crack‑and‑seat method is only viable when the existing concrete pavement exhibits a level of distress—such as faulting, extensive cracking, or free‑moving slabs—that makes conventional patching uneconomical [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Under those conditions the slab is intentionally fractured into fragments roughly twelve to twenty‑four inches long, with no individual piece exceeding about thirty inches, a size range that preserves enough aggregate interlock for the subsequent seating operation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The average elastic modulus of the concrete layer being broken must fall within prescribed limits; a modulus that is too high prevents the pieces from settling while an excessively low modulus can cause shattering and loss of interlock [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Successful performance also requires that the underlying base be stable, so any unsuitable or unstable material must be removed and replaced with a Subbase 2A layer backfilled to the bottom of the fractured slab [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Adequate subgrade drainage is essential because poor drainage can undermine the uniform support that the seated fragments are intended to provide [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Compatibility with the overlay material is achieved when a flexible (asphalt) wearing course is planned, as the crack‑and‑seat treatment enhances the performance of such overlays by limiting differential movement and reducing reflective cracking; it offers no benefit for unbonded concrete overlays and therefore would add unnecessary cost [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Prior to fracturing, surface asphalt, loose joint sealants, and any exposed reinforcement or steel plates must be removed, and utilities, structures, or other obstructions near the slab limit the applicability of the treatment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The cracking operation must employ equipment that delivers a controlled force and impact point to produce continuous full‑depth cracks while maintaining aggregate interlock; tools that cause extensive spalling, punch holes, or shattering are prohibited [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Seating of the broken pieces requires at least a fifty‑ton pneumatic‑tire roller, properly inflated, and sonic vibratory devices may be used only when the subgrade will not liquefy as a result of vibration [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Finally, seating should be avoided on wet or frozen surfaces and temperature limits prescribed for falling weight deflectometer verification must be observed to ensure reliable performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–98); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>The first preparation step is to verify that the concrete slab has deteriorated beyond the point where conventional patching would be effective and to correct any drainage or subgrade problems that could jeopardize the new structure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Any existing asphalt layers are stripped from the concrete, loose joint seals are removed, and slabs extending more than twenty feet are saw‑cut to a depth of about one inch, roughly two‑thirds of the slab thickness, while maintaining clearance zones around utilities and structures [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A test section of at least one thousand square feet is fractured with controlled impact equipment under wet conditions so that full‑depth cracks become visible before the production cracking proceeds [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The production fracture breaks the pavement into fragments approximately twelve to twenty‑four inches long, which are then rolled or pressed into the underlying base or subbase to create a uniformly seated support surface [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Seating is accomplished with a minimum fifty‑ton pneumatic‑tire roller that is inflated to provide proper contact pressure, making at least three passes over each area and avoiding vibratory rollers or wet conditions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Exposed reinforcement is removed and any unstable material is backfilled with Subbase No. 2A topped by Flexible Base Replacement as required before the base is rebuilt where deficient [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Deficient areas of the original base are reconstructed using an appropriate Base Course or Superpave Base Course material, and a continuous pavement‑drain system is installed to ensure proper water evacuation beneath the reconstruction [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Over the repaired base a leveling course at least one inch thick that includes a bond‑breaker layer and cross‑slope correction is placed and compacted, and the surface is swept clean and tack‑coated before traffic is allowed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The leveling layer must achieve its required strength before an overlay—typically an unbonded concrete or asphalt wearing surface designed to project specifications—is laid to the prescribed thickness and finished with full‑depth shoulders that meet required widths and clearances [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Finally, guide rails, drainage structures, and any necessary fill widening are reset or replaced to complete the rehabilitation, and the pavement may be opened to traffic within one week after placement of the leveling course [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 96–98); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<p>Crack‑and‑Seat requires impact equipment that can apply a controllable variable force without spalling or punching the slab, and sonic vibratory tools are permitted only when they will not liquefy the subgrade; after fracturing, a minimum 50‑ton pneumatic‑tire roller (four to seven wheels, 100 psi inflation) must be used for seating. The work sequence begins with removal of any asphalt overlay, joint seal removal and sawcutting of slabs up to 20 ft long, followed by a test fracture section, wetting to verify crack visibility, then systematic roller passes (at least three per spot) before final FWD modulus verification. Seating operations cannot be performed in wet conditions, and FWD testing is prohibited when the pavement is frozen or ambient temperatures are below 45 °F or above 90 °F; likewise, sonic equipment may not be used if it risks subgrade liquefaction. Traffic is barred on the fractured‑and‑seeded lane until an asphalt overlay is placed, with only limited crossing allowed for rollers over bridges when approved by the bridge engineer and for construction vehicles to access ramps. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>Crack and Seat work must be inspected at every stage: the fracturing equipment must be capable of delivering a controllable variable force without causing surface spalling, and all over‑lying asphalt, joint seals and unsuitable subgrade must be removed before sawcutting slabs to the prescribed depth; a test section is required to verify that full‑depth cracks are visible after wetting and that the subsequent seating uses a minimum 50‑ton pneumatic roller with tires inflated to achieve proper contact pressure and at least three passes over each spot, while visual observation of vertical deflection confirms adequate seating; after seating, falling‑weight deflectometer testing is performed according to AASHTO T256 and related ASTM methods to back‑calculate the elastic modulus of the fractured layer and compare it with Table A limits, and finally the surface is swept clean, exposed reinforcement or steel plates are removed, a tack coat applied, and traffic prohibited until an asphalt overlay is placed within one week. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<p>A satisfactory Crack and Seat treatment is recognized when the existing concrete pavement has been fractured into discrete pieces that are generally between twelve and twenty‑four inches in length, providing a uniform and stable base for the subsequent overlay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The fragments must not exceed thirty inches in any dimension, ensuring that no overly large slab remains capable of independent movement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Full‑depth cracks induced during the process must be clearly visible on the pavement surface, confirming that the concrete has been fully broken through. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After fracturing, the seating operation requires at least three passes with a fifty‑ton pneumatic‑tire roller, and visual observation should indicate that the underlying substrate does not exhibit vertical deflection under the roller’s weight. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The compacted fragments are then rolled or otherwise pressed into the underlying base or subbase so that they become fully seated and contribute to a continuous support layer for the overlay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Acceptance also depends on the measured structural response of the fractured layer; a falling‑weight deflectometer test performed on a representative one‑thousand‑foot section must produce an average elastic modulus that falls within the allowable range specified in the relevant tables. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] If any fragment size exceeds the limit, cracks are not fully visible, insufficient roller passes are made, vertical movement is observed, or the elastic‑modulus result lies outside the prescribed interval, additional fracturing, adjustment of the break pattern, or further seating passes are required before proceeding. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When patching is necessary after cracking and seating, the guides require that flexible base‑course material be used rather than concrete patches, to maintain compatibility with the seated aggregate mass. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Meeting all of these visual, dimensional, mechanical and material criteria ensures that differential movement at joints, cracks and punchouts is minimized and that the rehabilitated pavement will perform satisfactorily under the new overlay.</p>
+<!-- concept-tabular:begin key=2339a31e src=408_2020_11::tab:p413#1 -->
+<p>The table below specifies the nominal fracture ranges and average elastic modulus limits for crack-and-seat methods.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-crack-and-seat-1-cap" tabindex="0"><table class="ct-table" id="ct-crack-and-seat-1" aria-describedby="ct-crack-and-seat-1-sum">
+<caption id="ct-crack-and-seat-1-cap">TABLE AFracture Range Tolerances</caption>
+<thead>
+<tr><th scope="col">Fracture Method</th><th scope="col">Nominal Fracture Range</th><th scope="col">Range of Elastic Modulus Average</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Crack and Seat</th><td>&gt; 12&quot; and &lt;24&quot; with a maximum dimensionof 30&quot;</td><td>450 ksi +/- 250 ksi</td></tr>
+<tr><th scope="row">Break and Seat</th><td>&gt;12&quot; and &lt;24&quot; with a maximum dimensionof 30&quot;</td><td>500 ksi +/- 250 ksi</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-crack-and-seat-1-sum">Rows list fracture methods for concrete pavements. Columns provide the nominal fracture range and elastic modulus average for each method.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 413.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 96–98); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>When a concrete slab has deteriorated beyond economical patching, the crack‑and‑seat method is employed. The pavement is fractured into roughly twelve‑ to twenty‑four‑inch fragments and compacted into the underlying base or subbase, creating a uniform, stable support that limits the size of free‑moving slabs and curtails differential movement at existing cracks, joints, and punchouts. This more consistent backing reduces both the frequency and severity of reflective cracking in any subsequently placed overlay, which translates to an improved surface condition and functional performance compared with leaving the distressed concrete untouched. Because the overlay rests on a support level that exceeds what a conventional subbase can provide, the rehabilitated section exhibits greater durability. As a structural rehabilitation technique, crack‑and‑seat delivers the enhancements defined for 3R work—extending the pavement’s service life while boosting its structural and functional capacity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 6 (pp. 137–139)</small></p>
+<p>Crack‑and‑Seat treatments can fail when the fracturing equipment produces excessive surface damage such as spalling, punched holes or shattered edges, when cracks are not fully developed and visible on the slab surface, when the seated pavement still shows vertical deflection under the roller, or when the elastic modulus of the fractured layer falls outside the prescribed range, prompting re‑fracture and retesting. These problems are driven by factors such as uncontrolled impact force, use of unsuitable equipment (including sonic vibratory units on liquefiable subgrades), proximity to utilities or structures that restrict cracking, wet conditions during seating, and inadequate roller pressure or pass count. The procedure requires a test section to verify a continuous full‑depth crack pattern, visual confirmation of no movement after at least three roller passes, and FWD testing to keep the modulus within Table A limits; any deviation triggers corrective action. Proper control of equipment, subgrade stability, moisture, and adherence to the seating pattern therefore governs whether recurring distresses develop. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After cracking and seating, the fractured surface is first inspected visually for continuous full‑depth cracks and for lack of vertical movement while the 50‑ton roller passes; any non‑movement is confirmed by observing that the substrate does not deflect under the roller. The completed area must then be verified with falling weight deflectometer (FWD) testing, collecting modulus data at no more than 50 ft intervals using a 9,000‑lb drop weight and confirming that the average elastic modulus of the fractured layer falls within the range specified in Table A, with results submitted to the Representative within seven days. Finally, the surface is swept clean, traffic is prohibited until an asphalt tack coat and overlay are placed within one week, and the pavement must not be left exposed to freezing conditions. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<p>If after cracking and seating the pavement still shows vertical movement under the roller or the falling‑weight deflectometer indicates an elastic modulus outside the specified range—particularly above the upper limit—or if consecutive test lots repeatedly fail those criteria, the treatment is deemed unsatisfactory and further repair or re‑fracturing is required; likewise, visible cracks that are not fully developed on the surface or any remaining unsuitable or unstable material also signal the need for additional maintenance. In such cases base repair, removal of unstable material, proper backfill and a repeat of the fracturing and seating process until the visual and modulus acceptance criteria are met are mandated. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

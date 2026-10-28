@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transverse Crack</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html" class="active" aria-current="page">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><a href="distress.html">Distress</a><span class="crumb-sep">›</span><a href="cracking.html">Cracking</a><span class="crumb-sep">›</span><span class="crumb-current">Transverse Crack</span></nav>
+<article><h1>Transverse Crack</h1>
+<div class="meta"><div class="part-of">Part of: <a href="cracking.html">Cracking</a> <span class="edge edge-taxonomic" title="Transverse Crack is a topic under Cracking.">is-subtopic-of</span></div><div class="edge-reading">Transverse Crack is a topic under Cracking.</div><div><a class="tag" href="index.html?q=transverse-cracks">transverse-cracks</a><a class="tag" href="index.html?q=transverse-cracking">transverse-cracking</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Transverse cracking is a surface‑cracking distress that appears as cracks or joints oriented perpendicular to the direction of travel and signals a loss of structural support in concrete pavements [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The condition primarily results from inadequate subsurface drainage that leaves the subgrade saturated; during spring thaw a frozen layer impedes moisture percolation, reducing bearing capacity so traffic loads flex the slab and open transverse cracks, while deteriorated joints can trap water that later freezes and produces localized frost‑heave [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By definition these cracks are confined to the uppermost pavement layer, typically less than one inch deep with average openings not exceeding half an inch (or no more than half the slab thickness), and they commonly extend from about fifteen inches up to six feet in length [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When a transverse crack develops between adjacent grout‑injection holes it is treated as a severe condition that obligates full‑slab replacement, reflecting its role as an indicator of failed stabilization efforts [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Transverse cracking is a surface‑cracking distress that appears as cracks or joints perpendicular to the direction of travel and signals a loss of structural support in concrete pavements. The condition often originates from inadequate subsurface drainage that leaves the subgrade saturated, reducing support and causing flexure under traffic, especially during spring thaw when frozen layers impede moisture percolation. In addition, transverse cracks may develop between adjacent grout injection holes or as open joints, indicating a failure of stabilization efforts and providing pathways for water and contaminant infiltration. These cracks compromise load transfer across the slab, degrade ride quality, and threaten long‑term durability by reducing structural continuity. The distress is characterized by crack depths that are typically less than one inch with average widths not exceeding one‑half inch, or alternatively limited to no more than half the slab thickness and extending from about fifteen inches up to six feet in length. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–59), Ch. 5 (pp. 131–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 313–338), SECTION 500—RIGID PAVEMENTS (pp. 416–422), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>The treatment objective for transverse cracking is primarily to repair the damaged portion of the pavement and restore its functional performance, which includes reestablishing load transfer across working cracks [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Dowel‑bar retrofits are specified to provide a load path that allows traffic loads to be distributed effectively across transverse cracks, thereby returning the slab’s ability to carry vehicles as intended [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When a crack occurs between grout injection holes, the specifications require full‑slab replacement at no additional cost, emphasizing the focus on fixing the defect rather than merely slowing its progression [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Partial‑depth spot repairs are also prescribed for transverse joints, cracks or spalls, directly rebuilding the cracked area and reestablishing slab integrity [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In addition to these repair actions, the guides call for properly spaced and sealed expansion joints, saw cuts, and sealing of all transverse and longitudinal joints to inhibit random cracking and thus prevent further deterioration of the pavement system [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Collectively, the objective is to both remediate existing damage and restore functionality while simultaneously preventing additional distress, which ultimately extends the service life of the concrete pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 54–57); [2] — SECTION 500—RIGID PAVEMENTS (pp. 416–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>Transverse cracks that are the subject of maintenance guidelines are observed on the surface of the pavement, extending only through the uppermost layer and not penetrating deeper than one inch [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Their openings typically average no more than half an inch, which places them in the medium severity category according to the accepted rating system [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In addition, when such cracks appear between adjacent grout‑injection holes they are treated as a severe condition that obligates the contractor to replace the entire slab at no additional cost to the agency, reflecting a substantial operational consequence because full‑depth removal and reconstruction are required [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The guides do not specify typical crack lengths or provide quantitative rates of propagation for these distresses, leaving the progression rate undefined in both sources [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Likewise, explicit safety hazards are not enumerated; however, the requirement for slab replacement implies that the presence of a transverse crack in the described location can compromise structural integrity enough to warrant immediate corrective action, thereby affecting roadway operation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 131–133); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Transverse cracking in concrete pavements is primarily driven by inadequate subsurface drainage that allows water to accumulate beneath the slab. When the subgrade becomes saturated it loses its ability to support traffic loads, and during spring thaw the trapped moisture cannot drain because a frozen layer blocks percolation, causing the pavement to crack perpendicular to traffic flow. Additionally, deteriorated joints can trap water which later freezes, producing localized frost heave (tenting) that further promotes transverse cracking. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Transverse cracking is addressed primarily on concrete pavements and asphalt overlays placed over concrete when the underlying subgrade is saturated and lacks sufficient support for the slab under traffic loading [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The condition is most critical during spring thaw because a frozen layer beneath the pavement impedes downward drainage, trapping moisture in the base and creating an environment conducive to transverse cracks [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Treatment is considered appropriate only when the cracking is confined to the surface with a depth less than 1 inch and an average width not exceeding one‑half inch, while the remainder of the pavement remains free of load‑related distress and retains at least 1½ inches of asphalt below any milling depth; minor corrugation, shoving or slippage may be present provided each has an average depth under 1½ inches [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The base and subgrade must be sound, the top two inches of the surface must not contain rubber or fiber additives, and any bleeding, low friction numbers, or large mastic patches should be corrected before treatment [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. High‑performance (HIR) asphalt mixtures may be used for any level of average daily traffic provided these pavement conditions are satisfied [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In addition, the work is only undertaken when a loaded slab‑corner deflection of at least 0.02 inch has been measured and joint efficiency is at least 65 % under traffic loading, confirming adequate structural performance of the slab joints [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The site must have qualified personnel with demonstrated experience, and the subgrade must be unfrozen; consequently work may proceed only when daytime air temperatures are above 40 °F (and below 70 °F for deflection testing) to ensure that the base material remains unfrozen [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If transverse cracks develop between grout injection holes under these verified conditions, the specification requires replacement of the entire slab rather than localized repair [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 131–133); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Transverse cracks that exceed roughly one inch in depth or have an average opening wider than a half‑inch surpass the severity limits for Hot‑In‑Place Recycled (HIR) asphalt, rendering HIR unsuitable and necessitating another rehabilitation option such as milling with deeper crack removal, a full‑depth overlay, or conventional patching. Likewise, the presence of extensive crack sealant or overbanded rubberized joint seals on transverse joints disqualifies the pavement from HIR treatment, so alternative preservation or repair methods must be selected. When grout injection is used to stabilize a concrete slab and transverse cracks develop between adjacent injection holes, the treatment is deemed ineffective and the specification requires complete removal of the slab and replacement in accordance with Section 516. A partial‑depth repair of a transverse crack is only appropriate when the required repair depth does not exceed half of the slab thickness; if the necessary depth exceeds this 50 % threshold, the partial‑depth approach becomes unsuitable and a full‑depth concrete pavement patch or corner repair should be employed instead. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 131–133); [2] — SECTION 500—RIGID PAVEMENTS (p. 416), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>A visual pavement inspection is the first step used by the guides to locate all transverse cracks and joints before any measurements are taken [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The inspector marks the centreline of each identified joint or expansion joint with guide nails, tacks or other approved devices so that the locations remain identifiable after overlay work [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Crack severity is evaluated by measuring depth and opening; cracks deeper than one inch or wider than a half‑inch are classified above the medium rating and therefore trigger treatment consideration [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For each joint, the width is measured immediately prior to placement of an overlay, and slab thickness is recorded in order to determine the required saw‑cut depth, which must be at least one‑third of the slab thickness within a foot of the pavement edge and no less than one‑quarter elsewhere [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Joints exhibiting faulting greater than a quarter‑inch are slated for milling, while any joint that has a crack occurring at or within 1½ feet is excluded from sawing and addressed by alternative remedial procedures [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A seven‑day bond‑strength test performed in accordance with ASTM C1583 on randomly selected joint locations provides a quantitative check of the prepared surface; an average strength below 175 psi or any individual result under 160 psi designates the area as defective, prompting additional tests at 100‑foot intervals to map the extent of the problem [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When ambient temperature is between 40 °F and 70 °F and the subgrade is unfrozen, deflection testing per ASTM D4695 is carried out on each joint or crack, recording both unloaded and loaded slab‑corner deflections to compute joint efficiency [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If the loaded corner deflection equals or exceeds 0.02 inch and the calculated joint efficiency is 65 percent or greater, the joint is considered stable; if the efficiency falls below that threshold, patching and stabilization are required [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In addition to these dimensional and performance tests, the overall condition assessment incorporates sampling and testing of pavement layers together with a review of construction history and traffic data to confirm whether treatment is warranted [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Finally, if transverse cracks develop between adjacent grout‑injection holes, the guides prescribe full slab replacement as the remedial action [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 131–133); [2] — SECTION 500—RIGID PAVEMENTS (pp. 455–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Transverse‑crack treatment is indicated when a concrete slab shows active transverse cracks that compromise load transfer, particularly when the subgrade is saturated and its support is reduced during spring thaw because a frozen layer impedes moisture drainage [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. At this stage the cracks are confined to the surface course, have depths less than one inch and average widths not greater than half an inch, which corresponds to a medium‑severity rating [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If such a crack occurs between adjacent grout injection holes the specification calls for complete slab replacement at no additional cost to the department [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the crack or joint does not require removal of more than one‑half of the slab thickness, a partial‑depth repair is prescribed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Cracks whose lengths range from about fifteen inches up to six feet are treated with a Type 1 spot repair, while those exceeding six feet are addressed with a Type 2 extended‑length repair [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Independently of the other criteria, any transverse crack or joint that is at least one‑quarter inch wide must be sealed with the specified rubberized sealant at least twenty‑four hours before paving operations commence [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For asphaltic pavements that meet the same depth and width limits, a hot‑in‑place recycled asphalt treatment provides an appropriate remedial action [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 54–59), Ch. 5 (pp. 131–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 337–338), SECTION 500—RIGID PAVEMENTS (p. 416), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Transverse cracks are first prepared by thoroughly cleaning the joint and applying a sealant according to Publication 408 Section 590 specifications [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When load transfer must be restored across a working transverse crack, a dowel‑bar retrofit is installed using the standard dowel‑bar configurations shown on RC‑26M drawings and prescribed in Publication 408 Section 527 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For sections that will receive a Hot‑In‑Place Recycled overlay, the cracks are required to have a depth of less than one inch and an average width not exceeding one‑half inch, and any excessive sealant or large mastic patches must be removed before overlay placement to ensure proper bonding [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If a transverse crack measures one‑quarter inch or larger, district‑specified rubberized sealant is applied as a thin over‑band at least twenty‑four hours prior to paving, with the width and thickness kept within the tolerances of Section 469 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When a full‑depth overlay is planned, each existing transverse joint is first filled with an approved backing or joint‑filling material placed to within plus or minus one‑quarter inch of the pavement surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The joint is then saw‑cut through the entire overlay thickness plus an additional half‑inch; the cut width must equal or exceed the original crack and panel lengths are limited to fifteen feet between cuts [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A sealant reservoir, drawn according to the standard cement concrete joint drawing, is constructed before new concrete placement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Should a transverse crack develop between grout‑injection holes, the specification calls for complete slab replacement, after which any drill holes are patched full depth with rapid‑set, non‑shrink concrete patching material that is struck flush with the surrounding surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Partial‑depth repairs are permitted when the repair depth does not exceed one‑half of the existing slab thickness, and spot repairs cover cracks from about fifteen inches up to six feet in length while extended‑length repairs address cracks longer than six feet; both employ a rectangular repair zone that must be at least fifteen inches long, ten inches wide and two inches deep, extending roughly three inches beyond the cracked edges [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When such a repair abuts an existing transverse joint, a half‑inch expansion joint material is installed, extending at least one‑half inch below the bottom of the repair, and preformed cellular polystyrene may be used in the same manner [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For dowel‑bar repairs, parallel slots are cut with a power‑driven self‑propelled saw centered over the crack; each slot receives a quarter‑inch thick piece of preformed cellular polystyrene sized to the slot cross‑section, a one‑and‑half inch non‑metallic expansion cap positioned with a quarter‑inch clearance from the dowel end, and plastic or non‑metallic chairs that provide at least a half‑inch clearance from all slot surfaces [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Epoxy‑coated smooth dowel bars are installed across cracks where no dowels exist to restore load transfer, and heavy‑duty membranes may be placed over transverse or longitudinal joints and random cracks as directed by the Representative [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Existing transverse expansion joints are identified and marked; full‑depth saw cuts are made on each side of the joint with cut depths no less than one‑third the slab thickness within twelve inches of an edge and no less than one‑quarter elsewhere, the intervening concrete is removed, all joints are cleaned of deleterious material and finally sealed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 131–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 313–338), SECTION 500—RIGID PAVEMENTS (pp. 416–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Transverse cracking is primarily influenced by the condition of the supporting layers, especially when a saturated subgrade loses its bearing capacity and permits traffic stresses to open cracks that run across the pavement, an effect that intensifies during spring thaw because a frozen stratum above the subsoil blocks downward drainage. Deteriorated joints that have broken down into fine particles also impede gravity‑driven water movement, allowing moisture to accumulate beneath the joint and freeze in cold periods, producing localized frost‑heave (tenting) that further promotes transverse fractures. For hot‑in‑place recycled (HIR) asphalt treatments, the cracks must be relatively shallow—no deeper than about one inch—and narrow, with an average opening not exceeding roughly half an inch; the surrounding surface should be free of pronounced load‑induced distress or base deficiencies. The HIR overlay may be placed over any conventional asphalt course provided that at least one and a half inches of sound material remain below the milling depth, but the presence of rubberized binders, fiber reinforcement within the upper two inches, or paving fabric intersecting the cut zone renders the pavement incompatible with the HIR process. Sealants applied to longitudinal or transverse joints are acceptable, yet extensive crack‑sealant layers or large mastic patches disqualify a section from treatment. When concrete or asphalt overlays are used, durability also depends on the material properties of reinforcement; all steel reinforcement must be free of rust, dirt, oil, grease, or other contaminants that could impair the bond with new concrete. Dowel bars must be clean, correctly aligned, and either left exposed with a bond‑breaking coating applied at least one hour before concrete placement or replaced with a full‑depth patch if misaligned or severely deteriorated; allowable dowel deviation is limited to 0.25 in vertically or horizontally and no more than 1 in longitudinally or laterally. Non‑metallic chairs require a minimum half‑inch clearance from all slot surfaces, and the slot depth must correspond to the slab thickness; all debris must be removed and the slot air‑blasted at a pressure of at least 100 psi within thirty minutes before concrete placement. Temperature constraints are strict: concrete temperature at placement must be maintained between 65 °F and 90 °F, the existing surface temperature must be below 120 °F, ambient daytime temperatures may not fall below 40 °F, and the subgrade or base course may not be frozen; for asphalt overlays the air or surface temperature must stay above 50 °F and the surface must be dry. The cured overlay is required to achieve a minimum compressive strength of 3,600 psi before traffic, and bond‑strength testing per ASTM C1583 must average at least 175 psi with no individual specimen below 160 psi; failure to meet these values renders the work defective. Existing pavement conditions further dictate treatment suitability: cracks or joints located within ten feet of another joint, cracks wider than a quarter‑inch, surface defects larger than four square inches and deeper than one inch, or loaded slab corner deflections of 0.02 in or greater must be addressed by cleaning, roughening, sealing with the specified rubberized sealant at least twenty‑four hours before paving, and applying expansion joint material at least a half‑inch thick that extends at least a half‑inch below the repair bottom, while joint efficiency must be at least 65 %. If a transverse crack exceeds half the slab thickness, a full‑depth patch is required; otherwise partial‑depth repairs are permissible for cracks no deeper than half the slab thickness, with spot repairs used for lengths between fifteen inches and six feet and extended repairs for longer sections. Saw cuts prepared for joint repair must achieve at least one‑third of slab depth within twelve inches of the edge and at least one‑fourth elsewhere; geotextile interlayers may be employed only after all surface defects are patched, placed flat on a clean substrate, overlapped by eight inches (± 2 in.), and kept below 120 °F before overlay placement. Finally, sealants must be applied within the over‑band tolerances prescribed, and any wet surfaces or temperatures below the specified minima preclude asphalt placement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 131–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 337–338), SECTION 500—RIGID PAVEMENTS (pp. 355–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>The repair of a transverse crack begins with a documented quality‑control plan that is approved before any work starts. At least twenty‑four hours prior to placing any new material, all joints and cracks that are one quarter inch or wider must be sealed using the specified rubberized sealant, taking care to keep the sealant over‑band within the tolerances of Section 469, while any thermoplastic or tape markings thicker than 0.20 inch are removed and surfaces contaminated with oil, grease, or fuel are thoroughly cleaned; a final sweep is performed immediately before applying the surface treatment. Existing transverse expansion joints are identified and clearly marked, and the repair zone is laid out as a rectangle extending roughly three inches beyond each side of the cracked area, with minimum dimensions of fifteen by ten inches and a depth of at least two inches but not exceeding half the slab thickness. The unsound concrete within this zone is removed to the required depth – either by scarifying the surface to the indicated depth for an overlay or by saw‑cutting a perimeter to a minimum of two inches and using a chipping hammer (no larger than thirty‑five pounds) or a lightweight jackhammer not exceeding thirty pounds for interior removal. The exposed faces are then shot‑blasted, water‑blasted, or cleaned with oil‑free compressed air at a pressure of one hundred psi or greater, eliminating all loose material and slurry within twenty‑four hours of concrete placement. For joints that will receive dowel bars, two parallel saw cuts are made on each side of the crack so that the dowel centre aligns with mid‑depth of the slab; the intervening concrete is removed, the slots are cleaned, a bond‑breaker lubricant is applied to Type B coated dowels at least one hour before concreting, and the dowels are seated on non‑metallic chairs with the required clearances and capped. Joint backing or other approved joint‑filling material is installed within a quarter inch of the existing joint face before any overlay is placed. The repair concrete or overlay mix is then placed into the prepared slot or zone, vibrated to consolidate around dowels where applicable, and finished and textured to match the surrounding pavement profile. Curing follows the standard procedure: a curing compound is applied within thirty minutes after bleed‑water has dissipated and maintained until the pavement reaches the compressive strength required for traffic opening; insulating blankets are provided when ambient temperatures are forecast at forty‑five degrees Fahrenheit or lower, and the repaired area is protected from rapid heat loss until it attains sufficient strength. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 337–338), SECTION 500—RIGID PAVEMENTS (pp. 417–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Implementation begins with establishing temporary traffic control in accordance with Maintenance and Protection of Traffic guidelines and coordinating a detour with the District Traffic Unit, ensuring that the alternate route is maintained before vehicles are shifted. Both guides require that any existing expansion or transverse joints be identified and marked prior to work, and when new joints are needed they must be created by saw cutting using a green‑cut or power‑driven self‑propelled saw capable of making two parallel cuts per dowel slot, cut to at least one‑third the slab thickness and a minimum width of ¼ in. Removal of unsound concrete may be accomplished with a mechanical scarifier, a chipping hammer not exceeding 35 lb, or a milling machine equipped with an appropriate cutter head, and all loose debris must be cleared promptly, with final air‑blast cleaning using oil‑free, moisture‑free compressed air at a minimum of 100 psi no later than thirty minutes before placement of the repair mix. For dowel‑bar retrofits the sequence proceeds after traffic diversion, employing dowel‑installation tools to place load‑transfer bars across the transverse crack and then backfilling the slots, while a lubricant is applied to the dowels at least one hour before concrete placement. When hot‑in‑place recycling is selected, milling equipment is first deployed to cut to a depth that opens the crack and preserves vertical clearances for overhead structures, curbs, gutters, and guide rails, after which HIR plant equipment lays the recycled mix and sealant may be applied to joints. The HIR method limits acceptable cracks to depths less than one inch and average widths no greater than a half‑inch; cracks exceeding these dimensions require alternative repair such as dowel retrofit or conventional concrete overlay. For conventional concrete overlays the equipment includes supply pumps, valves, mixing gear and injection guns for grout or stabilizing material, with hole spacing, depth, diameter, drilling method and injection sequence defined in advance, and a paver equipped with a front‑mounted spray bar positioned ahead of a variable‑width heated screed is required to place UTFCEM and UTWC layers within five seconds. Environmental limits dictate that concrete be placed when its temperature is between 65 °F and 90 °F and the prepared surface temperature does not exceed 120 °F, while asphalt or polymer‑modified mixes require a dry surface and air or surface temperatures of at least 50 °F; work must be avoided if daytime temperatures fall below 40 °F or if subgrade or base materials are frozen, and protective covers or insulating blankets are mandated when ambient forecasts are 45 °F or lower with fog‑mist. The HIR guide adds only the requirement that traffic may not return until the newly placed surface has cooled to the temperature specified in the project specifications, which serves as the primary traffic restriction for that method. Curing procedures across sources require that curing materials be applied within thirty minutes of bleed‑water dissipation and remain in place until the pavement attains the prescribed strength—such as a minimum compressive strength of 3 600 psi—and bond criteria before opening to traffic, with concrete over dowel slots sealed after at least twenty‑four hours of prior sealant application. Construction traffic is prohibited on sensitive layers such as geotextile interlayers, and sharp turns or braking are minimized until joint work is completed; normal traffic resumes only after the final overlay has cured (or after the HIR surface has cooled) and all strength, bond and curing requirements have been satisfied. The overall sequencing therefore follows a consistent pattern of traffic control and detour setup, joint identification and marking, removal or milling of damaged concrete, placement of dowels or execution of HIR recycling, sealing and curing, installation of any permanent overlay before season’s end, and final reopening to traffic once temperature, strength and environmental conditions meet the specified thresholds. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 131–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 337–338), SECTION 500—RIGID PAVEMENTS (pp. 417–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>Inspection of transverse‑crack repairs is organized around four stages: materials, preparation, installation, and final acceptance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The evaluator confirms that all dowel‑bar retrofit components, sealants, concrete patch mixes, epoxy bonding agents, and any required geotextile interlayer meet the approved specifications, with only authorized sealant types permitted [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Prohibited materials are identified: rubber in pavement precludes hot‑in‑place recycling, fiber reinforcement is not allowed within the upper two inches of the surface layer, and non‑metallic expansion caps must provide a clear‑ance of at least one quarter inch [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Approved joint fillers such as preformed polystyrene or half‑inch expansion joint material are required when repairs intersect existing transverse joints [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Existing crack faces and any delaminated concrete are cleaned thoroughly, with loose debris removed and the surfaces air‑blasted using oil‑free air at a minimum of one hundred psi no more than thirty minutes before placement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The severity of transverse cracking is measured; depth must not exceed one inch and average width must stay at or below half an inch, while any surface defect larger than four square inches by one inch must be filled with compatible patch material [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Unsound concrete is sound‑tested using steel bars, drag chains, or hammers to delineate repair limits that extend beyond the visible crack, and all unsound material is removed to a minimum depth of two inches but not deeper than half the slab thickness, leaving a roughened substrate for bonding [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The base beneath the repair area is examined; areas of obvious failure are replaced with material capable of providing adequate structural capacity and drainage, and thin asphalt layers must not be left under hot‑in‑place recycling layers [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Dowel‑bar retrofit slots are cut with a power‑driven self‑propelled saw that makes two parallel cuts per slot, the depth being at least one‑third of slab thickness within twelve inches of edges and at least one‑fourth elsewhere; cuts are made at mid‑depth aligned with the centreline [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Slot cleaning is completed within twenty‑four hours of cutting, followed by a final air‑blast cleaning within thirty minutes before concrete placement, ensuring no debris remains [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Dowel ends must remain within 0.25 inch of vertical or horizontal displacement relative to the midpoint, and chairs provide at least a half‑inch clearance on all slot surfaces; any longitudinal translation is limited to one inch [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The hot‑in‑place recycling layer, when used, must achieve its minimum specified thickness and be placed over a sound base without thin asphalt layers beneath; sealant application follows the approved procedures and must restore load transfer across the joint [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Visual inspections during placement watch for new cracks between grout injection holes, and deflection testing of each transverse joint is performed in accordance with ASTM D4695, recording loaded slab corner deflection; values of 0.02 inch or greater trigger stabilization actions, and a joint‑efficiency of 65 % or more may require replacement as directed by the representative [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Temperature during placement must remain below one hundred twenty degrees Fahrenheit, and curing compounds are applied at the rates specified in Section 516.3(j) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After cure, the load‑transfer system is verified to operate as intended, and re‑sounding confirms that all delamination has been removed and crack dimensions remain within the prescribed depth and width limits [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Sealed cracks must stay intact, oversized mastic patches or markers are removed, and the finished slot surface must match the existing pavement profile without any new cracks outside the sawed joints; any crack occurring within 1.5 feet of a joint requires corrective action [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Final acceptance is granted only when all testing criteria are satisfied and defective work has been corrected at no cost to the department [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 131–133); [2] — SECTION 500—RIGID PAVEMENTS (pp. 417–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>An acceptable transverse crack in high‑intensity‑traffic (HIR) asphalt projects must be confined to the surface, have a depth of less than one inch, and exhibit an average width that does not exceed the medium rating of half an inch [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For concrete slab retrofits, a satisfactory condition is defined by the complete absence of cracks outside the prescribed saw‑cut joints after treatment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The required saw cuts run parallel to the roadway centreline and must reach at least one‑third of the slab thickness within twelve inches of any edge and no less than one‑quarter of the thickness elsewhere [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Cut surfaces are to be free of debris, cleaned a minimum of twenty‑four hours before concrete placement, given a final air‑blast cleaning within thirty minutes prior to patching, and sealed immediately after cutting [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Dowel bars installed in the slots must adhere to strict geometric tolerances: each end may deviate no more than 0.25 inch from the dowel midpoint, longitudinal translation along traffic direction may not exceed one inch, lateral translation across the joint may not exceed one inch, and no movement is permitted during vibration [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The finished surface after retrofit must match the existing pavement profile, including wheel ruts, to be deemed satisfactory [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Joints or cracks that display a loaded slab‑corner deflection of 0.02 inch or greater together with a joint efficiency of 65 percent or more, when approved, must be stabilized as part of an acceptable repair [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The emergence of any transverse crack between adjacent grout‑injection holes after the retrofit triggers full‑slab replacement, making the absence of such cracks a key indicator of satisfactory performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Concrete panels that develop cracking outside the sawed joints are considered defective and therefore unsatisfactory [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Sawing must be omitted if a crack is present at or within one‑and‑a‑half feet of a planned joint location before or during sawing, with the condition addressed according to specified remedial procedures [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 131–133); [2] — SECTION 500—RIGID PAVEMENTS (pp. 422–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Transverse cracks in concrete pavements indicate a deterioration of pavement condition because saturated subgrades no longer provide adequate support for the slabs, compromising functional performance and ride quality. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The compromised condition reduces durability and shortens the expected service life unless drainage conditions are improved. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When the severity of transverse cracking exceeds the acceptance limits—specifically a depth greater than 1.0 inch or an average crack width beyond the medium rating of ½ inch—the pavement cannot be successfully rehabilitated with Hot‑In‑Place Recycled treatment, which otherwise would seal the cracks, improve surface appearance, and provide a short‑term wearing layer that prolongs functional service until a permanent surface is placed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Keeping transverse cracks within those thresholds therefore preserves condition, maintains functionality, enhances durability, and extends the pavement’s service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In addition, if transverse cracks develop between adjacent grout‑injection holes, the guides require complete slab replacement at no additional cost to the Department, reflecting that such cracks effectively terminate the remaining service life of the affected slab until it is replaced. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 131–133); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Transverse cracking in concrete pavements is frequently linked to inadequate subsurface drainage that allows moisture to accumulate beneath the slab, reducing support and permitting traffic loads to open cracks perpendicular to the pavement centerline. This condition becomes especially acute during spring thaw when a frozen layer below impedes percolation of water, and when deteriorated joints trap water that later freezes, producing tenting or localized frost‑heave. The same moisture‑related mechanisms also predispose treated sections to debonding if the saw cut made for an overlay is not sized at least as wide as the existing joint or crack. Bond‑strength testing must demonstrate an average of no less than 175 psi with each specimen meeting a minimum of 160 psi; failure to meet these thresholds classifies the treatment as defective. Rapid temperature fluctuations during curing, typically exceeding about forty degrees Fahrenheit per hour, or exposure to rain, poor final finish, and unrepaired honeycombing further increase the likelihood of debonding failures. After slab stabilization, the appearance of transverse cracks between adjacent grout‑injection holes signals insufficient vertical restraint, requiring cessation of pumping and, if loaded corner deflection does not reach at least 0.02 in and joint efficiency is below 65 %, replacement of the entire slab. Unintended cracking outside the intended saw‑cut joints also renders a panel defective, often resulting from improper joint layout such as panels larger than eighteen times the overlay thickness or with a length‑to‑width ratio greater than 1.5, and from insufficient cut depth—no less than one‑third of slab thickness within twelve inches of an edge and at least one‑quarter elsewhere. Failure to clean and seal joints can produce random cracking or cracks occurring within 1.5 ft of a planned joint, leading to omission of the saw cut and the need for special remedial actions. Collectively, these distresses underscore that both moisture management in the subgrade and strict adherence to procedural thresholds for cuts, testing temperatures, bond strength, grout injection control, and panel geometry are critical factors influencing the development and treatment failure of transverse cracks. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 500—RIGID PAVEMENTS (pp. 455–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After the transverse‑crack repair is completed, the treated area must be inspected in several stages. First, a bond‑strength test required by ASTM C1583 is performed seven days after surface preparation with the Inspector present; the Inspector selects five random locations per lot and conducts three tests at each location. The work passes only if the average strength of the three tests is at least 175 psi and no individual result falls below 160 psi, and the concrete must also have reached a compressive strength of at least 3,600 psi before it may be opened to traffic. In addition, a visual examination for any new transverse cracks that appear between adjacent grout‑injection holes is required; the discovery of such a crack mandates replacement of the entire slab in accordance with the specifications. If the Representative directs, a follow‑up deflection test is carried out about 24 hours after grouting and prior to final acceptance to confirm that slab movement does not exceed the established limits, and any excess deflection triggers re‑grouting or other corrective action. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 455–457), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>When transverse cracks are observed to be active, meaning they are working cracks that reduce the pavement’s ability to transfer loads, the area is flagged for further action [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Any crack that meets the cleaning‑and‑sealing criteria of the specifications or any working transverse crack that requires restoration of load‑transfer capacity likewise calls for maintenance such as sealant application or dowel‑bar retrofit [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The need for more than routine surface treatment becomes evident when the measured depth of a transverse crack exceeds roughly one inch or when its average width surpasses the medium rating of half an inch, both of which are beyond the accepted severity limits [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Cracks that propagate below the surface layer and are accompanied by distress in the underlying base similarly breach acceptance criteria and require repair or rehabilitation beyond simple sealing [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Excessive use of sealant, including over‑banded rubberized joint seals, is not acceptable for high‑intensity rehabilitation processes and signals that additional corrective work is needed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Joint openings wider than one‑eighth inch, depressions between adjacent lanes of three‑sixteenths inch or more, and edge slump greater than a quarter inch within the outer six inches next to the shoulder are all listed as defect thresholds that trigger corrective action [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The appearance of any visible crack or spall before final inspection also mandates repair according to prescribed procedures [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Misaligned dowels beyond their allowable displacement, missing tie‑bars adjacent to joints where cracks have opened at least one‑eighth inch, and failures identified during construction or sawing of transverse joints each require remedial measures [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Bond‑strength testing that yields an average below 175 psi or any individual result under 160 psi classifies the treated area as defective and calls for rework [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Temperature changes during curing exceeding forty degrees per hour, failure to achieve a minimum compressive strength of 3,600 psi before traffic opening, and surface defects such as honeycombing, rain damage, or poor finish are all indicators that the pavement must be repaired or reconstructed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After grout injection, the development of new transverse cracks between adjacent injection holes necessitates replacement of the entire slab [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Deflection testing that records a loaded slab‑corner deflection of 0.02 inch or more signals trouble; if joint efficiency is at least sixty‑five percent the joint must be stabilized, while efficiencies below that level require patching and stabilization—both representing additional maintenance needs [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Visible instability, such as slabs or fragments that rock under normal traffic loads, also requires stabilization or repair before further work can proceed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Surface defects larger than four square inches and deeper than one inch must be filled prior to placement of interlayer material, indicating the need for corrective treatment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Cracks that extend beyond sawed transverse joints or that occur within approximately one‑and‑a‑half feet of a joint before it is cut are considered defective and must be addressed through repair or rehabilitation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 131–133); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

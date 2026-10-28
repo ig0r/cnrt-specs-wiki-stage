@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pavement Base Drain</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html" class="active" aria-current="page">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Pavement Base Drain</span></nav>
+<article><h1>Pavement Base Drain</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Pavement Base Drain is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Pavement Base Drain is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=pavement-base-drains">pavement-base-drains</a><a class="tag" href="index.html?q=pavement-base-drain">pavement-base-drain</a><a class="tag" href="index.html?q=continuous-pavement-base-drain">continuous-pavement-base-drain</a><a class="tag" href="index.html?q=continuous-pavement-base-drains">continuous-pavement-base-drains</a><a class="tag" href="index.html?q=base-drains">base-drains</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>A pavement base drain is a subsurface conduit installed alongside concrete or asphalt pavements to intercept and remove free and capillary water from the base, sub‑base, and underlying subgrade, thereby preventing moisture‑induced distress such as frost heave, cracking, rutting and surface roughness and extending pavement service life[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. It consists of a prefabricated inert‑plastic core placed in a trench that is excavated after the roadway surface is laid, lined with Class 1 geotextile and extending at least two inches into the subgrade; water enters through the geotextile and open‑core areas (minimum six percent on the pavement side face and three percent on the shoulder side) and is conveyed by positive gravity flow of no less than fifteen gallons per minute for each foot of pavement width within twenty‑four hours of trenching[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The core must satisfy performance thresholds—including a tensile strength of at least 1,200 psi, water absorption not greater than 0.01 % after 24 hours, and a crush strength of forty psi—while the surrounding geotextile permits unobstructed inflow over at least fifty percent of its pavement‑side area, and all pipe fittings and connections are sealed to maintain continuous flow[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Pavement base drains are employed to counteract the fundamental engineering problem of water accumulation within the base, sub‑base, and underlying subgrade, which otherwise undermines support, induces frost heave, cracking, rutting, and surface roughness, thereby shortening pavement life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] By providing a subsurface conduit that removes infiltrating moisture before it can degrade the structural integrity of the base layer, the system directly addresses moisture‑related distress and preserves subgrade bearing capacity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The design requires the drain to be installed after the adjacent roadway pavement is placed, in a trench extending at least two inches into the subgrade and lined with Class 1 geotextile, ensuring that water can enter the drainage core while preventing soil intrusion. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All pipe fittings and connections are sealed to maintain continuity of flow, and the drain must achieve positive gravity flow within twenty‑four hours of trenching, guaranteeing rapid removal of excess water. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] To meet the required conveyance capacity, the prefabricated drain is specified to transport no less than fifteen gallons per minute for each foot of pavement width in accordance with ASTM D4716, and its core must retain open‑area percentages of at least six percent on the pavement side face and three percent on the shoulder side face. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Moreover, the geotextile wrap must allow unobstructed inflow across a minimum of fifty percent of its area on the pavement side, providing sufficient water capture to sustain the prescribed flow rate. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Collectively, these provisions ensure that excess moisture is efficiently evacuated, thereby enhancing durability and delivering more uniform pavement performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510)</small></p>
+<p>A pavement base drain is required to remove free and capillary water from the base and subbase, lower intersecting water tables, intercept seepage from cuts, and prevent surface ponding that could infiltrate the pavement structure, thereby protecting the subgrade support and extending pavement life. The drain must provide reliable positive‑gravity flow that begins within twenty‑four hours of trenching and is capable of delivering at least fifteen gallons per minute for each foot of width while maintaining a minimum open‑core area of six percent on the pavement side face and three percent on the shoulder side to assure unobstructed inflow through the geotextile. Structural requirements call for installation in a trench adjacent to the pavement edge after the roadway surface is placed, with appropriate headwalls in mowable areas and spacing that follows design manuals for edge, low‑side superelevation, and median locations where subsurface water problems exist; the pipe must rest on Class 1 geotextile, be seated on at least two inches of well‑tamped embankment material, and be backfilled with fine‑aggregate Type A placed in hydraulically compacted lifts not exceeding nine inches, applied in roughly four‑inch increments to achieve a uniformly firm trench bottom. All joints, fittings and connections are required to follow manufacturer details so that soil intrusion is precluded and continuity of flow is maintained, with outlet openings spaced no more than fifteen feet through the wall and solid pipe sections used wherever contact with flowable backfill cannot be avoided; a pre‑formed drain not thicker than two inches may be placed between the wall and fill, and the surrounding non‑woven needle‑punched geotextile must cover at least fifty percent of the pavement side face. The core material must possess a tensile strength of at least 1,200 psi and a crush strength of not less than 40 psi, while the geotextile membrane used to protect against intrusion by flowable fill shall be Class 4 Type A where required. Durability is achieved by protecting the pipe during shipping, storage and installation, repairing any geotextile tears, limiting water absorption to no more than 0.01 % after twenty‑four hours, ensuring fungus resistance, shielding plastic ends from sunlight deterioration with concrete endwalls or suitable coverings, and applying water‑sprayed compaction of the backfill; these measures keep the subgrade supported by eliminating moisture that would cause aggregate deterioration, freeze‑thaw damage, pumping, and frost heave. Safety provisions include barricading trenches at all times, never leaving them open during precipitation or overnight, sealing upstream pipe ends to keep foreign material out, protecting outlet structures from crushing or plugging, and marking each subsurface outlet with a red marker embedded at least eighteen inches below the surface so that approaching traffic can see it. Serviceability is maintained by preserving uniform drainage performance, preventing rutting, cracking, surface roughness and loss of ride quality, and ensuring that alignment and structural integrity of the drain are retained throughout the pavement’s service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–514)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Pavement Base Drain is appropriate for both concrete and asphalt pavements whenever subsurface water threatens the structural performance of the pavement, encompassing new construction as well as rehabilitation projects on Interstate and non‑Interstate routes.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The design presumes a highly permeable granular base or subbase that can convey water by gravity, making such material conditions a prerequisite for its use.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Continuous edge drains are called for along the outer edge of the pavement, on the low side of superelevated sections, and on median sides where water accumulation is observed, while lateral underdrains are especially recommended at cut‑to‑fill transitions, in wet subgrade areas, sag zones, or wherever existing drainage is deficient.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Particular emphasis is placed on pavements that have been cut into hillsides or that have been identified by maintenance personnel as experiencing water‑related distress.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The drain can be installed after the adjacent pavement has been placed, provided it is not located beneath curbs or other special features where installation would be impractical.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Installation requires excavating a trench immediately adjacent to the pavement edge without disturbing the existing subbase and extending at least two inches into the underlying subgrade.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The trench must be lined with Class 1 geotextile, and backfilled with fine‑aggregate Type A compacted in lifts not exceeding nine inches, ensuring continuous contact between the aggregate, the geotextile, and the trench walls.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<p>When the level of permeability required for a pavement base drain would compromise the stability needed for construction equipment, designers often select an alternative that sacrifices some drainability to provide a more stable work platform and reduce initial costs. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Similarly, when project budgets limit the amount of drainage features that can be incorporated, the guides acknowledge that a reduction in drainability may be accepted as a cost‑saving measure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The normal practice of installing the base drain after the adjacent roadway pavement and excavating the trench without disturbing the sub‑base cannot be followed when the drain must be placed beneath curbs or other special locations, prompting the use of a different design solution. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] If the planned flowable backfill would intersect a base‑drain outlet, the design is required to shift to solid pipe outlets rather than the standard configuration. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] An inability to dewater the excavation also forces the adoption of tremie placement methods instead of conventional installation techniques. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Flowable backfill cannot be placed when its material temperature is below 50 °F or when air or surface temperatures are at 40 °F or lower, conditions that necessitate an alternative drainage or back‑fill design. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Lifts greater than four feet are prohibited unless specially approved, and this restriction likewise leads to the selection of a different drainage approach. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Finally, any form used must be sized to resist lateral fluid pressure with a factor of safety of at least 1.3; when this requirement cannot be met, designers must resort to an alternative solution. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The design and construction of pavement base drains are governed by a collection of state publications, contract specifications, standard drawings, and test standards that together define sizing, placement, material performance, installation procedures, and project‑level constraints. Pavement base drain sizing and outlet spacing must be designed according to the method shown in Publication 13M, Design Manual Part 2, Highway Design, Chapter 10 Section 10.3.D. All outlets located within mowable areas are required to be protected by appropriate headwalls as detailed in Publication 72M, Roadway Construction Standards (RC‑30M). Continuous edge drains are mandated along the outer edge of the pavement, on the low side of superelevated sections, and on the median side where subsurface water problems exist; this requirement applies to Interstate projects and to all non‑Interstate projects that encounter subsurface water issues. Lateral underdrains must be installed at cut‑to‑fill transitions, and subgrade drains are considered wherever evidence of water damage or sag areas is observed. Installation must follow the Standard Drawings and Section 610.3 of the contract documents, with detailed trench‑preparation procedures outlined in Section 615.3. The trench is excavated without disturbing the existing sub‑base, extending at least two inches into the subgrade, and its bottom must be uniformly firm and smooth to assure positive gravity flow. Pipe—whether prefabricated or perforated—is positioned after the adjacent roadway pavement has been placed (except beneath curbs) on a minimum of two inches of properly tamped embankment material, and all fittings are limited to deflection angles of forty‑five degrees or less with splices overlapped by at least six inches of geotextile. Backfill is placed in compacted lifts not exceeding nine inches when hydraulic compaction is used, commonly applied in four‑inch increments with thorough tamping; each lift is sprayed with one gallon of water per linear foot and must consist of Type A fine aggregate or other satisfactory embankment material as required by the specifications. The drain system is protected from intrusion by a Class 4 Type A geotextile membrane, while the primary drainage fabric throughout the base uses Class 1 geotextile in accordance with Section 212.3(b). Prefabricated drains must incorporate an inert plastic core that meets ASTM D638 tensile strength of at least 1,200 psi, ASTM D570 water absorption not greater than 0.01 % after twenty‑four hours, a minimum crush strength of forty psi per GRI‑GC4, and a verified flow capacity of fifteen gallons per minute per foot of width as demonstrated by ASTM D4716. The core must provide at least six percent open area on the pavement‑side face and three percent on the shoulder side face, be wrapped in a non‑woven needle‑punched geotextile that permits unobstructed inflow over half of its pavement‑side area, and all material approvals must be supported by certified test data or laboratory testing before inclusion in Bulletin 15 with each shipment labeled per Section 106.03(b)3. Outlet pipes intersecting flowable backfill are required to be solid; the pre‑formed drain thickness shall not exceed two inches, and outlets are spaced no more than fifteen feet apart through the wall unless directed otherwise by the Representative. When flowable backfill is used it must satisfy Table A criteria and be tested for slump according to AASHTO T119, air content according to AASHTO T152 or T196 without aggregate correction, yield per AASHTO T121/ASTM C136, and compressive strength as specified in PTM No. 604. Project constraints include submitting installation methods to the Representative at least two weeks before work begins, completing outlet piping within twenty‑four hours of trenching, prohibiting open trenches during precipitation or leaving them deeper than two inches overnight, protecting plastic pipe ends from sunlight with endwalls, and marking each subsurface drain outlet with a red marker embedded at least eighteen inches deep. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=6536b403 src=408_2020_11::tab:p508#1 -->
+<p>The table below specifies the physical requirements and test methods for the geotextile fabric used in prefabricated pavement base drains.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-base-drain-1-cap" tabindex="0"><table class="ct-table" id="ct-pavement-base-drain-1" aria-describedby="ct-pavement-base-drain-1-sum">
+<caption id="ct-pavement-base-drain-1-cap">TABLE APrefabricated Pavement Base Drain - Geotextile Physical Requirements</caption>
+<thead>
+<tr><th scope="col">Fabric Properties</th><th scope="col">Test Method</th><th scope="col">Required Value (1)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">1. Grab Tensile Strength, lbs.</th><td>ASTM D4632</td><td>158</td></tr>
+<tr><th scope="row">2. Grab Tensile Elongation, %</th><td>ASTM D4632</td><td>50</td></tr>
+<tr><th scope="row">3. Puncture, lbs. (2-inch flat-end rod)</th><td>ASTM D6241</td><td>400</td></tr>
+<tr><th scope="row">4. Trapezoid Tear Strength, lbs.</th><td>ASTM D4533</td><td>56</td></tr>
+<tr><th scope="row">5. Apparent Opening Size (AOS), Sieve No.</th><td>ASTM D4751</td><td>100 to 50</td></tr>
+<tr><th scope="row">7. Permittivity, sec-1</th><td>ASTM D4491</td><td>1.1</td></tr>
+<tr><th scope="row">9. Ultraviolet Resistance Strength Retention, %</th><td>ASTM D4355</td><td>70 @ 500 hrs.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-pavement-base-drain-1-sum">Rows list physical properties of fabric for pavement base drain, columns provide the test method and required value.</p>
+<p class="ct-notes">Notes: (1) The numerical values indicate average minimum roll value or minimum to maximum range, except as noted.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 508.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–514)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The sizing of pavement‑base drains and the spacing of their outlets are prescribed by the procedure set out in Publication 13M, Design Manual Part 2, which requires calculation of pipe intervals to achieve rapid removal of water from the pavement structure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Materials for the base and subbase must be highly permeable, with gradation used as an indicator of permeability, and the slope of the subbase is maximized to promote gravity‑driven drainage within the granular layers [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Lateral underdrains are called for in locations where the subgrade remains wet or where cut‑to‑fill transitions occur, and outlet protection devices must conform to the requirements of Publication 72M [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Construction begins after fine grading when a pipe underdrain is positioned, after which the pavement base drain is installed only after the adjacent roadway pavement has been placed, except in special situations such as beneath curbs [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A trench is excavated alongside the pavement edge without disturbing the existing subbase, extending at least two inches into the subgrade and following standard drawing dimensions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Within this trench the drain core—an inert plastic element that satisfies tensile‑strength, water‑absorption, crush‑strength and flow‑capacity criteria—is laid on a Class 1 geotextile layer [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The backfill consists of Type A fine‑aggregate sand placed in hydraulically compacted lifts not exceeding nine inches in thickness, each lift being moistened with one gallon of water per linear foot to obtain proper compaction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All pipe connections employ fittings limited to deflection angles of forty‑five degrees or less to preserve unrestricted flow through the system [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The design does not depend on analytical equations but rather on performance criteria established by ASTM and AASHTO standards, which specify a minimum flow capacity of fifteen gallons per minute for each foot of width of the drain [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. This flow requirement translates to at least six percent open area on the pavement‑side face of the core and three percent on the shoulder face [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Perforations in any associated pipe must provide an inlet area of 1.4 square inches per linear foot, delivering an infiltration rate of ten gallons per minute per foot as defined by AASHTO M 176M [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The surrounding geotextile is required to allow unobstructed inflow over roughly one‑half of its pavement‑side area and about one‑tenth of its shoulder area [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Compliance with these performance targets is verified through the ASTM D4716 flow‑rate test, which confirms that the installed system meets the prescribed drainage capacity [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510)</small></p>
+<p>Pavement base drains are required to deliver reliable subsurface drainage by employing highly permeable base and subbase materials that permit rapid gravity‑driven water removal, and by configuring the sub‑base layers with sufficient slope to encourage flow [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The layout must incorporate closely spaced drainage pipes and outlets so that water can reach a conduit within a short travel distance, and the sizing and outlet spacing are to be determined in accordance with the procedures set out in Publication 13M, Design Manual Part 2, Chapter 10, Section 10.3.D [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. All drain outlets must be protected from crushing or plugging, typically by installing appropriate headwalls as stipulated in Publication 72M, to ensure continued functionality throughout the pavement’s service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Lateral underdrains are strongly recommended at locations where the subgrade is expected to remain wet and at cut‑to‑fill transitions, while continuous edge drains should be placed along the outer edge of the pavement, on the low side of superelevations, and within medians wherever water accumulation problems have been identified [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Installation requires a trench whose width follows the Standard Drawings and whose depth extends at least two inches into the subgrade, with continuous Class 1 geotextile lining the trench to provide separation and filtration [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Adjacent sections of geotextile must overlap by a minimum of six inches to maintain continuity, and the trench is backfilled with fine‑aggregate Type A placed in hydraulically compacted lifts not exceeding nine inches thick; each lift is sprayed with one gallon of water per linear foot to achieve proper moisture conditioning [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All connections and fittings are required to prevent soil intrusion, preserve unrestricted flow, and be protected from damage during construction activities [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Prefabricated base drains consist of an inert plastic core wrapped in a non‑woven needle‑punched geotextile, and the core must satisfy performance thresholds that include a minimum tensile strength of 1 200 psi (ASTM D638), water absorption not greater than 0.01 % after 24 hours (ASTM D570), and a crush strength of at least 40 psi (GRI‑GC4) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The hydraulic capacity of the core is required to convey at least fifteen gallons per minute per foot of width, while providing a minimum open area of six percent on the pavement side face and three percent on the shoulder side face; the surrounding geotextile must permit unobstructed inflow through at least fifty percent of its area on the pavement side and twelve percent on the shoulder side [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Acceptance of each drain product is based on certified test data or laboratory testing, and every shipment must be clearly identified with lot number and product details to support traceability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any formwork used to support the drain during placement must be capable of resisting the lateral fluid pressure generated by unhardened flowable backfill with a factor of safety of no less than 1.3, thereby providing structural reliability during construction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Drain outlets are required to remain free of backfill material; when an outlet intersects a zone that will receive flowable backfill, a solid pipe must be provided to prevent blockage, and pre‑formed drains positioned between a wall and fill may not exceed two inches in thickness with discharge points spaced no farther than fifteen feet through the wall unless otherwise directed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>The specification requires that the base and subbase material be highly permeable to allow gravity drainage, which is achieved by using a granular aggregate whose gradation meets the permeability indicator used in state guidelines. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The design must identify the type of aggregate, its size range, shape, and any gradation limits needed to create sufficient void space that prevents capillary rise. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In addition, the drain system incorporates a prefabricated unit consisting of an inert plastic core wrapped in a non‑woven, needle‑punched geotextile fabric made from virgin resin, providing both structural strength and filtration. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The geotextile shall be Class 1 as required for all such installations. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The plastic core must meet performance criteria including a minimum tensile strength of 1,200 psi measured according to ASTM D638 and water absorption not greater than 0.01 % after 24 hours per ASTM D570. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The core must also provide at least six percent open area on the pavement‑side face and three percent on the shoulder side face. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Backfill surrounding the drain shall be fine‑aggregate Type A sand placed in hydraulically compacted lifts not exceeding nine inches in thickness, with each lift wetted by approximately one gallon of water per linear foot of trench. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Perforated or semicircular outlet pipe is installed with perforations facing downward and protected by galvanized wire‑mesh shields, and all connections follow the manufacturer’s recommendations. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510)</small></p>
+<p>Materials for the pavement base drain are chosen to be highly permeable granular aggregates whose gradation provides ample void space, with particle‑size distribution used in the field as an indicator of that permeability. The design permits a modest reduction in permeability when a coarser content is needed to furnish a stable work platform for construction equipment, recognizing that constructability sometimes outweighs maximum drainability. By maintaining large inter‑particle voids the material prevents capillary rise and enables rapid gravity drainage, which protects the structural support, durability and overall performance of the pavement system. In addition to aggregate selection, a Class 1 geotextile specified by the applicable section is installed as the interface between the drainage core and surrounding soils, providing filtration while allowing water to pass. The drainage core itself must be a prefabricated inert‑plastic unit that satisfies defined structural thresholds, including a minimum tensile strength of 1,200 psi (ASTM D638), water absorption not greater than 0.01 % after 24 h (ASTM D570), crush strength of at least 40 psi (GRI‑GC4) and a flow capacity of 15 gpm per foot. The core is wrapped in a non‑woven needle‑punched geotextile that filters the backfill while preserving open‑core areas of at least six percent on the pavement face, three percent on the shoulder, and providing coverage of at least fifty percent of the side face to ensure unobstructed inflow. The surrounding backfill consists of fine‑aggregate Type A sand combined with coarse aggregate that meets or exceeds Type C gradation and soundness criteria, and it is placed in hydraulically compacted lifts not exceeding nine inches in thickness. Each lift is sprayed with one gallon of water per linear foot to achieve the required density before compaction. When a flowable backfill is called for, its mix must conform to the type listed in Table A, and any field adjustments are permissible only if the resulting slump, air content, yield and compressive strength remain within the limits of the quality‑control plan. Cylindrical specimens (four inches by eight inches) are molded and tested for compressive strength, and material that fails to meet the Table A strength requirement is removed from the mix. Excavation of the drain trench proceeds without disturbing the existing subbase and extends at least two inches into the subgrade to provide additional structural support. Placement temperature is maintained at a minimum of fifty degrees Fahrenheit, lift thickness for flowable backfill is limited to four feet unless a higher value receives approval, and formwork is designed with a factor of safety of 1.3. All pipe, fittings and connections follow the manufacturer’s approved details and are installed in a sequence that preserves continuous contact among backfill, geotextile and drain, thereby satisfying constructability and long‑term performance requirements. Subbase slopes are maximized and drain outlet spacing minimized within cost constraints to further enhance water removal from the pavement structure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=1743eafc src=408_2020_11::tab:p182#1 -->
+<p>The table below specifies the mix design properties and criteria for Type B, C, and D flowable backfill materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-base-drain-2-cap" tabindex="0"><table class="ct-table" id="ct-pavement-base-drain-2" aria-describedby="ct-pavement-base-drain-2-sum">
+<caption id="ct-pavement-base-drain-2-cap">TABLE AMix Design</caption>
+<thead>
+<tr><th scope="col">Properties &amp; Criteria</th><th scope="col">Type B</th><th scope="col">Type C</th><th scope="col">Type D</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Mix Design ( /CY)Cement (lbs)*SupplementaryCementitious Material(lbs)*Bottom ash (lbs)*or Coarse Aggregateor Fine AggregateAir GeneratingAdmixture*</th><td>503002600</td><td>150-2003002600</td><td>300-700100-400**</td></tr>
+<tr><th scope="row">Slump (inches)AASHTO T 119, ASTM C136</th><td>7 min****</td><td>7 min****</td><td>7 min****</td></tr>
+<tr><th scope="row">Density (pcf)AASHTO T 121, ASTM C136</th><td>N/A</td><td>N/A</td><td>30-70 oras specified ***</td></tr>
+<tr><th scope="row">Water Absorption ofAggregate AASHTO T 85</th><td></td><td></td><td>20% max</td></tr>
+<tr><th scope="row">Compressive Strength (psi)PTM No. 604 28 Days</th><td>125 max</td><td>800 min</td><td>90-400</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-pavement-base-drain-2-sum">Rows list properties and criteria for flowable backfill, columns give specifications for Type B, C, and D mixes.</p>
+<p class="ct-notes">Notes: *Quantities may be varied or alternate designs submitted to adapt mix to conform to density and strength requirements or to adapt to specific site conditions.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 182.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>Pavement base drains are required to run continuously along the outer edge of the pavement, on the low side of any superelevated sections, and on median sides where subsurface water problems have been identified, as well as at cut‑to‑fill transitions and other critical locations flagged by maintenance personnel. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The guides do not prescribe specific joints, reinforcement or load‑transfer devices for the base drain itself, focusing instead on its placement and protection. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The drain is installed as a pre‑formed unit no thicker than two inches and positioned between the retaining wall and any flowable backfill material. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Outlet pipes are provided at intervals of fifteen feet or less through the retaining wall, and where the drain penetrates the flowable fill solid pipe sections are used to maintain structural integrity. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Connections between pipe sections employ standard splice fittings, connecting bands or split couplings that are sized so as not to restrict flow, and each bend is limited to a maximum of forty‑five degrees or a series of such bends. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] At every joint a minimum six‑inch overlap of Class 1 geotextile is required, with the joints sealed on the upgrade side to keep foreign material out. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The entire drainage core is wrapped in non‑woven geotextile; the fabric encircles the core and its longitudinal seam is placed on the shoulder side face near the midpoint, and when an adhesive is used the seam is fabricated with a non‑water‑soluble adhesive. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The geotextile is firmly attached to protrusions on the pavement‑facing side of the core and spot‑bonded on the shoulder side, or alternatively flow testing must demonstrate that an unattached fabric will not deform under load. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All fittings and outlet pipes follow the specifications of Section 615.3, including the use of galvanized‑wire‑mesh shields where required, and concrete endwalls are constructed to protect any outlet that is not tied into an existing drainage system. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When plastic pipe is used, its ends are protected from sunlight with suitable endwalls and backfill material. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A Class 4 Type A geotextile membrane separates the base drain from foundation drains to prevent intrusion or contamination of the flowable fill. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Finally, a red subsurface‑drain outlet marker is embedded at least eighteen inches on the traffic‑facing side of each opening for identification. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–514)</small></p>
+<p>The pavement base‑drain system is integrated with the surrounding pavement structure by selecting highly permeable base and subbase materials that permit rapid gravity‑driven water removal, and by providing the subbase with the maximum practical slope to accelerate flow toward the drains. Continuous edge drains are installed along the outer pavement edge, on the low side of any superelevated sections, and in median areas where subsurface moisture is a concern, while lateral underdrains are placed at cut‑to‑fill transitions and other wet zones identified by maintenance observations. At each interface with existing or new drainage networks the base drain is tied in using satisfactory connections that meet performance criteria, ensuring continuity of flow between the pavement layers and the broader drainage system. All fittings and couplings are chosen so that any change in direction does not exceed a 45‑degree bend, preserving smooth hydraulic conditions through the interface. The drain pipe is laid on a uniformly firm bed of at least two inches of satisfactorily tamped embankment material before sections are joined with split or standard couplings, establishing a stable contact surface between the pipe and the surrounding granular layers. Around the inert plastic core the drain is completely encased in a non‑woven geotextile that is wrapped and seamed lengthwise on the shoulder side, preferably near the midpoint, with an overlap of no less than six inches at each joint to maintain continuity of the filter barrier. Spot‑bonding secures the geotextile to protrusions on the pavement‑facing side of the core, leaving at least half of the geotextile area on that face open for inflow while protecting the shoulder portion from intrusion. The backfill placed adjacent to the drain consists of fine‑aggregate Type A (excluding limestone sand) compacted in four‑inch lifts within the trench and fully tamped, with additional compaction required beneath the pavement or shoulder as specified, thereby keeping full contact with both the geotextile and the drain core and preventing soil entry into the drainage pathway. Standard splice connections and outlet fittings of sufficient strength are used to resist construction handling and permanent loads; any non‑standard items must receive approval before installation. Drain outlets are located away from zones where flowable backfill is placed, and when an intersection cannot be avoided a solid outlet pipe is provided to protect the opening. In mowable areas all outlet terminations are protected by headwalls or concrete endwalls to prevent crushing or plugging, ensuring that the drainage function remains effective. Outlet spacing and pipe layout follow the criteria set out in Publication 13M (or equivalent guidance) to guarantee adequate removal of both surface runoff and subgrade water through the designed interfaces. Where foundation drains run adjacent to the pavement base drain, a Class 4 Type A geotextile membrane and a pre‑formed drain no thicker than two inches are placed between the wall and the fill, with outlets spaced at intervals not exceeding fifteen feet, thereby shielding the interface from contamination by flowable backfill. A red subsurface drain outlet marker is embedded at the prescribed depth to identify the system for future maintenance and to delineate the interface location. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–514)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>Pavement base drains are required to remove both surface runoff and subsurface water so that excess moisture does not degrade subgrade support, cause frost heave, or promote cracking [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. To achieve this, the design calls for highly permeable base and subbase materials together with sufficient subbase slope, allowing gravity‑drainable water to be removed rapidly [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Lateral underdrains and outlets are spaced closely enough to keep water tables below the subbase, and lateral drains are provided at cut‑to‑fill transitions where moisture accumulation is likely, thereby intercepting seepage from cuts and reducing capillary rise [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Drain inlets are protected from crushing or plugging, and the overall system lowers water tables to mitigate climate‑related problems such as freezing and thawing damage [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The drain unit itself is a prefabricated element that incorporates an inert plastic core meeting a minimum tensile strength of 1,200 psi, water absorption not greater than 0.01 % after 24 h, crush strength of 40 psi, resistance to fungal attack, and the capacity to pass at least 15 gallons per minute for each foot of width [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. This core is completely encased in a Class 1 non‑woven needle‑punched geotextile that filters infiltrating water, with a minimum of six percent open area on the pavement side face and three percent on the shoulder side, and at least fifty percent of the geotextile exposed on the pavement side and twelve percent on the shoulder side to ensure unobstructed inflow [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During construction the trench is never left open when rain is possible or overnight, and pipe ends are sealed to prevent entry of soil or foreign material, thereby protecting the system from moisture intrusion during installation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The pipe is placed on a minimum two‑inch layer of well‑tamped embankment material that provides a firm, smooth base promoting positive gravity flow toward the outlet, while the surrounding backfill consists of fine‑aggregate Type A sand placed in hydraulically compacted lifts not exceeding nine inches, commonly applied as four‑inch layers that are thoroughly tamped [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Each hydraulic lift is sprayed with one gallon of water per linear foot to achieve proper moisture content and compaction, ensuring the trench bottom remains uniformly firm and smooth for continuous gravity flow [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All materials are stored protected from weather and ultraviolet exposure until installation, and when a plastic pipe is used its ends are shielded from sunlight by endwalls and appropriate backfill to prevent UV‑induced deterioration [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By combining highly permeable structural layers, appropriately sloped subbase, closely spaced lateral drains, robust prefabricated drain units with specified strength and filtration characteristics, and careful construction practices that control exposure, moisture content, and compaction, the pavement base drain system provides reliable drainage, moisture control, and durability under a range of environmental conditions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 506–514)</small></p>
+<p>The pavement base drain must be installed continuously along the outer edge of the roadway and on the low side of any superelevated sections, with additional drains provided on the median where subsurface water is a problem; lateral underdrains are required at cut‑to‑fill transitions and other wet subgrade locations. The subbase beneath the drain should be sloped as steeply as practical to promote gravity flow, and the drain material must be highly permeable. Outlet structures located in mowable areas must be protected from crushing or plugging by using appropriate headwalls, thereby ensuring safe operation and accessibility for maintenance. Installation occurs in a trench whose width follows the Standard Drawings and whose depth extends at least two inches into the subgrade. The excavation is to be performed without disturbing the existing pavement structure or subbase, and the bottom of the trench must be uniformly firm and smooth to provide positive gravity flow toward the outlet. Trench openings shall not exceed two inches in depth, may not be left open overnight, and must be barricaded at all times in accordance with applicable code requirements. Geometrically, the prefabricated drain core must present a minimum of six percent open area on the pavement‑side face and three percent on the shoulder face, while the geotextile covering the core must allow unobstructed inflow across at least fifty percent of its area on the pavement side and twelve percent on the shoulder side. The core material shall be an inert plastic that meets durability criteria, including a minimum tensile strength of 1,200 psi (ASTM D638) and a crush strength of forty psi, and it must exhibit low water absorption and resistance to fungal attack. Outlet pipes intersecting flowable backfill shall be solid, and their placement shall avoid any conflict with the backfill operation. A Class 4 Type A geotextile membrane shall separate the drain from the surrounding fill to prevent intrusion and contamination. Where formwork is required, it must be designed to resist lateral fluid pressure equal to the total weight of unhardened flowable backfill with a factor of safety not less than 1.3. The pre‑formed drain may not exceed two inches in thickness, and outlets through retaining walls shall be spaced no more than fifteen feet apart unless directed otherwise by the project representative. All connections to underdrains or other drainage structures shall use suitable couplings and shall be limited to a maximum bend angle of forty‑five degrees, either as a single bend or a series of such bends. For safety and accessibility each subsurface drain outlet shall be identified with a red marker placed on the traffic‑facing side of the opening and embedded at least eighteen inches below the pavement surface. No additional user‑specific provisions beyond these safety and marking requirements are prescribed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–514)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed pavement base drain is verified through a sequence of checks that address compliance with the design documents, constructability, performance criteria, and overall consistency with project requirements. Prior to backfilling, the installed pipe must be inspected by the Inspector‑in‑Charge to confirm that trench dimensions, geotextile type, and compaction meet the Standard Drawings. The contractor is required to submit a written installation method at least two weeks before work begins for Representative approval, and all drainage material must be visually examined before placement so that any damaged items are rejected. Manufacturer‑approved fittings are used on every splice, ensuring they do not restrict flow, and a minimum six‑inch overlap of the geotextile is provided around the core. Backfill is placed in 9‑inch lifts of fine aggregate Type A, hydraulically compacted and sprayed at a rate of one gallon per linear foot.</p>
+<p>The drain itself must be a prefabricated unit from an approved manufacturer listed in Bulletin 15, with each roll bearing identification tags that record lot number, dimensions, and geotextile designation. The inert plastic core is required to meet the performance thresholds of at least 1,200 psi tensile strength (ASTM D638), water absorption no greater than 0.01 % after 24 hours, crush strength of a minimum 40 psi, and a flow capacity of 15 gpm per foot width. Open‑core area must be at least 6 % on the pavement side face and 3 % on the shoulder side face, while unobstructed inflow must cover at least 50 % of the geotextile area on the pavement face and 12 % on the shoulder face. The geotextile must fully wrap the core with a bonded seam on the shoulder side, and flow testing under load is used to demonstrate that the fabric will not deform and reduce capacity. All splice connections and fittings are required to be approved for permanent loading, and shipment certification per Section 106.03(b)3 must be documented.</p>
+<p>When these documented steps—pre‑approval of the installation method, inspection of materials and pipe, use of approved fittings and backfill procedures, verification of material properties and geometric criteria, and final sign‑off by the Inspector‑in‑Charge—are satisfied, the completed pavement base drain is deemed compliant, constructible, performant, and consistent with the project specifications. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510)</small></p>
+<p>The pavement base drain is intended to extend the functional service life of the pavement by maintaining a dry subgrade, which preserves support capacity and limits moisture‑induced deterioration [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By keeping the subgrade dry it also mitigates moisture‑related distresses such as frost heave, rutting, surface roughness and cracking, leading to more uniform structural behavior and improved ride quality [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The achievement of these service‑life and distress‑reduction goals is verified through systematic monitoring of the frequency and severity of those specific distress types, recording any maintenance interventions, and comparing the observed service life with the design expectations [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In addition to functional performance, the drain must retain its physical drainage capability throughout the pavement’s lifespan by resisting chemical attack, moisture uptake, and biological growth while sustaining traffic loads [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Compliance with these durability requirements is demonstrated by laboratory testing in which the core material must achieve a tensile strength of at least 1,200 psi according to ASTM D638 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Water absorption of the core after 24 hours may not exceed 0.01 % as measured by ASTM D570, ensuring minimal moisture uptake [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Resistance to fungal colonization is confirmed by ASTM G21 with no observable growth, indicating protection against biological degradation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The crush strength of the drain must be a minimum of 40 psi per GRI‑GC4, confirming that the component can withstand imposed traffic stresses without structural failure [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Hydraulic performance is quantified by measuring a flow rate of at least 15 gallons per minute per foot of width using ASTM D4716, which verifies that sufficient drainage capacity is provided [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Geometric criteria are also enforced; the open‑core area must remain at least 6 % on the pavement face and 3 % on the shoulder, and geotextile coverage on the pavement side must be equal to or greater than 50 %, thereby guaranteeing unobstructed inflow of water into the drain system [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 506–509)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concrete Shoulder</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html" class="active" aria-current="page">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><a href="shoulder.html">Shoulder</a><span class="crumb-sep">›</span><span class="crumb-current">Concrete Shoulder</span></nav>
+<article><h1>Concrete Shoulder</h1>
+<div class="meta"><div class="part-of">Part of: <a href="shoulder.html">Shoulder</a> <span class="edge edge-taxonomic" title="Concrete Shoulder is a topic under Shoulder.">is-subtopic-of</span></div><div class="edge-reading">Concrete Shoulder is a topic under Shoulder.</div><div><a class="tag" href="index.html?q=concrete-shoulders">concrete-shoulders</a><a class="tag" href="index.html?q=concrete-shoulder">concrete-shoulder</a><a class="tag" href="index.html?q=tied-concrete-shoulders">tied-concrete-shoulders</a><a class="tag" href="index.html?q=tied-shoulders">tied-shoulders</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>A concrete shoulder is a full‑depth, load‑bearing extension of a rigid pavement placed alongside the slab to provide structural continuity and edge support, transferring truck and turning loads into the main pavement while protecting the surface during construction and service [1][2]. It is tied to the adjacent pavement through aligned control joints—and, where required, dowel bars—so that the load‑transfer coefficient J accounts for edge stresses, limiting deflection, differential heave, settlement and horizontal separation at the carriageway margin [1][2]. Constructed of Portland‑cement concrete (plain or roller‑compacted) with thicknesses ranging from four to eighteen inches, joint spacing not exceeding twenty feet, a transverse groove texture for skid resistance, and strict tolerances such as ≤¼ in edge slump, it delivers the stiffness and durability needed for roughly a twenty‑year service life [1][2].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Concrete shoulders are installed adjacent to rigid pavements to remedy structural and functional deficiencies that arise at the pavement edge, where loads from trucks or turning vehicles can cause excessive deflection, differential heave, settlement, and horizontal separation. They also serve to protect the prepared pavement surface during construction and service, preventing damage that could compromise the roadway integrity. By providing a durable load‑bearing surface that transfers edge loads into the slab, the shoulder reduces stress concentrations at the outer edge and maintains structural continuity of the pavement system. The design incorporates the shoulder’s contribution in the load‑transfer coefficient J, allowing designers to avoid arbitrary reductions in slab thickness and thereby preserve durability and rideability. Joint spacing is limited to 20 ft and control joints are aligned with those of the main pavement so that transverse and longitudinal contraction joints can be accurately marked, sawed, cured and protected, which controls cracking and maintains edge stability. For low‑traffic roads (ADT ≤2 000) and lower speeds (≤55 mph), roller‑compacted concrete may be used as a maintenance‑free wearing surface that matches the main slab’s joint pattern while providing high compressive strength without reinforcement, further supporting edge stability. When existing shoulders are already concrete, matching type and geometry are required to retain proper width and bridge clearances, ensuring continuity of the edge support. In situations where truck traffic exceeds a design hourly volume of 150 or vehicles occupy the shoulder on sharp curves or turn lanes, the concrete shoulder supplies lateral support that mitigates deflection and prolongs service life. Overall, the concrete shoulder addresses the performance need for structural stability, edge load transfer, protection of the pavement surface, drainage, safety for turning vehicles and bicyclists, and long‑term serviceability of the roadway edge. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 60–62), Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99), Ch. 8 (pp. 164–166); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 564–565)</small></p>
+<p>The concrete shoulder is required to function as a durable load‑carrying extension of the rigid pavement that supplies a smooth riding surface for bicycles, supports heavy truck traffic, and accommodates vehicle turning movements at intersections, ramps with tight radii and sharp curves. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Structurally it must be provided full‑depth on interstates and other limited‑access freeways, while Type 1‑F, 1‑S or 1‑SP variants are specified for arterials, collectors and local roads where bicycle activity is anticipated. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Joint spacing may not exceed twenty feet and all control joints in the shoulder must align with those of the adjacent mainline pavement, with a minimum three‑foot width required for Type 6 (or 6‑F, 6‑S, 6‑SP) shoulders when only the first few feet of an existing high‑type paved shoulder are distressed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For widening projects the pavement structure shall be extended into the shoulder by two feet when average daily traffic exceeds five thousand or the adjusted truck traffic index surpasses five hundred, and by one foot when those thresholds are not met. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The shoulder thickness is limited to a range of four to eighteen inches and must achieve a compressive strength between four‑thousand and ten‑thousand psi, matching the mainline cement concrete; roller‑compacted concrete may be used provided it meets the same dimensional and strength criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Edge slumping at the lane‑shoulder interface is limited to a quarter inch measured over a six‑inch strip, and any post‑hardening slump must be corrected, while the longitudinal joint between pavement and shoulder must meet a surface‑tolerance limit of no more than a quarter inch. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The shoulder surface must receive a transverse texture consisting of rectangular grooves three‑thirty‑seconds to three‑sixteenths of an inch wide and one‑eighth to three‑sixteenths of an inch deep, delivering the required skid resistance for safety and serviceability. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Durability objectives include resisting the stresses associated with a design hourly volume of at least 150 trucks on two‑lane routes, maintaining performance under serious drainage conditions, and achieving an approximate twenty‑year design life through proper subgrade and subbase compaction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] All longitudinal and pavement‑shoulder joints are to be cleaned and sealed to preserve structural integrity, and guide rail and drainage structures adjacent to the shoulder must be adjusted or replaced as necessary. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The increased stiffness of a tied concrete shoulder reduces edge stresses, limits deflection, and prevents differential heave, settlement or horizontal separation between pavement and shoulder, thereby extending service life and delaying the first maintenance cycle for long‑life concrete pavement projects. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] On roadways with speed limits of thirty‑five miles per hour or higher, any exposed shoulder surface must be diamond‑ground to provide adequate texture, complementing the transverse groove pattern required for skid resistance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Serviceability is further ensured by retaining proper shoulder width through fill widening, verifying clearances at bridges, and providing a surface that remains usable for turning movements and incident‑management traffic on high‑volume corridors. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Where two‑way average daily traffic is under ten thousand, widened slabs with asphalt or roller‑compacted concrete shoulders may be considered as alternative treatments. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 60–62), Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99), Ch. 8 (pp. 165–166); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Concrete shoulders are specified only when the pavement structure is rigid, such as jointed plain cement‑concrete or Long‑Life Concrete Pavement, and the project involves new construction, reconstruction, or rehabilitation that retains or replaces a concrete slab. For any new construction or reconstruction that employs a rigid pavement, Portland Cement Concrete shoulders must be provided, with full‑depth PCC shoulders required on Interstate and other limited‑access freeways and Type 2 concrete shoulders called for on arterials, collectors and local roads adjoining the rigid slab. Rehabilitation work that uses methods such as the 3R process, bonded or unbonded overlays, crack‑and‑seat overlays, rubblization reconstruction, or full remove‑and‑replace of existing concrete pavements may also include a concrete shoulder to supply lateral support or a low‑maintenance edge, provided joint spacing does not exceed twenty feet. When an existing shoulder is already concrete the replacement must be concrete; if the existing shoulder is of another material the new shoulder should match that material. The design permits either plain cement concrete (PCC) or roller‑compacted concrete (RCC) as the shoulder material, and the choice between them is governed by traffic volume and design speed thresholds—if average daily traffic is two thousand vehicles or less and design speed is fifty‑five miles per hour or lower, RCC may be used as an alternate to PCC for a final wearing course adjacent to reinforced or plain cement‑concrete pavement when tied shoulders are not required. Under the same low‑volume condition RCC can also serve as a base course beneath an asphalt wearing surface. A special configuration that combines a widened concrete slab no wider than fourteen feet with a partial asphalt or RCC shoulder is acceptable for low‑volume rural Interstate or Expressway segments carrying two‑way traffic below ten thousand vehicles per day where an incident‑management lane is not needed, and in such cases tied concrete shoulders may be provided with the outside lane limited to thirteen feet and striped at twelve feet to control slab deflection while preserving conventional lane widths for the remaining lanes. On urban Interstate or Expressway corridors plain cement‑concrete shoulders that are tied to the mainline concrete pavement are mandatory; these must be full‑depth, use dowelled joints, and match the mainline material from subgrade through surface. For rural Interstates the selection depends on anticipated work‑zone or incident‑management use: if such support is not expected, tied concrete shoulders with undowelled JPCP joints may be used; if support is required, a full‑depth cement‑concrete shoulder with dowelled joints should be constructed. Concrete shoulders are not prescribed for projects that employ flexible (asphalt) pavements, which require alternative shoulder types. The PCC shoulder must be placed on a prepared surface that may consist of an asphaltic leveling course over rubblized concrete, a treated base course of cement or asphalt, or a No. OGS subbase, and the underlying surface must remain undamaged during placement; the concrete is specified as Class AA cement concrete and all transverse and longitudinal contraction joints must be sawed, cured and protected in accordance with the applicable joint‑sealing and curing provisions. RCC shoulders are constructed to the plan‑drawn details and to the mix, placement, and joint treatment requirements set out in the relevant sections, and in both PCC and RCC cases the subgrade must be adequately prepared and all joints marked, sawed, cured and protected as prescribed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 60–62), Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99), Ch. 8 (pp. 165–166); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 564–565)</small></p>
+<p>A concrete shoulder is appropriate only when the pavement structure, traffic characteristics, and construction constraints allow it to meet a series of stringent limits. When the roadway employs a flexible pavement rather than a rigid one, the standard full‑depth concrete shoulder is omitted in favor of Type 1 (or its variants) shoulders, especially where serious drainage problems are anticipated, truck traffic on two‑lane roads exceeds a Design Hourly Volume of 150, or regular shoulder use is expected at tight‑radius curves, ramp intersections, or turning movements. For collectors and local roads with flexible pavements, a same‑material Type 3 shoulder may also be selected. Concrete shoulders are further limited by joint spacing; the spacing must never exceed twenty feet, and if this limit cannot be achieved—or if the existing shoulder is itself a flexible pavement—alternative shoulder types become mandatory. On interstates and other limited‑access freeways that require excavation or scarifying of the existing shoulder, a Type 6 series shoulder is specified, while only cleaning and patching calls for a Type 7 shoulder. In low‑volume settings, when average daily traffic is five thousand vehicles or fewer (or ADTT ≤ 500), the widening extension into the shoulder may be reduced to one foot—or omitted entirely—provided an alternative such as a Type 6, 7, or recycled shoulder is used.</p>
+<!-- concept-tabular:begin key=b0430178 src=pub_242_change_10::tab:p61#1 -->
+<p>The table below specifies minimum shoulder lengths for higher types based on right-turning vehicle volumes.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-concrete-shoulder-1-cap" tabindex="0"><table class="ct-table" id="ct-concrete-shoulder-1" aria-describedby="ct-concrete-shoulder-1-sum">
+<caption id="ct-concrete-shoulder-1-cap">iv. At other locations at the discretion of the District PME.</caption>
+<thead>
+<tr><th scope="col">RIGHTTURNING VEHICLES/h</th><th scope="col">&lt;100</th><th scope="col">100 to 200</th><th scope="col">&gt;200</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">HIGHER TYPESHOULDER MINLENGTH</th><td>100 ft</td><td>175 ft</td><td>250 ft</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-concrete-shoulder-1-sum">Rows list minimum shoulder lengths for higher types, columns give right turning vehicles per hour ranges.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 61.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p>Traffic volume and speed also dictate suitability. Roller‑compacted concrete shoulders are acceptable only on roadways with an ADT of two thousand vehicles per day or less and a posted speed limit of fifty‑five miles per hour or lower; they are discouraged where the International Roughness Index will be measured for ride‑quality incentives, and if the RCC surface is exposed on roads with speeds of thirty‑five miles per hour or greater, mandatory diamond grinding must be performed—if this finishing step cannot be provided, another shoulder type is preferred. When frost heave differentials are expected, increasing slab thickness offers limited mitigation, and designers are directed to consult dedicated frost‑design provisions; tied concrete shoulders also preclude the one‑inch slab‑thickness reduction that might otherwise be applied because their effect is already incorporated in the load‑transfer coefficient.</p>
+<p>Finally, on low‑volume rural interstates or expressways with two‑way ADT below ten thousand and little demand for an incident‑management lane, a widened concrete slab limited to fourteen feet in width, using a twelve‑foot travel‑lane stripe, combined with an adjacent asphalt or RCC shoulder is preferred over a full concrete shoulder. This alternative leverages the reduced stresses associated with lower traffic volumes and the lack of anticipated heavy shoulder usage, making the durability advantages of a full concrete shoulder unnecessary. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 60–62), Ch. 4 (pp. 98–99), Ch. 8 (pp. 164–166)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>Design of a concrete shoulder using roller‑compacted concrete must confirm that the location is adjacent to reinforced or plain cement concrete pavement, that the existing subgrade and subbase are capable of supporting RCC compaction, and that traffic conditions do not exceed an average daily traffic of 2,000 vehicles with a speed limit of 55 mph or less. The material specification calls for a very dry mix of cement, aggregate (maximum size under one inch), and water with a low water‑cement ratio—typically around 0.40 but as low as 0.30—and a compressive strength target between 4,000 and 10,000 psi. Because service life is influenced by construction materials, environmental conditions, and traffic volumes, the design phase should also evaluate site‑specific climate impacts and anticipate a typical service life of about twenty years. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<p>The design of concrete shoulders is governed by a hierarchy that begins with project‑specific provisions, proceeds through geometric and construction specifications, and culminates in performance constraints that must be satisfied for both new construction and rehabilitation projects [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For any new or reconstructed facility employing a rigid‑pavement structure the shoulder material shall be Portland cement concrete, with full‑depth sections required on Interstates and other limited‑access freeways while Type 2 shoulders are prescribed for arterials, collectors, and local roads [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The geometric definitions that determine shoulder width, cross‑slope, and transition details are drawn from the standard design manuals, and the detailed shoulder types are further delineated in the roadway construction standards that provide supplemental guidance on placement and jointing practices [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When a flexible pavement is installed, the paved portion must be extended into the future shoulder area by at least one foot, increasing to two feet when average daily traffic exceeds five thousand vehicles or the truck factor exceeds five hundred; an option exists to pave the entire shoulder if desired [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Rehabilitation of rigid pavements may incorporate concrete shoulders to furnish lateral support, but joint spacing shall never exceed twenty feet and a minimum three‑foot width of Type 6, 6‑F, 6‑S, or 6‑SP must be provided when only the first few feet adjacent to the travel lane are distressed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Existing shoulders that are excavated or scarified on Interstates, other limited‑access freeways, and arterials must be replaced with the same concrete types, whereas Type 7 shoulders are used where only cleaning and patching are required [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Design work follows the project‑specific design chapters—Chapter 8 for full reconstruction or replacement and Chapter 10 for bonded or unbonded overlays—and any new shoulder must match the material of an existing concrete shoulder or be consistent with the adjacent pavement type when no concrete shoulder exists [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Ride quality on exposed concrete surfaces serving posted speeds of thirty‑five miles per hour or higher is enhanced by diamond grinding in accordance with the specified publication, and diamond grinding is also mandated as a general measure to improve ride quality [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Roller‑compacted concrete (RCC) shoulders are permitted where tied shoulders are not required; they are designed according to the concrete pavement procedures that specify thicknesses ranging from four to eighteen inches, compressive strengths of approximately four‑ to ten‑thousand psi, and control joints that must align with those on the adjacent mainline concrete pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The slip‑form paving requirements for RCC shoulders are set out in dedicated sections of the specifications, and the lane‑shoulder interface edge slumping is limited to a maximum of one‑quarter inch while any longitudinal joint between the main slab and the shoulder must not exceed a surface tolerance of one‑quarter inch measured with a twelve‑foot straightedge positioned perpendicular across the joint [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The transverse texture applied to shoulders consists of rectangular grooves whose width ranges from three‑thirty‑seconds to three‑sixteenths of an inch and whose depth varies between one‑eighth and three‑sixteenths of an inch, providing the required surface friction characteristics [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Material requirements for PCC shoulders call for Class AA cement concrete, approved joint sealing materials, protective covers and curing compounds during the curing period, pre‑approved admixtures, subgrade preparation that meets the relevant base‑course sections, dowels, and premolded expansion joint fillers, with longitudinal joint material prescribed by the specifications [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Construction constraints prohibit damage to the prepared surface while transporting or placing concrete, restrict vehicle travel to the immediate paving area, and require any damage to be repaired at no cost to the department [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All transverse and longitudinal contraction joints must be sawed, cured, and protected in accordance with the detailed joint‑treatment clauses that apply uniformly to shoulder concrete as they do to the main pavement system [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Widened slab alternatives are limited to a maximum width of fourteen feet and must be paired with either a Type 1 asphalt or an RCC right shoulder to achieve the required effective shoulder width; this configuration is allowed only on low‑volume rural Interstates and expressways where two‑way ADT is under ten thousand vehicles, and design must employ the load‑transfer coefficient given in Table 8.2 for widened lanes with asphalt or RCC shoulders [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Projects that adopt Long‑Life Concrete Pavement require plain cement concrete shoulders, and corridors with a high probability of incident‑management or future work‑zone traffic must employ full‑depth PCC shoulders to provide the necessary durability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Urban Interstate and expressway sections are required to have full‑depth PCC shoulders with dowelled transverse joints as shown in the roadway construction standards, whereas rural routes may use tied undowelled JPCP shoulders unless ADT exceeds ten thousand vehicles, at which point full‑depth dowelled shoulders become mandatory; the applicable specifications for dowelled shoulders are found in the designated sections of the concrete pavement specifications, while non‑dowelled or RCC shoulders are governed by the separate RCC provisions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 60–62), Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99), Ch. 8 (pp. 165–166); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (pp. 564–565)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>Concrete shoulder design follows the same overall procedures as the adjacent pavement and must be compatible from subgrade through surface, with full‑depth reconstruction using the methods of Chapter 8 and bonded or unbonded overlays designed according to Chapter 10. The thickness of a concrete shoulder slab is determined by the PennDOT RCC design procedures in Chapter 8 Section 8.15, which allow allowable slab thicknesses from four to eighteen inches selected on the basis of traffic volume and concrete compressive strength typically between 4,000 and 10,000 psi. The DARWin calculation routine incorporates the load‑transfer coefficient J for widened lanes with asphalt or RCC shoulders (Table 8.2) to compute the required slab thickness, after which the result is rounded to the nearest half‑inch, or to the nearest whole inch when the pavement exceeds seven inches and the total area is less than 30,000 yd². An empirical joint spacing rule governs control joint placement: slabs eight inches thick or greater receive joints spaced at 2.5 times the slab thickness in feet, while thinner slabs use a fixed spacing of fifteen to twenty feet. Geometric limits restrict a widened concrete slab to a maximum width of fourteen feet and require striping at twelve feet from the edge; when tied shoulders are employed a thirteen‑foot‑wide outside lane also striped at twelve feet is permitted to control deflection. For urban interstate and expressway projects, full‑depth plain cement concrete shoulders with dowelled transverse joints must be tied to the main pavement as shown in Publication 72M, whereas rural interstates may use either tied undowelled shoulders or full‑depth dowelled shoulders depending on anticipated work‑zone traffic, and if the two‑way average daily traffic is below ten thousand vehicles widened slabs with asphalt or RCC alternatives are allowed per Section 8.14. The slip‑form paving method prescribes construction using a self‑propelled slip‑form machine equipped with side forms and automatic alignment controls, and requires edge‑slump control not to exceed one‑quarter inch where the shoulder meets a lane. Prior to concrete placement, joints adjacent to the shoulder are installed in advance, dowel bars are positioned and later sawed so that transverse joints line up across the shoulder, and after placement the ends of all transverse joints and any cracks are sealed to prevent intrusion of cement mortar. The surface of the shoulder is given a full‑width transverse texture by cutting rectangular grooves of specified dimensions, providing the required vehicle grip. Together these design equations, empirical relationships, and construction procedures ensure that concrete shoulders perform consistently with the main pavement structure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99), Ch. 8 (pp. 164–166); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>Concrete shoulders are designed in accordance with the classification of the roadway and the type of pavement they accompany[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For new construction or reconstruction that employs a rigid (plain cement) pavement, Portland‑Cement Concrete shoulders are required, with full‑depth concrete specified for Interstate and other limited‑access freeways and Type 2 concrete prescribed for arterials, collectors and local roads[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the adjacent pavement is flexible, Type 1 (or its variants 1‑F, 1‑S, 1‑SP) shoulders are used on all interstates and arterials, on routes with serious drainage problems, on two‑lane highways where the design hourly truck volume exceeds 150, on curves sharper than approximately 12°‑30′, and within a corridor extending 250 ft upstream to 150 ft downstream of intersections; collectors and local roads with flexible pavement may receive Type 3 concrete shoulders or the same surface material as the main pavement[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Joint spacing for concrete shoulders shall not exceed twenty feet, and control joints on roller‑compacted concrete (RCC) shoulders must align with those of the adjacent mainline concrete pavement, using a 15–20 ft spacing rule for sections under eight inches thick or a spacing equal to 2.5 times the pavement thickness in feet for thicker sections[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Existing concrete shoulders must be retained as concrete, while existing non‑concrete shoulders may be replaced with matching material[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For widening projects, the pavement structure is extended into the shoulder by two feet when the current average daily traffic exceeds 5 000 vehicles or the adjusted daily truck traffic exceeds 500, and by one foot otherwise; the widened slab is limited to a total width of fourteen feet, striped at twelve feet, with the remaining width serving as an effective shoulder in conjunction with a Type 1 asphalt or RCC shoulder[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Tied shoulders are accounted for through the load‑transfer coefficient J, and when tied the usual one‑inch reduction in required slab thickness is not applied; calculated slab thicknesses are rounded to the nearest half inch, or to the nearest inch for slabs thicker than seven inches and less than 30 000 yd², and must fall within the minimum and maximum depths prescribed while satisfying durability and rideability requirements[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. RCC shoulders are limited to roadways with ADT of 2 000 vehicles or fewer and a posted speed limit of 55 mph or less, with thickness designed between four and eighteen inches using standard PennDOT concrete pavement design procedures, targeting a compressive strength of approximately 4 000 to 10 000 psi and an intended service life of twenty years[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Full‑depth plain cement concrete shoulders with dowelled transverse joints are required for projects employing Long‑Life Concrete Pavement on urban interstates and expressways; rural low‑volume corridors may use tied shoulders with undowelled joints or RCC shoulders, provided the materials from subgrade to surface match those of the mainline pavement[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. No separate factor‑of‑safety or reliability coefficient is prescribed beyond compliance with these design thresholds and the underlying PennDOT specifications[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Construction tolerances require that edge slumping measured over the six‑inch zone adjacent to the pavement edge not exceed a quarter‑inch, and that the surface at the longitudinal joint between the main slab and the shoulder be within a quarter‑inch when checked with a twelve‑foot straightedge; any transverse texture applied to the shoulder must consist of rectangular grooves whose width ranges from three‑thirty‑seconds to three‑sixteenths of an inch and whose depth is between one‑eighth and three‑sixteenths of an inch[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=0b4cbd84 src=pub_242_change_10::tab:p164#1 -->
+<p>The table specifies the minimum and maximum pavement depths for various concrete courses across different roadway classifications.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-concrete-shoulder-2-cap" tabindex="0"><table class="ct-table" id="ct-concrete-shoulder-2" aria-describedby="ct-concrete-shoulder-2-sum">
+<caption id="ct-concrete-shoulder-2-cap">TABLE 8.3MINIMUM AND MAXIMUM DEPTHS FOR CONCRETE PAVEMENTS</caption>
+<thead>
+<tr><th id="ct-concrete-shoulder-2-h0-0" scope="col" rowspan="4">COURSES</th><th id="ct-concrete-shoulder-2-h0-1" scope="col" colspan="5">MINIMUM DEPTHS</th><th id="ct-concrete-shoulder-2-h0-6" scope="col">MAXIMUMDEPTHS</th></tr>
+<tr><th id="ct-concrete-shoulder-2-h1-1" scope="col" colspan="2">INTERSTATES ANDOTHER LIMITED ACCESSFREEWAYS</th><th id="ct-concrete-shoulder-2-h1-3" scope="col" rowspan="3">ARTERIALS</th><th id="ct-concrete-shoulder-2-h1-4" scope="col" rowspan="3">COLLECTORS</th><th id="ct-concrete-shoulder-2-h1-5" scope="col" rowspan="3">LOCALROADS</th><td rowspan="3"></td></tr>
+<tr><th id="ct-concrete-shoulder-2-h2-1" scope="col" colspan="2">ALTERNATIVE</th></tr>
+<tr><th id="ct-concrete-shoulder-2-h3-1" scope="col">A*</th><th id="ct-concrete-shoulder-2-h3-2" scope="col">B*</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-concrete-shoulder-2-h0-0">JPCP</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-1 ct-concrete-shoulder-2-h2-1 ct-concrete-shoulder-2-h3-1">8 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-1 ct-concrete-shoulder-2-h2-1 ct-concrete-shoulder-2-h3-2">8 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-3">8 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-4">6 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-5">6 in</td><td headers="ct-concrete-shoulder-2-h0-6">15 in</td></tr>
+<tr><td headers="ct-concrete-shoulder-2-h0-0">ATPB ORCTPB</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-1 ct-concrete-shoulder-2-h2-1 ct-concrete-shoulder-2-h3-1">4 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-1 ct-concrete-shoulder-2-h2-1 ct-concrete-shoulder-2-h3-2">3 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-3">4 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-4">4 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-5">4 in**</td><td headers="ct-concrete-shoulder-2-h0-6">4 in</td></tr>
+<tr><td headers="ct-concrete-shoulder-2-h0-0">2A</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-1 ct-concrete-shoulder-2-h2-1 ct-concrete-shoulder-2-h3-1">4 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-1 ct-concrete-shoulder-2-h2-1 ct-concrete-shoulder-2-h3-2">6 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-3">4 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-4">4 in</td><td headers="ct-concrete-shoulder-2-h0-1 ct-concrete-shoulder-2-h1-5">4 in</td><td headers="ct-concrete-shoulder-2-h0-6">6 in</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-concrete-shoulder-2-sum">Rows list concrete pavement courses, columns provide minimum and maximum depth specifications for different road types.</p>
+<p class="ct-notes">Notes: * Either Alternative A or B is acceptable. ** ATPB or CTPB may be eliminated on low volume/local roads, but the depth of 2A will be 6 inches.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 164.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 60–62), Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99), Ch. 8 (pp. 164–166); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>The concrete shoulder that employs roller‑compacted concrete must be built to a pavement thickness ranging from four inches up to eighteen inches. Control joints are aligned with those of the adjoining mainline concrete pavement; when the RCC layer is less than eight inches thick, joint spacing is limited to fifteen‑to‑twenty feet, while for sections eight inches or thicker the spacing equals 2.5 times the slab thickness expressed in feet. The shoulder does not require formwork, steel reinforcement, or dowel bars and rests on a prepared subgrade and subbase capable of sustaining the required compaction. Where the shoulder is provided as a widened concrete slab, its overall width may not exceed fourteen feet and it is striped at twelve‑foot intervals; an alternative tied‑concrete shoulder can be formed as a thirteen‑foot‑wide outside lane, also striped at twelve feet, while conventional layouts retain twelve‑foot lanes with a tied concrete shoulder. No explicit dimensions are prescribed for the pavement base, subbase, treated‑soil layer, edge support, or additional reinforcement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 8 (p. 165)</small></p>
+<p>Concrete shoulders built with roller‑compacted concrete are sized using the standard PennDOT concrete pavement design procedures, which allow a structural thickness anywhere between four and eighteen inches depending on traffic and subgrade conditions. The required thickness is achieved in one or more lifts that match the paver’s width, and because RCC does not need forms or reinforcement, the layer configuration is simply compacted lift(s). Control joints are placed to align with the mainline concrete pavement; when the shoulder is under eight inches thick the joints are spaced about fifteen to twenty feet, while for thicknesses of eight inches or more the spacing equals 2.5 times the slab depth in feet. These joint locations provide the necessary tie‑ins between the RCC shoulder and the adjacent pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>Concrete shoulders must be constructed from Portland‑cement concrete, and for plain (non‑roller‑compacted) sections the concrete is required to meet the Class AA cement concrete criteria specified in the relevant standards. The constituent materials are Portland cement, a dense aggregate gradation whose maximum particle size does not exceed one inch, and water; limited admixtures may be incorporated and air‑entraining agents are permitted when the shoulder is placed as roller‑compacted concrete. The mix design calls for a low water‑to‑cement ratio, typically between 0.30 and 0.40, producing a dry, no‑slump mixture comparable to damp gravel. This proportioning is intended to achieve compressive strengths ranging from approximately four thousand to ten thousand pounds per square inch for roller‑compacted concrete shoulders. For plain cement concrete shoulders the material constituents must be identical to those used in the adjoining mainline pavement throughout all structural layers, thereby matching the subgrade‑to‑surface specifications of that pavement without imposing separate proportioning requirements. In addition to the concrete itself, the specification requires joint‑sealing material as referenced in Section 705.4, premolded expansion‑joint filler (Section 705.1), and longitudinal joint material (Section 705.2) to be provided for the shoulder joints. Covers for curing and protection must be supplied in accordance with Section 711.1, and a concrete curing compound as described in Section 711.2(a) is required to ensure proper moisture retention during early strength development. Only admissible concrete admixtures listed in Section 711.3 may be used, reinforcing the limitation on admixture types noted for roller‑compacted applications. The prescribed base courses underlying the shoulder are defined in Sections 303.2, 350.2, and 360.2, establishing the granular material that supports the concrete layer. Where dowelled joints are employed, deformed or plain bar dowels as specified in Section 709.1(a) must be installed, while non‑dowelled and roller‑compacted shoulders are governed by the provisions of Section 502.2. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 60–61), Ch. 4 (pp. 98–99), Ch. 8 (pp. 165–166); [2] — SECTION 600 INCIDENTAL CONSTRU… (p. 564)</small></p>
+<p>The selection and proportioning of the concrete‑shoulder mixture is guided by the need to achieve required structural capacity, durability against traffic and environmental exposure, constructability, and long‑term performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Materials are chosen from the same basic constituents used for the adjacent mainline pavement—cement, aggregate, and water—so that every layer from subgrade through surface is identical, which ties the shoulder to the pavement and reduces edge stresses [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The concrete‑shoulder mix must be based on Class AA cement concrete as defined for structural base, with additional components such as joint‑sealing material, curing covers, appropriate base courses, dowels, expansion‑joint filler, and longitudinal joint material specified in the relevant sections [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For roller‑compacted concrete shoulders the water‑to‑cement ratio is reduced to about 0.40 and may be as low as 0.30, producing a damp‑gravel consistency with essentially no slump that can be placed by a paver and compacted with rollers without forms or reinforcement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The aggregate gradation is dense, with a maximum size of less than one inch, and air entrainment may be incorporated when required; admixtures are limited to those needed for workability or durability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. This proportioning typically yields compressive strengths in the range of 4,000 psi to 10,000 psi, satisfying the structural demands imposed by anticipated traffic loads [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Design thickness is selected according to state design procedures, with sections ranging from four inches to eighteen inches to meet required capacity and service life under expected traffic and climate conditions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Full‑depth concrete shoulders on high‑volume corridors are constructed with dowelled transverse joints in accordance with the applicable publication, while rural sections may use undowelled tied joints when work‑zone support is not needed; both approaches conform to constructability and long‑term serviceability provisions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The inclusion of base courses as prescribed in the relevant sections further supports structural integrity and durability of the shoulder system [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Curing covers and protection are applied according to specified guidelines to ensure proper moisture retention and strength development during early ages [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 8 (pp. 165–166); [2] — SECTION 600 INCIDENTAL CONSTRU… (p. 564)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>A concrete shoulder is joined to the adjacent pavement by a system of control and transverse joints that are treated in the same manner as the mainline joints, with all longitudinal joints intersecting the shoulder cleaned and sealed before placement and any failed transverse joint repaired or resealed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Control joints are mandatory and must line up with those of the adjoining concrete pavement, spaced no farther than twenty feet apart; for reinforced cement concrete (RCC) shoulders thinner than eight inches the spacing follows the usual RCC rule of fifteen to twenty feet, while thicker slabs use a spacing equal to 2.5 times the slab thickness in feet, which also satisfies the general twenty‑foot limit [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The pavement‑shoulder interface is required to limit edge slumping to no more than one‑quarter inch and any transverse joint cut adjacent to the shoulder must have its ends sealed so that cement mortar cannot intrude [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Both transverse and longitudinal contraction joints are provided; their centre lines are accurately marked with tacks or an approved method before being sawed using guided equipment equipped with a blade guard, water‑cooling system and depth control, after which the cuts are cured and protected in accordance with the referenced specifications [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Reinforcement placed in the shoulder must be clean, free of rust and foreign material and installed full length prior to concrete placement; however, reinforcement is not required for RCC shoulders, which are placed without forms, steel bars or dowels, whereas a full‑depth Portland cement concrete (PCC) shoulder includes dowel bar retrofits at mid‑panel cracks and transverse joints to provide load transfer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Load‑transfer units such as dowel bars are staked at their designated locations before paving, with positions marked for precise saw cuts; the dowels may be deformed or plain bar types as prescribed, and mechanical implantation of the dowels is permitted [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In urban interstate applications the transverse joints are routinely dowelled, while rural sections may use undowelled joints unless work‑zone support is needed, in which case dowelling is applied per Section 658 of Publication 408 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The shoulder concrete shall be Class AA cement concrete and its joints are treated with the specified joint‑sealing material together with a premolded expansion‑joint filler for transverse joints and longitudinal joint material for the longitudinal joints [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The surface of the shoulder is textured across its full width with rectangular grooves ranging from three‑thirty‑seconds to three‑sixteenths of an inch in width and from one‑eighth to three‑sixteenths of an inch in depth [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The shoulder slab width is limited to fourteen feet, with a stripe placed at twelve feet; when a tied concrete shoulder is used an outside lane of thirteen feet striped at twelve feet may be provided to limit slab deflection, and the design employs the load‑transfer coefficient (J) prescribed for widened lanes with asphalt or RCC shoulders [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Appropriate base courses provide support for the shoulder, and after placement the concrete is protected with curing covers and a curing compound to ensure proper strength development [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Finally, the shoulder material—from subgrade through surface—must match that of the adjoining mainline pavement, ensuring continuity of structural properties [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99), Ch. 8 (pp. 165–166); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (pp. 564–565)</small></p>
+<p>Concrete shoulders are tied directly to the adjacent pavement so that the interface behaves as a continuous slab, and the same materials used in the mainline structure—from subgrade through base and surface—must be matched across the joint [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Full‑depth concrete shoulders are required next to rigid pavements and on Interstates or other limited‑access freeways, while flexible pavements may employ various shoulder types that begin about 250 ft before an intersection and terminate roughly 150 ft downstream; a concrete shoulder is also mandated when truck traffic on a two‑lane road exceeds a Design Hourly Volume of 150 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Joint spacing in the shoulder may never exceed twenty feet, and control joints are aligned with those of the adjoining concrete pavement; for roller‑compacted concrete shoulders the spacing follows the same rules as the mainline—typically fifteen to twenty feet for lifts under eight inches thick or a distance equal to the RCC thickness multiplied by 2.5 for thicker sections [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The edge slump at the slab edge is limited to one‑quarter inch measured on a twelve‑foot straightedge, and any excess must be corrected or the section replaced to maintain a smooth interface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the shoulder is placed after the main pavement, every transverse joint and crack that terminates at the shoulder is sealed to prevent cement mortar intrusion, and the first joints in the new shoulder are aligned with the dominant joints already sawed in the existing concrete pavement to preserve movement compatibility [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All longitudinal joints and pavement‑shoulder joints are cleaned and sealed using the specified joint sealing material, premolded expansion‑joint filler, and longitudinal joint material to preserve a continuous base drain and prevent water ingress [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Load transfer across the shoulder‑pavement interface is provided by deformed or plain bar dowels where required, with dowelled transverse joints installed on high‑volume urban interstates or rural corridors that may see work‑zone traffic; undowelled joints are permitted on low‑traffic rural sections [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The subgrade and subbase are constructed as separate items capable of supporting the concrete during placement, and equipment travel is restricted to the immediate paving zone to protect the prepared surface—any damage must be repaired at no additional cost [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In locations with heavy turning movements such as driveway entrances, exits, or intersections, out‑to‑out paving of the shoulder with the same material as the main lane is strongly recommended, and guide rail and drainage structures at the shoulder edge are adjusted or replaced as needed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If widening is required, the structural layer of the new lane extends into the shoulder by one foot when average daily traffic is five thousand vehicles or less and by two feet when traffic exceeds that limit, creating a continuous structural connection [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Fill widening is used where necessary to retain the designed shoulder width and to verify bridge clearances, while the widened slab shall not exceed fourteen feet in width and is striped at twelve feet; a tied shoulder may include a thirteen‑foot‑wide outside lane also striped at twelve feet to limit slab deflection [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The design adopts the Load Transfer Coefficient specified for widened lanes with asphalt or RCC shoulders as given in Table 8.2, ensuring adequate load distribution across the interface [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 60–62), Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99), Ch. 8 (pp. 165–166); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (pp. 564–565)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>Concrete shoulder design must incorporate a continuous pavement base drain to convey water away, clean and seal all longitudinal and pavement‑shoulder joints to prevent moisture intrusion, and adjust or replace guide rail and drainage structures as needed; when an overlay is used, concrete shoulders are required if the existing shoulders are concrete, otherwise they may match the existing shoulder type. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70)</small></p>
+<p>Concrete shoulders are required wherever a rigid‑pavement system is installed and may be incorporated into flexible‑pavement projects by widening the pavement two feet into the shoulder to retain a concrete edge. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Full‑depth plain cement concrete shoulders are mandatory on Interstate and other limited‑access freeways, while arterials, collectors and local roads use Type 2 (or Type 6/6‑F/6‑S/6‑SP) sections that provide at least three feet of width adjacent to the travel lane. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Minimum shoulder widths are three feet for the Type 6 families, with extensions into the shoulder limited to one foot when average daily traffic is 5 000 vehicles or less (and ADTT ≤ 500) and two feet for higher volumes. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The overall slab width of a widened concrete section may not exceed fourteen feet, and where tied shoulders are used a thirteen‑foot outside lane is striped at twelve‑foot intervals to limit deflection. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Joint spacing shall never exceed twenty feet and control joints must align with the joint pattern of the adjoining mainline pavement; longitudinal joints with the main pavement must remain within a one‑quarter inch tolerance measured with an appropriate straightedge regardless of cross‑slope changes. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Edge slumping between lane and shoulder is limited to one‑quarter inch, providing a smooth transition for users. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Transverse texture on the shoulder surface shall consist of rectangular grooves 3/32–3/16 in wide and 1/8–3/16 in deep, and where traffic negotiates curves tighter than a 50‑ft radius the finished macrotexture must achieve at least a 0.040‑inch mean texture depth to maintain vehicle stability. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When the design hourly volume of trucks exceeds 150, or when tight‑radius ramps, curves sharper than about 12°‑30′, and intersections where vehicles may need the right‑hand shoulder are present, a paved concrete segment extending roughly 250 ft upstream and 150 ft downstream of the intersection is required to give bicyclists a smooth surface and permit optional rumble‑strip treatment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Safety and user performance are enhanced by tying the shoulder to the adjacent pavement, which adds stiffness, reduces edge stresses, limits differential settlement and improves incident‑management capability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Urban interstates require full‑depth dowelled joints; rural corridors may use undowelled tied shoulders unless the shoulder serves work‑zone traffic control on high‑volume routes. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For low‑volume roads (ADT ≤ 2 000) with speed limits up to 55 mph, roller‑compacted concrete is permissible, but if the exposed surface carries a posted speed of 35 mph or greater it must be diamond‑ground to provide adequate texture. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] All full‑depth shoulders use the same material layers as the mainline pavement from subgrade to surface, and bridge underclearances must be verified with fill widening employed where necessary to retain required widths. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 60–62), Ch. 3 (pp. 69–70), Ch. 4 (pp. 98–99), Ch. 8 (pp. 165–166); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed concrete shoulder is verified by a series of field checks that mirror those for the main slab. During placement the crew measures edge slippage with a 12‑foot straightedge on the 6‑inch zone next to the pavement edge and must keep the deviation between lane and shoulder within one‑quarter inch; the same straightedge test is repeated after the concrete has hardened and any excess slump must be corrected. Once set, the surface is inspected with a 12‑foot straightedge for overall flatness, requiring no more than three‑sixteenths of an inch variation parallel to the centerline, and the joint between shoulder and lane is checked with a 12‑foot straightedge across the joint to stay within one‑quarter inch. The shoulder texture is confirmed as transverse grooves meeting the specified rectangular dimensions (3/32–3/16 in wide by 1/8–3/16 in deep). Finally, the usual curing, joint sealing and thickness verification procedures are applied to ensure the shoulder meets all performance and project specifications. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>The concrete shoulder built with roller‑compacted concrete is expected to provide a design service life on the order of twenty years, a figure that reflects the durability afforded by its low water‑cement ratio and resulting high compressive strength. It contributes to overall pavement longevity by adding stiffness that limits slab deflection, an effect that is documented through periodic measurements of deflection magnitudes over time. Distress resistance is achieved through a jointing strategy that aligns control joints with the mainline pavement and spaces them according to thickness‑based guidelines; this arrangement, together with the inherent rigidity of the shoulder, reduces differential heaving, settlement, and horizontal separation at the edge of the carriageway. The time elapsed before the first maintenance intervention is recorded as an indicator of distress progression, and the interval is expected to exceed that observed for conventional concrete pavements. Ride‑quality considerations recognize that roller‑compacted concrete typically yields a rougher surface texture; when ride‑quality performance must be verified, the International Roughness Index is employed, although projects that rely on IRI‑based payment incentives generally avoid this shoulder type. In addition to these structural and functional criteria, the shoulder must satisfy geometric tolerances at its junction with the main pavement, which are checked with a straightedge; any deviation greater than one‑quarter inch is deemed unacceptable. Edge slumping is measured while the concrete is still plastic and again after hardening using a twelve‑foot straightedge, and a slump exceeding one‑quarter inch between lane and shoulder fails to meet the requirement. The transverse texture of the shoulder surface must be applied across the full width by cutting rectangular grooves that are three‑thirty‑seconds to three‑sixteenths of an inch wide and one‑eighth to three‑sixteenths of an inch deep, a condition verified visually during construction. Macrotexture depth is required to reach at least a mean texture depth of 0.040 in, which is confirmed by testing in accordance with ASTM E965. The joint between pavement and shoulder is inspected with a straightedge and must not exceed the same one‑quarter‑inch deviation tolerance applied to edge slumping. Compliance with these surface‑quality criteria, together with the long‑term stiffness and distress‑resistance measurements, constitutes the overall performance verification program for concrete shoulders. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 8 (pp. 165–166); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>A roller‑compacted concrete shoulder is expected to provide roughly a twenty‑year service life and to resist distress through its high compressive strength (on the order of four‑to‑ten thousand psi) and appropriate joint spacing, making it suitable for low‑volume roads (ADT ≤ 2,000, speed ≤ 55 mph). Because RCC surfaces are generally rougher than conventional concrete, ride quality will vary with the placement equipment and is evaluated using the International Roughness Index; consequently RCC shoulders are not recommended where IRI‑based payment incentives are applied. Service life, distress resistance, and ride quality are therefore measured by design‑life assumptions, compressive‑strength testing and joint performance, and IRI surveys respectively. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

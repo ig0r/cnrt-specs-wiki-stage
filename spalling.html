@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spalling</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html" class="active" aria-current="page">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><a href="distress.html">Distress</a><span class="crumb-sep">›</span><span class="crumb-current">Spalling</span></nav>
+<article><h1>Spalling</h1>
+<div class="meta"><div class="part-of">Part of: <a href="distress.html">Distress</a> <span class="edge edge-taxonomic" title="Spalling is a topic under Distress.">is-subtopic-of</span></div><div class="edge-reading">Spalling is a topic under Distress.</div><div><a class="tag" href="index.html?q=spalling">spalling</a><a class="tag" href="index.html?q=spall">spall</a><a class="tag" href="index.html?q=spalls">spalls</a><a class="tag" href="index.html?q=joint-spalling">joint-spalling</a><a class="tag" href="index.html?q=surface-spalling">surface-spalling</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Spalling is a surface distress in rigid Portland‑cement concrete pavements manifested by the loss of chips or fragments from slab surfaces, joints, corners, edges, or between lanes[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The detachment creates a rough riding condition and permits water, chlorides, and other incompressible materials to infiltrate the pavement, degrading load‑transfer capability, structural performance, and ride quality[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Treatment seeks to restore a smooth, load‑bearing surface by removing loose material and filling the defect with compatible concrete or asphalt mix—using partial‑depth repairs when loss is confined to the upper half of slab thickness and full‑depth patches or overlays for deeper losses—to regain functionality and extend service life[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Spalling is a surface distress in rigid Portland‑cement concrete pavements characterized by the loss of chips or fragments from the slab surface, whether occurring on interior slabs, transverse or longitudinal joints, corners, edges, or between lanes. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The detachment creates a rough, uneven riding condition and permits water to infiltrate the pavement structure, thereby degrading load‑transfer capability and overall structural performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Because the loss of material reduces the slab’s ability to distribute traffic loads, spalling is associated with a decline in ride quality, an increased potential for edge‑slumping, and accelerated deterioration of the concrete deck. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–98), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<p>The treatment of spalling in concrete or asphalt pavements is directed toward repairing the damaged portion so that the surface regains its smooth, load‑bearing performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the loss of material is confined to the upper half of the slab, partial‑depth repairs are specified, whereas deeper or more extensive spalls require full‑depth joint rehabilitation, thin‑bonded concrete inlays, or bonded overlays that add structural capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The damaged area is removed, cleaned of loose material, and filled with a compatible concrete or asphalt mix—often a 4.75 mm wearing course in the case of concrete pavements—to reestablish rideability and load transfer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In edge spalling situations the repair may involve removal of at least ten feet of slab or an entire panel because longitudinal edge repairs are deemed unsatisfactory [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Tie‑bars, when required, are rotated several times during insertion to purge air voids and ensure proper bonding [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. These repair actions not only restore functionality but also retard further deterioration, thereby extending the useful service life of the pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–98), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>Spalling in concrete pavements typically appears on transverse or longitudinal joints, interior slab surfaces, and at corner intersections where the two joint directions meet. The distress is classified by length: spot repairs from about 15 inches up to 6 feet (Type 1) and extended repairs longer than 6 feet (Type 2), and it is considered severe enough for partial‑depth repair only when the lost depth does not exceed half the slab thickness; deeper loss requires full‑depth patching. Although the source does not quantify a progression rate, spalling can degrade rideability and, if not properly repaired, may lead to compression or point‑loading failures that compromise safety and traffic operations. Consequently, timely partial‑depth repair using appropriate cement concrete mixes and joint restoration materials is prescribed to restore serviceability for the remaining pavement life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 90–91)</small></p>
+<p>Spalling in rigid pavements is driven primarily by the loss of effective load transfer at transverse or longitudinal joints, which allows water, chlorides and incompressible materials to penetrate the slab and attack its matrix.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The infiltrating moisture, combined with inadequate drainage or an unstable subgrade, creates rocking, pumping or faulting that reduces support beneath the pavement and concentrates compression and point‑loading stresses at joint faces or patch edges.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Heavy, channeled traffic loads amplify these localized stresses, while repeated temperature swings produce expansion‑contraction cycles that further weaken the surface layer.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Moisture‑related surface defects are also generated when rainfall infiltrates the concrete, producing cracks that erode the matrix and predispose the slab to spalling.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Construction shortcomings such as improper joint fabrication, insufficient curing, and poor final finishing promote edge slumping, which readily evolves into spalled fragments along longitudinal edges.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Pre‑existing material flaws including cracking and honey‑combing further diminish the slab’s load‑bearing capacity and accelerate loss of surface material.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When these deficiencies coincide with an undersized slab—identified when the average core depth is more than 0.5 in below the design thickness—the structural capacity is insufficient to resist traffic and environmental loads, hastening spalling.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Likewise, a compressive‑strength quality index that falls below 55 % of the specified value indicates inadequate material strength, which reduces resistance to point‑loading and contributes to surface breakaway.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The combined effect of insufficient structural capacity, poor drainage, weak subgrade support, environmental exposure, heavy loads, and long‑term material degradation therefore accelerates the detachment of concrete chips observed as spalling.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–98); [2] — SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>A bonded jointed plain concrete (JPCP) overlay is appropriate when the existing Portland cement concrete pavement is in good‑to‑fair condition, the subgrade provides stable support and the drainage system functions properly, and surface spalling is evident; under these site conditions the overlay can correct the spalling distress. The method should be avoided on asphalt or composite pavements that suffer major structural loss, unstable support, stripping of the asphalt, or unresolved drainage problems. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98)</small></p>
+<p>Spalling repair using a partial‑depth patch is limited to situations where the loss of material does not extend beyond the upper half of the slab thickness and where joint integrity remains satisfactory; once the depth reaches or exceeds one‑half of the slab, or when spalls involve corners that pass the mid‑slab level, the partial‑depth method becomes unsuitable and a full‑depth concrete patch, corner repair, or longitudinal joint reconstruction must be employed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Edge spalling or slumping that occurs at longitudinal edges, between adjacent lanes, or beyond the pavement edge is also not adequately addressed by localized repairs; the specifications require removal and replacement of a minimum ten‑foot segment between transverse joints for reinforced cement concrete pavements, or the reconstruction of an entire plain‑cement panel, treating these defects as defective work requiring full‑panel rehabilitation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In preservation programs, spalling repair is deemed inappropriate when the quantity of concrete patching would exceed roughly ten percent of the total pavement area, because such extensive patching is generally not cost‑effective; in those cases a more comprehensive rehabilitation—such as full‑depth patching, joint reconstruction, base repair, or placement of an overlay—is recommended [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When an overlay is planned, sealing existing joints before the new surface is placed is unsuitable because sealants would become trapped beneath the overlay; instead the badly spalled joints and interior slab areas should be cleaned and filled with a thin layer of asphalt wearing‑course material prior to overlay placement, and joint rehabilitation is limited to restoration projects rather than overlay applications [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A bonded jointed plain concrete pavement (JPCP) overlay can be used for extensive surface spalling only if the underlying concrete is in good to fair condition; significant structural deterioration, unstable support, stripping of asphalt, or unresolved drainage problems render a bonded overlay unsuitable and call for an unbonded overlay, rubblizing, or another rehabilitation method [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For minor spalling at a transverse joint that results from poor joint performance, slab stabilization together with dowel‑bar retrofit is preferred over a partial‑depth patch, particularly in environments prone to compression or point‑loading failures where the limited repair might otherwise fail [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–98), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221); [2] — SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>Determining the need for spalling repair begins with a systematic visual inspection of the concrete pavement surface, which records interior‑slab spalls as well as transverse and longitudinal joint spalls and notes their longitudinal extent [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The visual survey is complemented by an annual automated pavement condition survey (videologging) that captures joint spalling and other distresses; any spall observed in the video record triggers a field verification to confirm location and severity before treatment decisions are made [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the pavement is being saw‑cut, the inspector also examines the freshly exposed concrete, documents any break‑back or spalled area, and cuts a new full‑depth transverse joint beyond the damaged portion so that a full‑depth Type A patch can be placed if required [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The recorded spalls are classified by length, with defects between fifteen inches and six feet assigned to a Type 1 spot‑repair category and those longer than six feet designated as Type 2 extended‑repair, guiding the selection of partial‑depth or mechanized patch solutions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Representative core samples are taken from the spalled slab surface or adjacent joints and measured for depth; the loss of material must not exceed one‑half of the slab thickness for a partial‑depth repair, and cores are also compared to the design thickness, flagging a defect when the average depth is more than ½ inch below design or any individual core falls that short [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The extracted cores are sent to the laboratory where compressive strength and plastic air content are tested, and a percent‑within‑limits result below fifty‑five percent indicates that the concrete does not meet specifications and therefore requires repair [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Surface conditions observed during the visual inspection—including rain‑induced cracking, honeycombing, improper joint construction, curing deficiencies, or depressions and high points that exceed tolerance limits—are also considered indicators of spalling that must be addressed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Edge slumping is measured against the criteria set out in the applicable specification (Section 501.3(g)5), and failure to meet those limits mandates corrective action for spalling [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A Falling Weight Deflectometer test is performed on the existing pavement before any overlay design and again to verify joint efficiency where failed joints accompany spalling; the resulting deflection data quantify structural loss and identify locations that require full‑depth patching or a bonded Jointed Plain Concrete Pavement overlay [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Finally, a pre‑acceptance visual check screens for any remaining cracks or spalls before project closeout, and if such defects are found the affected segment must be removed and replaced, ensuring that all identified spalling has been properly treated [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 90–98), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221); [2] — SECTION 500—RIGID PAVEMENTS (pp. 379–402)</small></p>
+<p>Spalling should be addressed as soon as it is observed on a concrete pavement, whether the observation occurs during construction activities such as cutting or profiling or later in routine service [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The trigger for a preservation‑type repair is the presence of extensive surface spalls while the underlying slab still exhibits fair to good structural condition; at that point the distress level is considered sufficient to warrant treatment but not yet severe enough to require full reconstruction [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the loss of material is confined to the upper half of the slab depth and is not associated with serious joint problems such as loss of load transfer, a partial‑depth repair is prescribed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The partial‑depth repair may be applied to interior slab spalls whose length ranges from about fifteen inches up to six feet as spot repairs, and to longer sections exceeding six feet as extended‑length repairs, provided the depth does not exceed one‑half of the slab thickness [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If a spall penetrates beyond the mid‑slab depth, the appropriate action escalates to a full‑depth joint repair or complete slab replacement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In cases where spalling occurs at a saw‑cut edge, the guideline calls for making an additional full‑depth transverse cut beyond the damaged zone and incorporating that length into the repair [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Prior to placing any overlay, badly spalled joints and interior spalls must be cleaned and filled with a 4.75 mm asphalt wearing‑course material (or equivalent) to provide a sound base for the new surface layer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the total area of spalling that would require patching exceeds roughly ten percent of the pavement’s surface, preservation treatment is no longer considered appropriate and other rehabilitation criteria must be applied [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–98), Ch. 12 (pp. 204–205), Ch. 13 (pp. 220–221); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 399–441)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Spalling repairs are classified as either partial‑depth or full‑depth depending on the depth of loss and its location within the slab. When the loss is confined to the upper half of the slab thickness a partial‑depth patch may be used, with the repair thickness limited to no more than one‑half of the existing slab depth. The length of a partial‑depth repair determines its type: spot repairs cover lengths from fifteen inches up to six feet, while repairs longer than six feet are treated as extended‑length patches, and a minimum patch length of six feet is required for transverse joint work. The concrete mix for partial‑depth patches follows the standard pavement concrete specifications; Class AA Cement Concrete Modified may be used for normal curing, and an accelerated version of the same class is specified when rapid reopening of the roadway is needed, while the mix design may also follow Section 501.3 with rapid‑set patching material and epoxy bonding compound where required. Prior to placement the spalled area must be thoroughly cleaned of loose material; for concrete pavements a jackhammer not exceeding thirty‑five pounds is used at an angle of forty‑five degrees or less to taper the boundary, and any unsound concrete is removed. Full‑depth transverse saw cuts are then made with a diamond‑tipped blade, limited to a width of one‑half inch, extending at least two inches beyond the defect; for corner repairs the cut depth is limited to two inches and also extends a minimum of two inches beyond the damaged area, and cuts may be extended transversely into adjacent slabs up to full depth plus two inches provided dowel bars are not harmed. If the spalling exceeds the half‑slab depth or involves severe joint deterioration, a full‑depth removal and replacement is required; the removed portion shall not exceed ten percent of the total pavement unless a cost‑effectiveness justification is documented, and at least ten feet of reinforced concrete between transverse joints must be replaced when full‑depth repair is called for. When removal reaches an existing transverse joint the joint is rebuilt in kind using standard joining methods, including installation of dowel bars that run the full embedded length and are bonded with epoxy, polyester or vinylester binders. All new joints receive a joint‑reconstitution system: rigid polystyrene board is placed for longitudinal joints, premolded expansion‑joint material is used for transverse joints, each matching the existing joint width, and an expansion‑joint filler of three‑quarters inch (or one‑half inch for corner repairs) is installed. Dowels and tie bars are lubricated, positioned as required, and secured with epoxy bonding compound injected into drilled holes that are no larger than three‑eighths inch beyond the bar diameter; the epoxy is troweled flush to provide approximately one inch of surface coverage before the joint is routed to three‑quarters inch width and one inch depth and sealed within a quarter inch of the pavement surface. Joint sealing incorporates a sealant reservoir measuring three‑quarters inch by three‑quarters inch that is filled with rubberized or asphalt joint‑sealing material to ensure proper bonding and water resistance before any overlay is placed. After placement, a curing compound is applied to the fresh concrete patch, and surface tolerances are checked; any high spots exceeding three‑sixteenths inch are ground away, and diamond grinding may be performed when no asphalt overlay is planned. When a full‑depth repair is completed and an asphalt overlay is not intended, surface treatments such as a one‑inch (6.3 mm) thin asphalt overlay, micro‑surfacing, ultra‑thin bonded wearing course, or diamond grinding may be applied to improve ride quality and skid resistance. For extensive surface spalling the guides also prescribe bonded jointed plain cementitious concrete (JPCP) overlays that are bonded to the existing slab; thin‑bonded JPCP overlays are typically two‑and‑a‑half to four inches thick, while standard bonded overlays range from four to eight inches, and adequate subdrainage must be provided. In cases where spalling occurs during profile milling of an asphalt surface, the affected area is excavated to match the surrounding pavement depth, cleaned, coated with an emulsified asphalt tack coat, filled with an asphalt mix identical to the existing surface, then leveled and compacted to meet the same surface tolerances as the adjacent pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–98), Ch. 12 (pp. 204–205); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 379–425)</small></p>
+<p>The performance of a spalling repair is fundamentally linked to the inherent quality of the existing concrete slab, which must achieve at least a 55 % within‑limits rate for compressive strength or plastic air content and be placed with a water‑to‑cement ratio between 0.37 and 0.42, while core depths may not fall more than one‑half inch below the design thickness [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For flexible pavements the repair material must be identical to the existing asphalt mix and the damaged area excavated to the same depth before being treated with an emulsified tack coat and compacted to match surrounding smoothness [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The depth of the spalling relative to slab thickness dictates whether a partial‑depth patch or a full‑depth joint reconstruction is appropriate, with partial repairs limited to disturbances that do not exceed the upper 50 % of the slab thickness and deeper failures requiring complete joint restoration [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Compatibility between the repair mix and the original concrete is essential; a Class AA cement‑concrete modified blend provides the best match for regular repairs, whereas rapid‑set or high early‑strength mixes are discouraged because their excessive shrinkage can induce new cracking, although accelerated materials may be used when time constraints demand it provided they remain compatible with the existing pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Load transfer across transverse joints must be reestablished by ensuring dowel bars are fully bonded along their entire embedded length, correctly spaced, properly coated, and sealed; inadequate bond or compression of the patch is a major cause of premature failure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Anchoring materials for dowel bars should achieve an initial set within five minutes and be placed free of voids, while bond‑breaker lubricants must be applied without brushes to avoid unintended adhesion that would impede load transfer [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When epoxy bonding compounds are used, the drilled holes and concrete surfaces must be completely dry and clean, and the epoxy mixed and placed according to manufacturer specifications so that it fully surrounds the tie bar and develops a sound bond [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Joint cuts created for repair should be full‑depth, no wider than one‑half inch, and a fresh cut made beyond any break‑back or spalling to provide a proper bonding surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Prior to any overlay, the underlying slab must be in at least good‑to‑fair structural condition, the subgrade stable, and drainage functional; extensive surface spalling on such sound slabs can be addressed with a bonded jointed plain cement concrete overlay, whereas moderate to severe distress or poor drainage calls for an unbonded overlay or alternative rehabilitation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Severely spalled joints should be cleaned and filled with a 4.75 mm asphalt wearing‑course material before placing the overlay, while rubberized sealants are only appropriate when no overlay is planned [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Surface defects that cannot be satisfactorily remedied—such as rain‑induced staining, poorly constructed joints, inadequate curing or finishing, visible cracking, honeycombing, edge slumping, or uncorrectable high/low spots—render the pavement defective and predispose it to further spalling, making longitudinal edge repairs insufficient for such conditions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Ambient air and pavement surface temperatures must be at least 40 °F during repair activities to ensure proper curing of the materials used in both concrete and asphalt treatments [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–98); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>Preparation begins with a quality‑control plan that is prepared and submitted at least two weeks before work starts, detailing equipment, personnel, traffic protection and testing procedures, and the damaged area is then identified, marked and delineated for repair [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The surface of the spalled concrete or asphalt is thoroughly cleaned to remove loose material, and where the distress is in a concrete slab the area is further prepared by saw‑cutting full‑depth perimeter cuts with a diamond‑tipped blade equipped with a guard, alignment guides, water cooling and depth controls to isolate the patch while preventing slurry from entering traffic lanes [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Traffic may be allowed on the newly cut sections for up to 72 hours, but no un‑patched zone may remain longer than 48 hours, including weekends or holidays, after which the spalled concrete is removed in one or more pieces without using drop hammers or hydro‑hammers and with care taken to minimize disturbance of the subbase and adjacent pavement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any excavated subbase that has been disturbed deeper than an inch is promptly re‑compacted, and when removal intersects a transverse joint the joint is rebuilt in kind; new transverse joints are formed at the edges of the replacement area according to standard drawings [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For concrete pavements whose spalling is confined to the upper half of slab depth, a partial‑depth patch is cut after sawcutting, whereas spalls extending beyond mid‑slab depth require a full‑depth longitudinal joint repair; in both cases all crushed or damaged joints are excavated and cleaned [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Dowel bars are positioned across the repaired joint and bonded with epoxy to re‑establish load transfer, and for longitudinal joints a rigid polystyrene board or an expansion‑joint material is installed to recreate the original joint geometry and to keep the new patch from contacting adjacent slabs [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When an overlay is planned, the cleaned spalled joint or slab is filled with 4.75 mm asphalt wearing‑course material (or equivalent) before placing the new surface; similarly, for milled asphalt surfaces the void is filled with an asphalt mix of the same type after applying an emulsified tack coat [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The concrete patch is placed using the mix specified in Publication 408 Section 704—standard pavement concrete with optimized aggregate gradation—or a Class AA cement‑concrete modified for regular repairs; accelerated concrete may be used when rapid traffic opening is desired, but high early‑strength concrete should be avoided because of shrinkage cracking [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The fresh concrete is placed immediately after removal, finished and textured to match the surrounding surface while ensuring that the repair does not touch adjacent slabs, and then cured according to Publication 408 Section 525.3 using a membrane‑forming compound applied per the manufacturer’s instructions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Typical strength development periods are 24 to 48 hours for normal concrete and 4 to 7 hours for accelerated material, with a minimum compressive strength of about 1,000 psi required before traffic is reopened; after curing, grout is placed around the patch, all original joints and any saw cuts extending beyond the repair limits are sealed, and the surface is inspected with a straightedge, requiring tolerances no greater than three‑sixteenths of an inch [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All steps, including preparation, removal, placement, finishing, curing and post‑repair inspection, are documented in accordance with the approved QC plan [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–91); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 379–408)</small></p>
+<p>A quality‑control plan must be prepared and submitted at least fourteen days before any spalling work begins, and it may need to include a demonstration of the cross‑stitching method. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The first piece of equipment deployed is a diamond‑tipped saw equipped with a blade guard, alignment guides, a water‑cooling system and precise cut‑depth controls, which is used to make full‑depth longitudinal cuts along the perimeter of the repair area before any transverse cuts are introduced. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All opened saw cuts are limited to one‑half inch in width and may be exposed to traffic for no more than seventy‑two hours, provided that drop‑off hazards are mitigated according to the applicable safety section. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] If additional spalling or break‑back is encountered, a new full‑depth transverse cut is placed beyond the damaged zone, again respecting the half‑inch width limit. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After the saw cuts are completed, excavated areas must be backfilled and patched within forty‑eight hours and may not remain open over weekends or holidays without protective grading. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When tie‑bars or anchorage are required, a hydraulic‑powered drill—either stand‑alone or gang‑mounted on a rig that maintains the proper drilling angle—is used to bore shallow vertical holes at each tie‑bar location, and work with this equipment is prohibited when ambient air temperature or pavement surface temperature falls below forty degrees Fahrenheit. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For asphalt pavements, a self‑propelled milling machine capable of cutting an entire twelve‑foot lane in one pass, equipped with an automatic grade‑control system and profiler cutters to regulate longitudinal profile and transverse cross‑slope, is employed to remove the deteriorated surface before spalled areas are identified, cleaned, tack‑coated and filled with matching asphalt. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Traffic is prohibited on any milled surface for up to six calendar days, and the first overlay must be placed within seven calendar days of the start of milling; weather‑related stoppages do not count toward this window. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For concrete repairs, the sequence begins with preparation of the repair area, removal of deteriorated concrete, placement of a partial‑depth patch, and curing as prescribed in the specifications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Between the new patch and adjacent slabs, rigid polystyrene boards for longitudinal joints or premolded expansion‑joint material for transverse joints are installed to reform the original joint and prevent intrusion of repair material into the adjacent joint. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Ambient temperature and seasonal expansion/contraction cycles are critical; repairs should be placed when slabs are contracted and provided adequate clearance to avoid failure during cool nights and hot days. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The patch may not be opened to traffic until it has achieved the required cure time, which dictates the opening‑to‑traffic restriction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Rainfall occurring while a repair area is open triggers the requirement to cut a drainage outlet in the shoulder and to repair any moisture‑induced damage at no additional cost. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 90–91); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 399–425)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>Inspection of spalling begins with confirming that the concrete mix meets the specified compressive‑strength level and that its air content falls within contract limits, requiring at least fifty‑five percent of cores to satisfy both criteria before acceptance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The required minimum compressive strength for opening to traffic is one thousand pounds per square inch as demonstrated by cylinder testing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Core measurements are also used to verify that the average thickness does not fall more than a half‑inch below the design depth and that no individual core is short of the nominal thickness by that amount [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When evaluating repair material, the inspector must ensure that it matches the project constraints, such as using Class AA cement concrete modified or an accelerated mix appropriate to the time available before traffic opening and ambient temperature conditions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Preparation of the spalled area requires removal of existing concrete according to specified procedures, excavation to a depth equal to the surrounding surface, and cleaning of all loose material [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Prior to placing new material, a rigid polystyrene board or premolded expansion‑joint filler having a width equal to the existing joint must be installed between the patch and adjacent slabs so that the fresh patch does not contact the neighboring slab and sufficient movement space is provided [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For asphalt repairs, an emulsified asphalt tack coat is applied before filling the void with an asphalt mixture identical to the existing pavement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The placed mix must be leveled and compacted so that surface smoothness and cross‑slope conform to the allowable tolerance of one‑eighth inch in twelve feet and match adjacent sections [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Curing of concrete repairs is required to follow the prescribed guidelines, and the completed patch should be examined for any signs of compression or point‑loading failure, which are major causes of partial‑depth repair failures [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Surface flatness of the repaired area is checked with a twelve‑foot straightedge; depressions or high spots greater than three‑sixteenths of an inch must be corrected by grinding [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The inspector also verifies that voids surrounding dowel bars total less than half an inch on each inspected core [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Final acceptance includes inspection for surface defects that cannot be adequately repaired, such as rain damage, improperly formed joints, insufficient curing or finishing, cracking, honeycombing, edge slumping and spalling along lane edges; longitudinal edge spall repairs alone are not considered satisfactory remedies [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By addressing material quality, preparation steps, installation accuracy, and the condition of the completed work, the inspection ensures that spalling is identified and remedied in accordance with the acceptance criteria [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 90–91); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<p>Acceptable spalling condition is defined by the depth of concrete loss and the proportion of pavement that must be patched; loss confined to the upper half of a slab permits a partial‑depth repair while any loss extending past the mid‑slab depth requires a full‑depth longitudinal joint repair [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For projects receiving an overlay, joints and slabs that are badly spalled or contain interior spalls must be cleaned and backfilled with 4.75 mm asphalt wearing‑course material (or equivalent) before the new layer is placed, and treatment should begin as soon as distress is observed even if overall serviceability appears acceptable [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The total area of concrete that needs patching may not exceed ten percent of the pavement surface unless a cost‑effectiveness justification is provided; exceeding this threshold otherwise disqualifies the work from preservation activity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. All repairs, including joint rehabilitation, must be completed and subsequently verified by Falling Weight Deflectometer testing, with patching quantities encompassing faulted joints, cracks, existing asphalt patches, failed concrete patches, and transverse or longitudinal spalls [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A satisfactory repair is declared only when no spalled concrete remains and all surface irregularities fall within prescribed limits; any crack or spall that appears before the final inspection must be removed and replaced at no additional cost, accompanied by a new full‑depth transverse saw cut placed beyond the damaged zone [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Surface high points or depressions exceeding three‑sixteenths of an inch are considered defective and must be ground smooth, with replacement required if the deviation persists after grinding [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For rigid pavements the repaired surface must satisfy the criteria set out in Section 501.3(g)5, and edge slumping or spalling that does not meet those specifications is deemed defective, requiring removal of at least ten feet of pavement between transverse joints for reinforced concrete or an entire panel for plain concrete [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Longitudinal edge spall patches are expressly excluded as acceptable fixes for spalling between lanes or at the pavement edges, and such conditions must be addressed by removal and replacement rather than patching [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In asphalt repairs the spalled area must be excavated, cleaned, tack‑coated and filled with the same asphalt mix, then leveled and compacted so that after profiling the surface smoothness does not deviate more than one‑eighth inch over any twelve‑foot length, edge matching is within one‑eighth inch, and cross‑slope conforms to the specified grade within one‑eighth inch per twelve feet; failure to meet these tolerances constitutes defective work [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Ultimately acceptance rests with the designated Representative, who must determine that spalling has been fully eliminated and all dimensional tolerances have been satisfied; any defect that cannot be satisfactorily repaired as judged by the Representative renders the pavement defective [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 89–90), Ch. 12 (pp. 204–205); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Spalling on rigid pavements manifests as surface chips that impair structural integrity, ride‑ability and load transfer, thereby degrading the overall condition and functional performance of the pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When spalling is confined to the upper half of a concrete slab and is not associated with severe joint loss, the guides permit a partial‑depth repair limited to no more than one‑half the slab thickness using compatible Class AA or accelerated cement‑concrete material together with proper joint preparation such as polystyrene or expansion inserts, which restores structural integrity, improves functionality and extends the remaining service life toward the design period [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If the spalling penetrates beyond the mid‑slab depth, a full‑depth longitudinal joint repair or a thin‑bonded concrete inlay is required, and for very extensive surface loss replacement of the affected section or placement of a bonded jointed plain‑concrete (JPCP) overlay adds structural capacity and further prolongs service life while reducing future maintenance cycles [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For spalling that occurs during construction, the specifications call for a full‑depth transverse saw cut extending beyond the damaged zone, removal of the affected concrete, and replacement with new concrete that satisfies all joint, dowel and curing requirements, thereby restoring the pavement’s condition, functional performance and durability to its originally designed level [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Longitudinal edge spalling that cannot be satisfactorily patched requires removal of a minimum of ten feet of concrete between transverse joints—or an entire panel in the case of plain cement‑concrete—and replacement with new material, which re‑establishes the intended durability and service life [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Prior to any overlay, cleaning and filling spalled areas with a 4.75 mm asphalt wearing course (or equivalent) re‑creates a sound surface profile, and leveling courses may be applied to correct profile deficiencies, actions that preserve ride quality and extend the pavement’s useful life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Early resealing of joints at the first indication of spalling is advised even when overall serviceability appears acceptable, because postponing treatment leads to more extensive repairs and a shortened expected service life; timely joint maintenance therefore helps maintain durability and prolongs service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In all cases, addressing spalling through the prescribed repair or replacement actions preserves pavement condition, functionality, durability and ultimately extends the expected service life compared with leaving the distress untreated, which would otherwise accelerate deterioration and reduce longevity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–98), Ch. 13 (pp. 220–221); [2] — SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<p>Spalling in rigid pavements is observed as surface loss confined to the upper half of a concrete slab, interior slab spalls, corner spalls at joint intersections, transverse and longitudinal cracks, break‑back at transverse saw‑cut edges, isolated surface cracks that appear before final acceptance, longitudinal edge spall along lane lines or margins, and surface breakage associated with tie‑bar drilling. When the loss is limited to the top half of the slab and joint performance is satisfactory, a partial‑depth repair may be selected, but this method requires sufficient expansion space to avoid compressive stresses on the patch and must guard against point‑loading that can occur if underlying cracks propagate toward the repaired area rather than vertically. If spalling exceeds roughly ten percent of the pavement area or is linked to compromised joints, full‑depth concrete patching together with joint rehabilitation—often including dowel bar retrofits or slab stabilization at transverse joints—is prescribed, and in some cases thin‑bonded concrete inlays or complete pavement replacement become necessary. The specification treats any manifestation of break‑back, edge spall, or drill‑induced surface damage as a defect that must be corrected without charge to the owner, typically by extending a new full‑depth transverse saw‑cut beyond the damaged zone or by removing and replacing the affected concrete with a full‑depth patch. Edge slumping that produces longitudinal edge spall cannot be remedied by limited edge repairs; the entire compromised section must be removed and replaced. When tie‑bar drilling creates surface spalling, shallow vertical holes are permitted at each tie‑bar location, but any slab in which a hole penetrates to the bottom requires full‑depth patching at no additional cost. The recurring distresses are driven primarily by temperature‑driven expansion and contraction cycles that induce slab movement, as well as insufficient joint spacing and loss of load transfer capacity. Construction‑related factors such as shallow or vibratory saw‑cutting, intrusion of cooling water, slurry or dust into traffic lanes, rain‑induced surface damage, improper joint construction, inadequate curing or finishing, cracking, honeycombing, slab thickness that falls more than 0.5 in below design, and a compressive‑strength quality index below 55 % create vulnerable zones that predispose the pavement to spalling. Drilling operations performed when ambient or surface temperatures are below 40 °F, or using unsuitable drills or angles, increase the likelihood of over‑drilling through the slab and producing surface breakage. Failure of partial‑depth repairs is commonly associated with compression of the patch against neighboring slabs and point‑loading from underlying crack propagation, underscoring the need for careful assessment of joint condition before selecting this treatment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–91), Ch. 12 (pp. 204–205); [2] — SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>When spalling extends beyond the upper half of the concrete slab thickness or becomes sufficiently widespread to affect a large portion of the surface, the limits for partial‑depth treatment are exceeded and full‑depth patching, replacement, or a thin‑bonded inlay is required [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If spalls remain confined to the top 50 % of the slab and joint conditions are sound, partial‑depth repairs may still be appropriate, but any penetration past mid‑slab depth signals the need for full‑depth repair actions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The appearance of severe joint deterioration—such as loss of load transfer, recurring compression failures, or point‑loading cracks that propagate toward a repaired area—indicates that the original repair has been compromised and calls for more extensive measures such as slab stabilization, dowel‑bar retrofits, or full‑depth repairs [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Even early joint spalling, while overall serviceability may still be acceptable, warrants resealing of the joint before the distress expands further [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the cumulative area of spalled pavement approaches or exceeds roughly ten percent of the total surface, especially when accompanied by other distresses such as cracking or rutting, routine spot repairs become uneconomical and a preservation or structural rehabilitation treatment is triggered [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Any occurrence of break‑back, spalling, or cracking within a previously treated zone or extending into an adjacent lane is considered deficient; it requires a new full‑depth transverse saw cut beyond the affected area and a full‑depth Type A concrete repair or replacement at no additional cost [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Core‑depth measurements that fall more than one‑half inch below the specified design thickness also classify the pavement as defective, prompting further repair or replacement actions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Likewise, compressive‑strength (or plastic‑air‑content) testing that yields a Percent Within Limits below the 55 % acceptance threshold signals a defect that must be addressed through additional maintenance or rehabilitation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Surface defects that cannot be satisfactorily corrected—such as rain damage, improper joint construction, inadequate curing, poor final finish, honeycombing, depressions or high points, and persistent cracking—are indicators that further maintenance or replacement is required [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Edge slumping or longitudinal spalling between lanes that simple edge‑spall repairs have not remedied likewise signals the need for more extensive rehabilitation, up to full pavement replacement if necessary [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–91), Ch. 13 (pp. 220–221); [2] — SECTION 500—RIGID PAVEMENTS (pp. 379–441)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

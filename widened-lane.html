@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widened Lane</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html" class="active" aria-current="page">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="rigid-pavement.html">Rigid Pavement</a><span class="crumb-sep">›</span><span class="crumb-current">Widened Lane</span></nav>
+<article><h1>Widened Lane</h1>
+<div class="meta"><div class="part-of">Part of: <a href="rigid-pavement.html">Rigid Pavement</a> <span class="edge edge-taxonomic" title="Widened Lane is a topic under Rigid Pavement.">is-subtopic-of</span></div><div class="edge-reading">Widened Lane is a topic under Rigid Pavement.</div><div><a class="tag" href="index.html?q=widened-lanes">widened-lanes</a><a class="tag" href="index.html?q=widened-lane">widened-lane</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>The widened lane is a concrete or asphalt extension of one to two feet beyond the regular travel lane that functions as a supported edge, preserving lateral clearance and shoulder width after overlay rehabilitation while providing an effective outside lane on low‑volume rural highways [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By extending the slab up to fourteen feet total width and striping twelve feet for traffic, it supplies additional lateral support that reduces slab deflection and permits a one‑inch reduction in minimum concrete thickness at supported edges, with edge‑slump tolerances limited to ≤ 1/8 in between lanes (or ramps) and ≤ 1/4 in to shoulders [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The approach is restricted to roadways carrying fewer than about ten thousand vehicles per day where an incident‑management lane is unnecessary, assumes a twenty‑year design life with terminal serviceability indices of 2.5 for collectors or 2.0 for locals and reliability targets of 90 %/85 %, and mandates strict joint alignment, surface smoothness (≤ 3/16 in) and texture depth (≥ 0.040 in) to ensure ride quality and durability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>The widened‑lane element is introduced to meet several interrelated performance needs in pavement design. By adding a lane one to two feet wide alongside asphalt or RCC shoulders, it preserves the required lateral clearance and shoulder width after concrete overlay rehabilitation, ensuring that the rebuilt section retains adequate support. Extending the concrete slab up to fourteen feet and coupling it with this widened edge also reduces excessive slab deflection on low‑volume rural highways, providing a functional outside lane that serves as an effective shoulder where a dedicated incident‑management lane is unnecessary for traffic volumes under ten thousand ADT. In addition, treating the widened lane as a supported edge supplies extra lateral support to the concrete slab, allowing designers to deduct one inch from the minimum slab thickness prescribed in the tables, thereby satisfying serviceability and reliability objectives while limiting material use. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–69), Ch. 8 (pp. 165–167)</small></p>
+<p>The widened lane is intended to serve as the supported edge of a roller‑compacted concrete pavement, thereby providing additional width for traffic movements and ensuring that the roadway can accommodate projected volumes while preserving acceptable ride quality.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] To meet structural adequacy, the design permits a reduction of one inch in the minimum slab thickness relative to the standard pavement thickness, provided that the lane functions as the supported edge.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Edge geometry must be controlled so that slumping does not exceed one‑eighth inch between adjacent lanes or ramps and does not exceed one‑quarter inch between a lane and its shoulder, limits that help maintain structural integrity and vehicle stability.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Any new transverse joints introduced in the widened portion are required to be aligned with existing construction or contraction joints; when alignment is not feasible they must be located at least ten feet from any existing joint, a measure intended to preserve slab continuity and reduce stress concentrations.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The finished surface of the widened lane must conform to the same smoothness tolerance as the remainder of the pavement, with deviation measured by a straightedge limited to three‑sixteenths inch, and it must achieve a minimum mean texture depth of 0.040 inches, criteria that support both ride quality and skid resistance.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Durability requirements assume a twenty‑year design service life and tolerate up to fifteen percent of slabs developing cracks at the end of that period, while concrete curing must follow the specified methods and protect the material from temperature fluctuations greater than forty degrees Fahrenheit per hour, actions intended to sustain structural performance over time.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Serviceability objectives are expressed through terminal serviceability indices of 2.5 for collector roads and 2.0 for local roads, with corresponding reliability targets of ninety percent and eighty‑five percent, ensuring that the widened lane maintains acceptable ride quality throughout its intended life.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 166–167); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Widened lane provisions are appropriate for new‑construction or reconstruction projects that employ flexible pavements, where the travel lane is extended two feet into the shoulder area, and also for rigid‑pavement projects that incorporate concrete shoulders, with specific guidance found in Chapter 8.14 of the construction standards. In concrete‑pavement rehabilitation using bonded overlays, a lane may be widened one to two feet and paired with asphalt shoulders; additional fill widening is provided as needed to retain proper shoulder widths in accordance with Chapter 10 requirements. For rigid (concrete) pavements the design permits expanding a slab up to fourteen feet wide, striped at twelve feet, leaving the remainder as a right‑hand shoulder constructed of Type 1 asphalt or roller‑compacted concrete. This configuration is limited to low‑volume rural Interstates and Expressways carrying two‑way traffic volumes under ten thousand vehicles per day where an incident‑management lane is not required; when a tied concrete shoulder exists, a thirteen‑foot outside lane striped at twelve feet may be used to reduce slab deflection while preserving the conventional twelve‑foot passing lane. In roller‑compacted concrete designs for low‑volume local and collector highways (ADT ≤ 2000), a widened lane can serve as a supported edge—either a curb and gutter or a widened lane—allowing the RCC slab thickness to be reduced by one inch relative to the minimum depth for an unsupported edge, assuming a standard six‑inch unbound granular subbase, a twenty‑year design life, and typical PennDOT material inputs for PCC pavements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 60–61), Ch. 3 (pp. 67–69), Ch. 8 (pp. 165–167)</small></p>
+<p>When the required lane width would exceed fourteen feet, or the roadway carries more than about ten thousand daily vehicles in each direction, a widened‑lane solution is no longer appropriate; similarly, if an incident‑management lane is needed, designers revert to conventional 12‑foot lanes with tied concrete shoulders. In those cases the standard design—12‑ft passing lanes and a concrete shoulder—or alternative shoulder treatments are preferred over a widened slab. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (p. 165)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>In new flexible‑pavement projects the lane is required to extend two feet into the shoulder, except on inside shoulders of Interstate and other limited‑access freeways, as set out in Publication 13 Design Manual Part 2 Chapter 4 and reinforced by Publication 72M RC‑25M. For concrete pavements the guidance appears in Chapter 8.14 with related shoulder provisions in Chapter 8.15, and a widened lane is treated as a type of shoulder that must comply with the same chapter‑level criteria governing the associated pavement work, namely Chapter 10 for asphalt overlays and Chapter 9 for full reconstruction. All shoulders, including those created by widening, must satisfy the applicable Type 6 or Type 7 paved‑shoulder specifications to maintain proper shoulder widths. When a widened lane is provided as a concrete shoulder its width is limited to one to two feet and it must be paired with an asphalt shoulder; any concrete slab used for a widened lane may not exceed fourteen feet in total width and must be striped at twelve feet, the remaining width functioning as an effective shoulder when combined with a Type 1 asphalt or roller‑compacted concrete shoulder. Such configurations are restricted to low‑volume rural Interstates or Expressways carrying two‑way average daily traffic of less than ten thousand vehicles and where an incident‑management lane is not required, and the appropriate load‑transfer coefficient for widened lanes with asphalt or RCC shoulders must be applied as specified in Table 8.2. Design of widened concrete lanes follows PennDOT’s RCC pavement criteria using ACPA StreetPave12 software and standard PCC values, allowing a one‑inch reduction in concrete thickness at supported edges provided the design meets a twenty‑year service life, 1 % annual traffic growth, a six‑inch unbound granular subbase, a fifteen‑percent allowable slab‑crack rate, reliability levels of 85 % for local roads and 90 % for collector roads, and terminal serviceability values of 2.0 and 2.5 respectively; no other depth‑reduction methods are permitted on Department roadways. In slip‑form concrete pavements the widening is governed by rigid‑pavement specifications that control joint placement, requiring any new transverse construction, contraction or expansion joints to be aligned with existing joints whenever feasible and, if alignment is not possible, to be located at least ten feet from any existing joint. Edge slumping along lane edges is limited to one‑eighth inch between adjacent lanes (or ramps) and one‑quarter inch between a lane and its shoulder, measured over a six‑inch strip with a twelve‑foot straightedge before the concrete sets; work must be halted after two hundred feet if these tolerances cannot be met. These dimensional tolerances, joint‑alignment rules, and edge‑slump testing constitute the performance requirements that constrain widened‑lane construction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 60–61), Ch. 3 (pp. 67–69), Ch. 8 (pp. 165–167); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The widened‑lane design for concrete pavements follows dimensional limits that cap slab width at fourteen feet and place lane markings twelve feet from the edge, a practice applied to low‑volume rural interstates and expressways with two‑way ADT under ten thousand vehicles where an incident‑management lane is not required. When a tied concrete shoulder is provided, the outer lane may be expanded to thirteen feet while retaining the twelve‑foot striping to limit slab deflection, whereas the adjacent passing lane remains at the conventional twelve‑foot width. The principal structural parameter governing these configurations is the load‑transfer coefficient J, which is selected from tables that differentiate widened lanes supported by Type 1 asphalt or roller‑compacted concrete shoulders. For projects using a roller‑compacted concrete shoulder, the widened lane is treated as a supported edge and the required concrete slab thickness is reduced by one inch in accordance with the tabulated guidance. Thickness calculations are performed with ACPA’s StreetPave12 software, which evaluates structural depth using the subgrade resilient modulus expressed as MRSG = 1500 × CBR, adopts a design life of twenty years, assumes an annual traffic growth rate of 1.0 %, and applies terminal serviceability indices of 2.5 for collector roads and 2.0 for local roads together with reliability targets of 90 % (or 85 %). The construction of a widened lane on existing concrete employs the slip‑form paving method equipped with side forms and automatic alignment/grade devices to maintain geometric control. Prior to loss of plasticity, edge slumping is measured with a twelve‑foot straightedge and must not exceed one‑eighth inch between adjacent lanes or ramps and one‑quarter inch between a lane and its shoulder. Any new transverse construction or contraction joints are aligned with existing joints whenever feasible; if alignment is not possible, the new joint must be located at least ten feet from any other joint. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=0b773746 src=pub_242_change_10::tab:p167#1 -->
+<p>Table: Minimum Depths for RCC on Local Roads (inches).</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-widened-lane-1-cap" tabindex="0"><table class="ct-table" id="ct-widened-lane-1" aria-describedby="ct-widened-lane-1-sum">
+<caption id="ct-widened-lane-1-cap">Minimum Depths for RCC on Local Roads (inches)</caption>
+<thead>
+<tr><td></td><th id="ct-widened-lane-1-h0-1" scope="col" colspan="6">Subgrade Resilient Modulus, MrsG (psi)</th></tr>
+<tr><th id="ct-widened-lane-1-h1-0" scope="col">Number of one-way ADTT</th><th id="ct-widened-lane-1-h1-1" scope="col">7,500</th><th id="ct-widened-lane-1-h1-2" scope="col">9,000</th><th id="ct-widened-lane-1-h1-3" scope="col">10,500</th><th id="ct-widened-lane-1-h1-4" scope="col">12,000</th><th id="ct-widened-lane-1-h1-5" scope="col">13,500</th><th id="ct-widened-lane-1-h1-6" scope="col">15,000</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-widened-lane-1-h2-0" scope="row">1</th><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-1 ct-widened-lane-1-h2-0">5.0</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-2 ct-widened-lane-1-h2-0">4.5*</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-3 ct-widened-lane-1-h2-0">4.5*</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-4 ct-widened-lane-1-h2-0">4.5*</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-5 ct-widened-lane-1-h2-0">4.5*</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-6 ct-widened-lane-1-h2-0">4.5*</td></tr>
+<tr><th id="ct-widened-lane-1-h3-0" scope="row">2</th><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-1 ct-widened-lane-1-h3-0">5.0</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-2 ct-widened-lane-1-h3-0">5.0</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-3 ct-widened-lane-1-h3-0">5.0</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-4 ct-widened-lane-1-h3-0">4.5*</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-5 ct-widened-lane-1-h3-0">4.5*</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-6 ct-widened-lane-1-h3-0">4.5*</td></tr>
+<tr><th id="ct-widened-lane-1-h4-0" scope="row">3</th><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-1 ct-widened-lane-1-h4-0">5.0*</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-2 ct-widened-lane-1-h4-0">5.0*</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-3 ct-widened-lane-1-h4-0">5.0</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-4 ct-widened-lane-1-h4-0">5.0</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-5 ct-widened-lane-1-h4-0">4.5*</td><td headers="ct-widened-lane-1-h0-1 ct-widened-lane-1-h1-6 ct-widened-lane-1-h4-0">4.5*</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-widened-lane-1-sum">Rows list the Number of one-way ADTT, columns give Subgrade Resilient Modulus values for Minimum Depths.</p>
+<p class="ct-notes">Notes: *When using a supported edge, subtract 1 inch except when marked with an *, then only subtract 0.5 inch.</p>
+
+<p><em>Source: pub_242_change_10, Table 8.5.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 8 (pp. 165–167); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>In flexible‑pavement projects involving new construction or reconstruction, the lane is required to extend two feet into the adjacent shoulder, except for inside shoulders on Interstate and other limited‑access freeways [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the widened portion functions as a concrete shoulder its width is limited to one to two feet and must be paired with an asphalt shoulder; any necessary fill widening is provided so that intended shoulder dimensions are preserved [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A widened concrete slab may not exceed fourteen feet in overall width and is striped at twelve feet, creating an effective shoulder when combined with a Type 1 asphalt or roller‑compacted concrete (RCC) shoulder, a configuration limited to low‑volume rural Interstates and expressways with two‑way average daily traffic under ten thousand vehicles [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Design calculations for such configurations must employ the load‑transfer coefficient specified for widened lanes with asphalt or RCC shoulders, and when the widened lane serves as a supported edge in RCC pavement design the required RCC thickness can be reduced by one inch [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The overall design assumes a twenty‑year service life, a 1 % annual traffic growth rate, permits up to fifteen percent of slabs to be cracked at the end of that period, and for collector roads sets a terminal serviceability index of 2.5 with a reliability target of ninety percent [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Edge slumping on the widened lane must be tightly controlled; the allowable deviation is no more than one‑eighth inch between adjacent lanes or ramps and no more than one‑quarter inch between a lane (or ramp) and its shoulder, measured over the six‑inch zone next to the pavement edge [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The contractor must test for edge slump both while the concrete is still plastic and after it has hardened, and if limits are exceeded the section must be corrected or replaced [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When widening an existing concrete pavement any new transverse construction or contraction joints should be aligned with pre‑existing joints whenever feasible, and no new joint may be placed within ten feet of an existing joint [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 60–61), Ch. 3 (pp. 67–69), Ch. 8 (pp. 165–167); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>The design guidance for a widened lane varies with pavement type but does not prescribe additional layer thicknesses beyond the existing structure. For flexible‑pavement projects the widening is achieved simply by extending the surface course two feet into the adjacent shoulder; no separate base, subbase, treated‑soil, slab, edge‑support or reinforcement dimensions are called for. In rigid‑pavement applications a widened lane may be provided as a concrete shoulder whose width ranges from one to two feet and is typically paired with asphalt shoulders, again without any specified changes to the underlying layers. When the widened lane is classified as a supported edge in reinforced cement concrete design tables, the slab thickness can be reduced by one inch relative to an unsupported edge, but no other dimensional requirements for base, subbase, treated‑soil, edge support structures or reinforcement are given. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 60–61), Ch. 3 (pp. 67–69), Ch. 8 (pp. 166–167)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>The guidance specifies that a widened lane is built as a concrete element, generally 1 to 2 feet wide, and is provided with asphalt shoulders; however, it does not prescribe particular material properties or mixture proportions for the concrete or asphalt, merely indicating the type of material to be used. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–69)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>When a widened lane is added to a concrete overlay the design provides a concrete extension typically one to two feet wide that is tied directly to an adjacent asphalt shoulder, and fill widening is placed as needed to retain the intended shoulder dimensions. The resulting concrete slab may be up to fourteen feet in overall width but is striped for traffic use at twelve feet, with the remaining width functioning as an effective shoulder when combined with a Type 1 asphalt or reinforced cement‑concrete (RCC) shoulder. Design follows the standard passing‑lane geometry of a twelve‑foot lane plus a tied concrete shoulder and requires application of the appropriate load‑transfer coefficient J for widened lanes with asphalt or RCC shoulders as listed in Table 8.2. At the edge of the widened portion the transverse joints must be rehabilitated when the underlying base consists of composite layers, and new transverse construction or contraction joints should be aligned with any existing joints or cracks whenever feasible; if alignment cannot be achieved the new joint must be located at least ten feet from any other joint. Load‑transfer units such as dowel bars are required across these joints; they must be staked in their final positions before paving, may be implanted mechanically, and the dowel locations are marked so that transverse saw cuts fall directly over them. Each Type B coated dowel bar receives a bond‑breaker lubricant applied to at least half of its length using spray or gloved hand rather than brushes. Any reinforcement placed in the widened lane must be free of rust, dirt, oil, grease, or other foreign substances that could impair concrete‑steel bonding, although no additional reinforcement beyond standard practice is mandated. No special transition details or extra connections are required beyond these provisions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–69), Ch. 8 (p. 165); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>When a lane is widened its added width is incorporated as an integral part of the existing pavement system, and the new portion may be provided with concrete shoulders extending one to two feet beyond the original edge that are matched by asphalt shoulders on the adjacent surface [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If the original shoulder dimensions would be reduced by the widening, fill widening is employed so that final shoulder widths remain consistent across the transition [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The widened lane itself is typically constructed as a concrete slab whose overall width does not exceed fourteen feet, with twelve‑foot striping defining the travel portion and the remaining width functioning effectively as a shoulder when it abuts a Type 1 asphalt or roller‑compacted concrete (RCC) shoulder [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Where tied concrete shoulders are used, an outside lane of thirteen feet, also striped at twelve feet, may be provided to limit slab deflection [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The structural interaction between the new slab and the adjoining material is governed by a load‑transfer coefficient J specified for widened lanes with asphalt or RCC shoulders, ensuring appropriate stress distribution across the joint [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. At the junction between the widened segment and the pre‑existing pavement continuous base drainage must be maintained, joints are cleaned and sealed, and heavy‑duty membranes are installed where required; guide rails and any associated drainage structures are relocated or replaced to follow the new geometry [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Edge slump of the fresh concrete is limited to no more than one‑eighth inch between the widened lane and adjacent lanes or ramps and to no more than one‑quarter inch between the lane and shoulder, preserving smooth transition and preventing excessive differential settlement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any transverse construction or contraction joints introduced in the widened portion are aligned with existing joints or cracks whenever feasible; if alignment is not possible the new joint must be located at least ten feet from any existing joint [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After the concrete has set, the ends of all new transverse joints and adjacent cracks are sealed to keep cement mortar out, and dowel bars are positioned so that saw cuts fall directly over their centers, providing load transfer across the joint [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In RCC designs for local and collector roads carrying up to two thousand vehicles per day the widened lane is classified as a supported edge—analogous to a curb and gutter—and this recognition permits reduction of the minimum concrete thickness by one inch while still applying standard design inputs such as a twenty‑year service life, one percent annual traffic growth, and a six‑inch granular subbase [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–69), Ch. 8 (pp. 165–167); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>A widened lane is provided by adding roughly one to two feet of width beyond a standard travel lane and is bounded on both sides by asphalt shoulders that meet the same pavement standards as the main carriageway [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The shoulders must conform to the paved‑shoulder classification used elsewhere in the rehabilitation plan, typically a Type 6 or Type 7 shoulder, and where concrete surfaces exist the total slab width of the widened lane shall not exceed fourteen feet, with the travel portion striped at twelve feet and the remaining width serving as an effective shoulder when paired with a Type 1 asphalt or RCC shoulder [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When tied‑concrete shoulders are employed, an outside lane may be up to thirteen feet wide and also striped at twelve feet to limit slab deflection, while the regular passing lane remains a conventional twelve‑foot lane with its own tied concrete shoulder; such configurations are limited to low‑volume rural Interstates or Expressways carrying fewer than ten thousand average daily traffic where incident‑management lanes are not required [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Fill widening shall be performed as necessary to retain proper shoulder widths, and the load‑transfer coefficient J for these widened lanes is taken from Table 8.2 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Edge slumping between the new lane and adjacent lanes or ramps must be limited to one‑eighth inch, and between the lane and shoulders it may not exceed one‑quarter inch, providing the tolerances needed for accessibility and safety [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any transverse construction or contraction joints introduced in a concrete widening shall, where practicable, be aligned with existing joints or cracks; if alignment is not possible they must remain at least ten feet from any existing joint to avoid creating weak points [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Longitudinal joints may not cross the driving surface of the widened lane and must be placed parallel to the final pavement markings within twelve inches unless the construction drawings specify otherwise, ensuring continuity of the travel path for users [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–69), Ch. 8 (p. 165); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>After the widened lane is placed, it must be inspected at several stages to verify that it meets all design and performance criteria. First, while the concrete is still plastic a 12‑foot straightedge is used to check edge slumping and any deviation beyond the allowable limits; the same test is repeated after the slab hardens and, if excess slump is found, corrective methods must be submitted for approval. Next, once the surface has set, a second straightedge survey confirms that surface variation does not exceed three‑sixteenths of an inch in either direction, and any high or low spots are ground or cut until they meet this tolerance. Macrotexture is then measured according to ASTM E965 to ensure a mean texture depth of at least 0.040 in.; if the result is lower, additional grooving is required. Finally, tie‑bar pull‑out resistance is tested after the concrete reaches the specified compressive strength and the results are compared with Table B; any bars that fail must be replaced before traffic can be opened, and thickness checks by core drilling or nondestructive testing complete the verification of compliance, constructability, performance, and consistency with project requirements. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>When a widened lane is used as a supported edge, the RCC design assumes a 20‑year service life with a 1 % annual traffic growth, and performance is evaluated against a terminal serviceability of 2.5 for collector roads (or 2.0 for local roads) together with a reliability target of 90 % (85 %). The design also limits overall distress by permitting no more than 15 % of the concrete slabs to be cracked at the end of the design period, and the required pavement thickness is reduced by one inch relative to an unsupported edge. These outcomes are measured through the ACPA StreetPave12 software calculations that incorporate subgrade modulus, subbase thickness, and the specified serviceability and reliability criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 166–167)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=a5a0c103 src=pub_242_change_10::tab:p166#1 -->
+<p>Table: Minimum Depths for RCC on Collector Roads (inches). It relates to the section <a href="#design-methods-and-criteria">Design methods and criteria</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-widened-lane-2-cap" tabindex="0"><table class="ct-table" id="ct-widened-lane-2" aria-describedby="ct-widened-lane-2-sum">
+<caption id="ct-widened-lane-2-cap">Minimum Depths for RCC on Collector Roads (inches)</caption>
+<thead>
+<tr><td></td><th id="ct-widened-lane-2-h0-1" scope="col" colspan="6">Subgrade Resilient Modulus, MRSG (psi)</th></tr>
+<tr><th id="ct-widened-lane-2-h1-0" scope="col">Number of one-way ADTT</th><th id="ct-widened-lane-2-h1-1" scope="col">7,500</th><th id="ct-widened-lane-2-h1-2" scope="col">9,000</th><th id="ct-widened-lane-2-h1-3" scope="col">10,500</th><th id="ct-widened-lane-2-h1-4" scope="col">12,000</th><th id="ct-widened-lane-2-h1-5" scope="col">13,500</th><th id="ct-widened-lane-2-h1-6" scope="col">15,000</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-widened-lane-2-h2-0" scope="row">30</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h2-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h2-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h2-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h2-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h2-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h2-0">5.5*</td></tr>
+<tr><th id="ct-widened-lane-2-h3-0" scope="row">40</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h3-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h3-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h3-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h3-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h3-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h3-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h4-0" scope="row">50</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h4-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h4-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h4-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h4-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h4-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h4-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h5-0" scope="row">60</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h5-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h5-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h5-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h5-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h5-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h5-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h6-0" scope="row">70</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h6-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h6-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h6-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h6-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h6-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h6-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h7-0" scope="row">80</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h7-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h7-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h7-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h7-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h7-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h7-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h8-0" scope="row">90</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h8-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h8-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h8-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h8-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h8-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h8-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h9-0" scope="row">100</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h9-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h9-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h9-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h9-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h9-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h9-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h10-0" scope="row">110</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h10-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h10-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h10-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h10-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h10-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h10-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h11-0" scope="row">120</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h11-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h11-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h11-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h11-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h11-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h11-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h12-0" scope="row">130</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h12-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h12-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h12-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h12-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h12-0">6.0</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h12-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h13-0" scope="row">140</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h13-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h13-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h13-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h13-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h13-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h13-0">6.0</td></tr>
+<tr><th id="ct-widened-lane-2-h14-0" scope="row">150</th><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-1 ct-widened-lane-2-h14-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-2 ct-widened-lane-2-h14-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-3 ct-widened-lane-2-h14-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-4 ct-widened-lane-2-h14-0">6.5</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-5 ct-widened-lane-2-h14-0">6.0*</td><td headers="ct-widened-lane-2-h0-1 ct-widened-lane-2-h1-6 ct-widened-lane-2-h14-0">6.0</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-widened-lane-2-sum">Rows list the Number of one-way ADTT, columns give Subgrade Resilient Modulus values for Minimum Depths for RCC on Collector Roads.</p>
+<p class="ct-notes">Notes: *When using a supported edge, subtract 1 inch except when marked with an *, then only subtract 0.5 inch.</p>
+
+<p><em>Source: pub_242_change_10, Table 8.4.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

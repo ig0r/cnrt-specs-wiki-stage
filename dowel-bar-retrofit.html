@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dowel Bar Retrofit</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html" class="active" aria-current="page">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-preservation.html">Pavement Preservation</a><span class="crumb-sep">›</span><span class="crumb-current">Dowel Bar Retrofit</span></nav>
+<article><h1>Dowel Bar Retrofit</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-preservation.html">Pavement Preservation</a> <span class="edge edge-taxonomic" title="Dowel Bar Retrofit is a topic under Pavement Preservation.">is-subtopic-of</span></div><div class="edge-reading">Dowel Bar Retrofit is a topic under Pavement Preservation.</div><div><a class="tag" href="index.html?q=dowel-bar-retrofit">dowel-bar-retrofit</a><a class="tag" href="index.html?q=dowel-bar-retrofits">dowel-bar-retrofits</a><a class="tag" href="index.html?q=dowel-bar-retrofit">dowel-bar-retrofit</a><a class="tag" href="index.html?q=dowel-retrofit">dowel-retrofit</a><a class="tag" href="index.html?q=dowel-retrofits">dowel-retrofits</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Dowel‑Bar Retrofit is a concrete‑pavement preservation treatment applied when slabs have lost effective load‑transfer capability across transverse joints or cracks, manifesting as faulting, spalling, or reduced ride quality on heavily loaded roadways[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The method restores structural continuity by cutting slots through the affected joint in the wheel path and inserting epoxy‑coated smooth steel dowel bars that are grouted in place, thereby reestablishing load transfer and improving slab performance[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. It is used only where the existing pavement retains adequate compressive strength, aggregate interlock remains, and subgrade drainage is sound, making it a targeted, preventive‑maintenance intervention that extends service life without requiring an overlay[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Dowel Bar Retrofit is applied when concrete pavement slabs have lost effective load‑transfer capability, a condition that appears as working transverse cracks, longitudinal cracks, mid‑panel cracks, deteriorated or failed transverse joints, faulting, poor load transfer across joints, edge spalling, or corner breaks. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] These distresses reduce the ability of adjacent slab sections to share traffic loads, leading to diminished structural performance and ride quality, especially on roadways subjected to heavily channeled loading. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The treatment involves cutting slots across the affected crack or joint in the wheel path and inserting epoxy‑coated smooth dowel bars to reestablish structural continuity and improve load‑transfer performance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] By restoring load transfer, the retrofit restores slab functionality, improves ride quality, and extends the pavement’s service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–90), Ch. 12 (pp. 211–213); [2] — SECTION 500—RIGID PAVEMENTS (pp. 422–423)</small></p>
+<p>The objective of a dowel‑bar retrofit is to reestablish the pavement’s load‑transfer capacity across active transverse joints or cracks, thereby restoring the slab’s intended structural and functional performance. By installing epoxy‑coated dowels in the wheel paths where transfer has been lost—often on heavily loaded roadways—the treatment directly addresses faulting and poor load transfer rather than merely slowing deterioration. When distress is primarily load‑related, the retrofit provides the necessary structural improvement, and it can be combined with slab jacking to recover settled sections. Restoring this capability preserves the pavement system, retards further degradation, and consequently extends its service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 82–90), Ch. 12 (pp. 211–213)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress that calls for a dowel‑bar retrofit occurs in the wheel paths of heavily loaded concrete roadways where transverse joints or cracks develop, often manifesting as early‑stage hairline cracking and the onset of faulting or poor load transfer across the joint. Because the aggregate interlock is still present, the problem is limited in extent but can quickly degrade ride quality and pavement performance if left unattended; the source does not quantify a progression rate. Restoring load transfer with dowel bars prevents further deterioration and maintains safe, operational service of the pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90)</small></p>
+<p>The distress that a dowel‑bar retrofit is intended to correct stems from two interrelated mechanisms. Repeated heavy traffic loads generate high wheel pressures on transverse joints and cracks, leading to load‑related cracking and faulting when the pavement’s ability to transfer load is compromised. At the same time, climate‑ and material‑related factors degrade the concrete over its service life: water infiltrates through joint gaps or cracks, especially where drainage is inadequate, carrying chlorides and other incompressible materials into the structure; subgrade weakness or instability reduces the support beneath the slab; aggregate deterioration and frost damage further erode durability. When these mechanisms act together, any improvement in load transfer will be short‑lived unless water ingress, drainage failure, and subgrade condition are addressed, which is why dowel‑bar retrofits are applied only where existing drainage functions properly and the subgrade is stable, thereby restoring effective load transfer across the joint or crack. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–90)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Dowel‑bar retrofit is suitable for concrete pavements whose distress is chiefly load‑related—such as joint faulting, slab movement, or transverse joints and hairline cracks where aggregate interlock remains—and where the existing slabs still possess adequate compressive strength and proper air content. The treatment is most appropriate when traffic consists of heavy, channeled loads that generate significant shear across the joints, and when the required patching is modest—generally less than about ten percent of the pavement area, excluding sound existing patches—so that a cost‑effectiveness analysis is not triggered. Site conditions must include a stable subgrade and a functional drainage system so that water infiltration does not undermine the repair, and any underlying climate or material durability issues should have been addressed before installation. Under these combined pavement, traffic, environmental, and site criteria, inserting dowel bars across deficient joints or cracks restores load transfer without necessitating an overlay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–90)</small></p>
+<p>When the pavement requires extensive patching—more than about ten percent of the surface—or when the dominant distress stems from climate‑ or material‑related durability problems such as inadequate drainage, frost damage, or aggregate polishing, dowel‑bar retrofit is not the preferred treatment. In those situations designers should consider alternatives that address the underlying cause rather than merely restoring load transfer, including full‑depth patching, concrete or asphalt overlays, slab stabilization, joint rehabilitation, jacking, or other rehabilitation methods. Likewise, if the pavement’s drainage is compromised, the subgrade is unstable, or the cracks are larger than hairline so that aggregate interlock has been lost, dowel‑bar retrofit should be avoided and more appropriate treatments such as slab stabilization, full‑depth joint patching, or other joint repair techniques should be selected. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–90)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>To decide whether a dowel‑bar retrofit is warranted, the evaluator begins with a systematic visual survey of all transverse joints and cracks, recording the type, extent, and frequency of distress; particular attention is given to hairline cracking where aggregate interlock remains intact and any indication of joint faulting that suggests loss of load transfer. The inspection also confirms that drainage is adequate and that the underlying subgrade appears stable, because retrofitting addresses only transfer deficiencies. Quantitative counts of each distress type are tabulated. Where distress is noted, cores are extracted both at the deteriorated joints and at randomly selected locations to assess subbase or subgrade condition and to detect hidden deterioration beneath the surface. Non‑destructive testing follows: deflection tests and fault‑level measurements are performed to locate joints that have lost load‑transfer capacity; ground‑penetrating radar, MIT‑Scan 2 (for dowel‑bar alignment), and MIT‑Scan T2 (for slab thickness) may be employed to verify the presence or condition of existing dowels. Additional nondestructive tools such as friction testing, roughness surveys, MIRA assessments, and tensile bond testing can further substantiate the need for retrofit. When these inspections, measurements, and tests collectively indicate compromised load transfer on heavily loaded sections, a dowel‑bar retrofit is indicated. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–90)</small></p>
+<p>Dowel‑bar retrofit should be applied when a Portland‑cement concrete pavement begins to lose its ability to transfer load across transverse joints or cracks while the slab, subgrade and drainage remain sound. It is indicated for working transverse cracks, mid‑panel cracks, or deteriorated transverse joints that have progressed beyond hairline cracking yet still retain aggregate interlock, particularly on heavily loaded roadways where faulting or poor load transfer has been observed. The method may also be used as a preventive‑maintenance treatment on pavements in overall good condition that exhibit only minor joint or crack distress and possess significant remaining service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 3 (pp. 69–70), Ch. 4 (pp. 89–90), Ch. 12 (pp. 211–213)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Dowel‑bar retrofit employs steel dowel bars that are supplied either with an epoxy‑coated smooth surface or pre‑treated with a bond‑breaker coating to reduce adhesion to the surrounding grout or concrete [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The bars are installed across transverse cracks or joints in the wheel paths, and each joint typically receives six dowels arranged in three parallel slots per wheel path, providing two bars per slot [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Slots are cut with a power‑driven self‑propelled saw that makes two parallel cuts for each slot, the cuts being aligned parallel to the roadway centreline; alternatively, narrow‑mouth slots may be drilled, but the standard method uses the saw‑cut slots [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Each slot is approximately one inch wide at the pavement surface and tapers to about three inches in width roughly one inch below the mid‑slab depth, creating a tapered cavity that accommodates the dowel bar and associated accessories [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Grout ports are incorporated into the slots so that a rapid‑setting dowel‑slot grout can be placed after the bars are positioned, and the grout must develop a compressive strength of at least 2 500 psi before traffic is allowed to resume [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Around each bar a quarter‑inch‑thick preformed cellular polystyrene insert, cut to match the slot cross‑section, serves as a temporary joint filler during placement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A non‑metallic expansion cap one and a half inches long is set back a quarter inch from the dowel end, and plastic or other non‑metallic chairs provide at least a half‑inch clearance between the bar and all slot surfaces, including ends, sides and bottom [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After the bars are seated, an epoxy bonding compound may be introduced and the voids are backfilled with either approved rapid‑setting grout or concrete patching material, which is vibrated to consolidate and then cured before reopening to traffic [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Installation tolerances require that any vertical tilt or horizontal skew of either end of a dowel not exceed 0.25 inch relative to the bar midpoint, that longitudinal positioning remain within one inch of the intended joint line, and that placement be within ±⅛ inch of the shop‑drawing coordinates [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For Type B dowels a bond‑breaker lubricant is applied by daubing or mopping at least one hour before concrete placement, whereas Type A dowels require no such lubricant; both types follow the same dimensional and positioning requirements [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 422–435)</small></p>
+<p>Successful dowel‑bar retrofits depend first on the condition of the existing concrete slab, which must possess sufficient compressive strength—generally no less than 4,925 psi—and a flexural strength of at least 650 psi, and its air content should be compatible with the epoxy coating used on the steel dowels to ensure a durable bond. The slab should exhibit only minor hairline cracking so that aggregate interlock remains effective, and visual inspection must reveal no serious durability concerns such as weak or frost‑damaged aggregates, polishing‑prone aggregates, or other defects that could impair load transfer. Extensive patching of the joint area diminishes retrofit effectiveness; therefore the percentage of patched surface should be kept low, and any existing patches must be properly prepared before dowel installation. The grout that fills the dowel slots is required to reach a compressive strength of at least 2,500 psi before traffic is allowed onto the repaired section. Epoxy‑coated smooth steel dowels are used, and their coating must be matched to the pavement environment; Type A coated bars are installed without additional lubricant, whereas Type B bars require application of a bond‑breaker lubricant unless it has already been applied at the factory. All vertical edges of the slab and the dowel surfaces that will contact grout must receive the specified bond‑breaker coating to prevent unintended bonding between concrete and grout. Dimensional compatibility is achieved by cutting transverse joints to a width between one‑quarter and one‑half inch along their entire length, limiting longitudinal gaps to no more than three‑quarters inch, and maintaining a finished vertical differential across any joint of no greater than one‑quarter inch. Prior to placing the grout, dowel slots must be cleared of loose material and slurry within thirty minutes so that the epoxy and patching materials can develop full bond strength. The dowels themselves must be positioned with tight tolerances—tilt not exceeding 0.25 inch and longitudinal or horizontal translation limited to one inch—to preserve proper load transfer geometry. Non‑metallic expansion caps, typically 1½ inches long, are installed with a quarter‑inch clearance from the dowel end to the cap bottom, and plastic or other non‑metallic chairs must provide at least a half‑inch gap around the cap on all sides. The supporting layers beneath the slab must be stable and well‑drained; the subbase should be shaped to a firm, even surface within plus or minus one‑half inch of the design grade and contour, and any soft or unsuitable material must be removed before work begins. Adequate surface friction and acceptable ride quality are verified before installation, especially on heavily loaded wheel paths where the retrofit is intended to function. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 422–435)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>To retrofit dowel bars the pavement is first prepared by cutting slots across each joint or crack, using a power‑driven self‑propelled saw that makes two parallel cuts for each slot so the dowel will be centered at mid‑depth of the slab; three slots are placed in each wheel path and the cuts run parallel to the roadway centreline. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The concrete between the cuts is then removed with a light jackhammer, limited to 30 lb (or reduced to 15 lb when damage is encountered), and the bottom of each slot is leveled. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All slots are thoroughly cleaned; loose material must be removed within twenty‑four hours and a final air‑blast cleaning performed no more than thirty minutes before concrete placement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The dowel bars, which are epoxy‑coated smooth or Type B coated, are prepared by applying a bond‑breaker lubricant at least one hour prior to placement, and preformed cellular polystyrene sleeves are cut to fit if required. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Dowel bars are set in plastic or non‑metal chairs that provide a minimum clearance of one‑half inch, aligned within the specified tilt and translation tolerances, with expansion caps positioned at the required clearances; caulking seals the assembly before epoxy bonding compound is applied as directed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The slots are then filled with concrete patching material, which is vibrated to consolidate without moving the dowel, and the surface is finished to match the existing pavement profile. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The patched area is cured according to standard concrete curing procedures; thereafter the joint is sawed and sealed, and traffic may be reopened in accordance with applicable specifications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 422–423)</small></p>
+<p>Implementation of a dowel‑bar retrofit relies on a set of specialized pieces of equipment. A power‑driven, self‑propelled saw capable of making two parallel cuts per dowel bar slot is used to cut the required slots across the wheel path[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Lifting devices such as cranes, excavators and rigging must conform to the requirements of Section 1105 and be sized for the slab weight, load distribution and lifting capacity shown on the shop drawings[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Removal of the concrete between the saw cuts is performed with a jackhammer that shall not exceed thirty pounds in weight, reduced to fifteen pounds if damage to the existing concrete is observed[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The work sequence begins with pre‑placement meetings followed by precise saw‑cutting of the joint, removal of the cut slab sections, preparation of the subbase and accurate leveling of the remaining slab[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Within twenty‑four hours after the slots are cut they must be cleaned, and a final air‑blast cleaning using dry, oil‑free compressed air is performed no more than thirty minutes before placement of the patch concrete[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Lubricant is applied to the prepared surfaces at least one hour prior to concrete placement[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Epoxy‑coated dowel bars and grout ports are then positioned, the dowels are grouted together with bedding material, and the voids are filled with a concrete patching material that must be cured before traffic can resume[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Ambient temperature conditions that influence the mix design for thermal expansion are taken into account when fabricating the grout and concrete, although one guide does not prescribe any particular environmental constraints beyond this consideration[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Traffic may not be reopened until the cured concrete attains the minimum compressive strength specified for opening to traffic; if earlier reopening is required a minimum of two incompressible shims must be installed in each transverse joint and exposure of ungrouted sections is limited to three days[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The first guide does not specify additional traffic control measures, while the second guide emphasizes strict compliance with Section 516.3(q) for reopening criteria[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 422–435)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>The inspector must first confirm that all materials meet the prescribed specifications. Dowel bars intended for load transfer shall be provided with a bond‑breaker coating, and when Type B bars are used the lubricant must be applied by daubing or mopping at least one hour before concrete placement. The concrete mix and grout employed for the retrofit must achieve the required compressive strength; in particular the grout surrounding each dowel must reach a minimum of 2,500 psi before any traffic is permitted. Preparation checks include verification of the sub‑base grading and of joint geometry. Transverse joints shall be no wider than one‑half inch and not less than one‑quarter inch along their entire length; longitudinal joints may be up to three‑quarters inch wide, and vertical differentials across joints must stay within the allowable limit. The cutting equipment must be a power‑driven, self‑propelled saw capable of producing two parallel cuts for each dowel slot, and the slots are required to be cut to mid‑depth. All debris must be removed and final cleaning completed no later than thirty minutes before concrete placement. During installation the location of each dowel slot, grout port, and lifting device fill shall follow the shop drawings. Dowel bars are to be placed square to the slab edge and parallel to the top surface within plus or minus one‑eighth inch of the drawing locations, and the ends of each bar may not deviate more than a quarter inch from the midpoint in either vertical tilt or horizontal skew. Expansion caps, non‑metallic chairs, and any required polystyrene joint material must provide the clearances shown on the drawings, and the dowel assembly must be sealed at its sides and bottom. The surrounding epoxy and concrete patch shall be fully vibrated to achieve consolidation, and the finished slot surface must match the existing pavement profile. The final acceptance inspection verifies that joint widths and vertical alignment conform to the specified limits, that all bond‑breaker coatings and grout ports are correctly installed, and that the grout has attained the required compressive strength. Any work failing these criteria is to be deemed defective and removed before the retrofit is considered complete. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 422–435)</small></p>
+<p>A satisfactory dowel‑bar retrofit is confirmed when the installed bars and their slots are located within plus or minus one eighth inch of the coordinates shown on the approved shop drawings, while the bar itself does not exhibit a tilt or skew greater than a quarter‑inch at either end relative to its midpoint. Both the longitudinal and transverse positions of each dowel must lie no more than one inch from the intended joint centreline. The transverse joint gaps after placement are required to fall between one quarter inch and one half inch, with longitudinal joints not exceeding three quarters inch, and the finished vertical differential across any joint must be limited to one quarter inch, unless a diamond‑grinding operation is planned in which case up to one half inch is permissible. All slot surfaces must be free of loose material and slurry, with final cleaning completed no later than thirty minutes before concrete placement (preliminary cleaning performed within the preceding twenty‑four hours). Non‑metallic chairs providing at least a half‑inch clearance are used, and each dowel bar receives a bond‑breaker coating prior to insertion. The dowel and bedding grouts must reach a compressive strength of at least 2,500 psi before the slab is opened to traffic. Meeting these dimensional tolerances, joint gap limits, vertical alignment, cleaning timing, chair clearance, bond‑breaker application, and grout strength constitutes acceptance of the retrofit. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 422–435)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>The dowel‑bar retrofit restores lost load‑transfer capacity at concrete joints or cracks, re‑establishing proper stress distribution across slabs and thereby improving the pavement’s overall condition. By installing smooth epoxy‑coated bars in the wheel paths, the treatment enhances functional performance under heavy traffic loads and contributes to greater durability of the slab system. When applied to hairline cracks where aggregate interlock remains, it preserves structural integrity without substantially increasing the slab’s inherent strength. Classified as a preventive‑maintenance intervention, the technique is used while the pavement is still in good condition and has significant remaining service life; the restored load transfer retards further deterioration, extends useful life, and postpones more costly rehabilitation or reconstruction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90), Ch. 12 (pp. 211–213)</small></p>
+<p>Typical dowel‑bar retrofit problems arise when joint vertical differentials exceed the allowable ¼ inch, when grout does not achieve the required 2,500 psi compressive strength before traffic, or when ungrouted slabs settle and create edge differentials greater than ¼ inch; repeated surface or edge damage during handling also triggers work stoppage. These distresses are driven by inadequate bedding preparation, failure to meet joint‑gap tolerances, improper grout mix or curing, and insufficient quality control of dowel slot placement and bonding. Maintaining the specified tolerances, using approved rapid‑setting grout, and inspecting for handling damage are required to avoid these failures. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 428–435)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>If after a dowel‑bar retrofit the pavement shows any vertical differential greater than one‑quarter inch at a joint, a joint width that exceeds the specified limits, grout that has not reached the required 2,500 psi compressive strength, or exposed or improperly positioned dowels, these conditions trigger further maintenance; likewise, recurring cracks, spalling, or other distress require additional repair until the underlying cause is corrected. The contract tolerances of a maximum one‑quarter inch differential (with grinding allowed up to half an inch) and the minimum grout strength are the acceptance criteria that, when not met, indicate the need for remedial action. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 428–435)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

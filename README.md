@@ -8,9 +8,9 @@ Live: https://ig0r.github.io/cnrt-specs-wiki-stage/
 
 | What | Where |
 |---|---|
-| Concept hierarchy (27 pages, root `penndot-pavement-policy-manual.html`) | `index.html` |
-| Formula cards (rendered formula, symbols, source check) | `pavement-design.html`, `subgrade.html`, `pavement-structure.html` (M_r = 1500 CBR), `resurfacing.html` (Asphalt Adjustment Multiplier), `base-course.html` (RCC compaction percentage, Pub 408) |
-| Calculators for those formulas | `_apps/` |
+| Concept hierarchy (77 pages, root `penndot-pavement-policy-manual.html`) | `index.html` |
+| Formula cards (rendered formula, symbols, source check) | 14 blocks of 8 formulas on 10 pages: M_r = 1500 CBR (`pavement-design.html`, `rigid-pavement-design.html`, `pavement-reconstruction.html`, `subgrade.html`), Asphalt Adjustment Multiplier (`resurfacing.html`, `pavement-type-selection.html`), AASHTO Group Index (`compaction.html`, `pavement-reconstruction.html`), coefficients of uniformity and curvature (`gradation.html`), concrete elastic modulus and modulus of rupture (`rigid-pavement-design.html`), compaction percentage from Pub 408 (`base-course.html`, `roller-compacted-concrete.html`) |
+| Calculators for those formulas | `_apps/` (8) |
 
 ## How this repo is produced
 

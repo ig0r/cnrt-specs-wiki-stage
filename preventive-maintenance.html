@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preventive Maintenance</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html" class="active" aria-current="page">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-preservation.html">Pavement Preservation</a><span class="crumb-sep">›</span><span class="crumb-current">Preventive Maintenance</span></nav>
+<article><h1>Preventive Maintenance</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-preservation.html">Pavement Preservation</a> <span class="edge edge-taxonomic" title="Preventive Maintenance is a topic under Pavement Preservation.">is-subtopic-of</span></div><div class="edge-reading">Preventive Maintenance is a topic under Pavement Preservation.</div><div><a class="tag" href="index.html?q=preventive-maintenance">preventive-maintenance</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Preventive maintenance is a planned program of surface‑ or near‑surface treatments applied to pavements that are still structurally sound but exhibit early‑stage distresses such as non‑working cracks, edge spalls, corner breaks, or alkali‑silica reaction–induced cracking, with the goal of preserving functional performance and extending remaining service life without substantially increasing structural capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By sealing cracks, applying thin overlays, joint sealants, diamond grinding, dowel‑bar retrofits or supplementary cementitious material blends, moisture ingress is limited and chemically induced expansion is restrained to less than 0.04 % after two years, thereby retarding further deterioration while restoring the surface toward its original condition [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Effectiveness is verified through inspections and long‑term tests such as the ASTM C1293 concrete prism test, where expansions below the 0.04 % threshold confirm successful mitigation and justify continued service of the pavement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Preventive maintenance is applied to pavements that are still in good condition yet exhibit early‑stage surface distresses such as non‑working cracks, edge spalls or corner breaks that can permit water infiltration and degrade functional performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The strategy also targets concrete‑specific distress caused by alkali‑silica reaction, where reactive aggregates expand and generate cracking within the slab [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By implementing cost‑effective surface or near‑surface treatments—including crack sealing, chip sealing, micro‑surfacing, thin overlays, joint sealing, diamond grinding, dowel‑bar retrofits for asphalt, and supplementary cementitious material blends or blended cements for concrete—the preventive program seeks to retard further deterioration, preserve the functional condition of the pavement, and control expansion below the 0.04 % threshold that indicates effective ASR mitigation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The overall intent is to maintain or improve functionality without substantially increasing structural capacity, thereby extending remaining service life while addressing early surface cracking and chemically induced expansion problems [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 12 (pp. 211–213); [2] — SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<p>Preventive maintenance in pavement engineering is defined as a planned set of surface or near‑surface treatments applied while the pavement remains structurally sound, intended to preserve the existing roadway and its appurtenances. The guides concur that the chief aim is to prevent deterioration of the pavement, exemplified by measures such as limiting alkali‑silica reaction expansion to less than 0.04 % after two years. In addition to outright prevention, the practice also seeks to retard further degradation, thereby slowing the progression of distress and maintaining or improving functional performance without adding structural capacity. By restoring a deteriorating surface to its original level of service, preventive maintenance helps retain functionality of the existing system. Because deterioration is delayed, the remaining service life of the pavement is extended, postponing the need for major reconstruction. Neither guide identifies repair of already incurred damage as a primary purpose of preventive maintenance, focusing instead on actions taken before structural failure occurs. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 202–213); [2] — SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>Preventive maintenance is directed at distress that originates from moisture entering pavement cracks, the gradual loss of material stiffness with age, and exposure to environmental conditions that generate top‑down surface cracking while the underlying structural layers remain essentially sound. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The ingress of water through untreated cracks promotes subgrade saturation, reduces effective support, and accelerates freeze–thaw or chemical deterioration, thereby amplifying the progression of surface distress. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In addition to moisture‑related mechanisms, chemically induced expansion of reactive aggregates—commonly identified as alkali‑silica reaction (ASR)—produces internal stresses that manifest as cracking, diminish structural capacity, and hasten aging of concrete pavements. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The presence of ASR is detected through field performance histories, petrographic analysis, and standardized expansion tests such as ASTM C1293 or AASHTO T 303, which allow the aggregate’s reactivity class to be assigned and guide the level of preventive action required. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] By applying near‑surface treatments such as crack sealing, joint sealants, chip seals, slurry or micro‑surfacing, thin hot‑mix overlays, or concrete joint repairs, moisture infiltration is limited and the cracked zones are reinforced, slowing further deterioration without substantially increasing structural capacity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When reactive aggregates are identified, mitigation may involve selecting compatible cement–supplementary cementitious material combinations or adjusting mix designs to reduce alkali availability, thereby limiting ASR‑driven expansion and preserving pavement integrity. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The effectiveness of preventive maintenance depends on timely implementation while the pavement is still in relatively good condition so that successive low‑cost treatments cumulatively postpone more extensive rehabilitation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213); [2] — SECTION 700 MATERIAL (p. 659)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Preventive Maintenance is appropriate when the pavement is still in good condition and retains a significant amount of remaining service life, meaning the structure is sound enough for surface‑or near‑surface treatments that do not substantially increase structural capacity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213)</small></p>
+<p>Preventive maintenance should be limited to pavements that are still in good condition and have a significant amount of remaining service life; when the pavement shows age‑related, top‑down surface cracking, loss of structural capacity, or severe defects such as edge spalls, corner breaks, or embrittlement, it is no longer appropriate. At that point the agency should move to other strategies—minor rehabilitation to eliminate surface cracks, major rehabilitation for structural overlays, routine or corrective maintenance for localized failures, catastrophic maintenance for extreme events, or full reconstruction when the pavement has failed or become functionally obsolete. The key threshold is that preventive treatments do not significantly increase structural capacity, so any condition requiring a structural enhancement calls for a different approach. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>Determining whether and where a preventive‑maintenance treatment is required relies on a sequence of inspections, measurements, and tests that evaluate the current condition of both flexible and rigid pavements. The process begins with a thorough visual inspection to detect surface irregularities such as cracking, rutting, or other distress, followed by measurement of the remaining pavement thickness after any prolonged exposure that may have caused material loss. For flexible pavements, and prior to placing new surfacing on either flexible or rigid sections, a proof‑rolling test is performed according to the specified procedure; if the roll reveals instability—particularly when most or all of the subbase shows such behavior—the subbase must be removed and the underlying subgrade repaired or replaced, indicating that maintenance is needed at those locations. In concrete pavements, representative mixes are evaluated using the Concrete Prism Test (ASTM C1293). Prisms are monitored for length change over a two‑year period, and an expansion of less than 0.04 percent confirms that preventive measures such as supplementary cementitious material or blended cement are effective, allowing the pavement to be considered adequately protected. Conversely, expansions exceeding this threshold or instability observed during proof rolling identify sections where preventive maintenance should be applied. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (p. 227), SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<p>Preventive maintenance is applied when a pavement is still in good condition with significant remaining service life, i.e., before any serious distress such as extensive cracking or rutting has appeared. Treating the surface or near‑surface of a structurally sound roadway at this stage—using crack sealing, chip seal, micro‑surfacing, thin overlays, joint sealing, etc.—restores it close to its original condition and delays more expensive rehabilitation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Preventive maintenance programs employ a range of surface‑oriented treatments that are applied to pavements judged structurally sound and still in good condition [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The material palette for asphalt surfaces includes crack sealants, chip‑seal mixes, slurry or micro‑surfacing blends, as well as thin and ultra‑thin hot‑mix asphalt overlays designed to rejuvenate the wearing course without adding substantial thickness [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For concrete pavements, preventive actions rely on repair mixes capable of addressing isolated, partial, or full‑depth slab deficiencies such as edge spalls or corner breaks, restoring functional integrity of the slab [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Joint sealing compounds are used to protect concrete joints from ingress, while diamond grinding is employed to restore surface smoothness and improve skid resistance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Dowel‑bar retrofit kits provide a means to reestablish load transfer across cracked joints without full reconstruction [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When concrete is placed as part of preventive maintenance—whether in overlays, precast elements, or prestressed products—the mix must incorporate supplementary cementitious materials or blended cements at the volumetric replacement levels prescribed by specifications [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The mix design may also include metakaolin, and if a lithium nitrate admixture is selected it is introduced into the mixing water with appropriate adjustments to account for its water contribution [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any aggregate identified as potentially reactive, whether coarse or fine, is permitted only when used together with the specified cement‑SCM blends, and its reactivity must be verified by ASTM C1293 or AASHTO T303 testing; the resulting classification determines the level of alkali‑silica reaction mitigation required in the mix [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Substitution of aggregates outside these prescribed combinations is expressly prohibited under the preventive maintenance approach [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The effectiveness of the concrete mitigation measures is confirmed through a concrete prism test, where an expansion of less than 0.04 percent after two years indicates successful prevention of deleterious reactions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. This suite of materials and configurations—ranging from asphalt sealants and thin overlays to SCM‑enhanced concrete mixes with controlled aggregate reactivity—constitutes the required inventory for implementing preventive maintenance on both flexible and rigid pavements [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=12798c40 src=408_2020_11::tab:p660#3 -->
+<p>Table: Table EDetermining the Level of Prevention.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-preventive-maintenance-1-cap" tabindex="0"><table class="ct-table" id="ct-preventive-maintenance-1" aria-describedby="ct-preventive-maintenance-1-sum">
+<caption id="ct-preventive-maintenance-1-cap">Table EDetermining the Level of Prevention</caption>
+<thead>
+<tr><th id="ct-preventive-maintenance-1-h0-0" scope="col" rowspan="2">Level of ASR Risk</th><th id="ct-preventive-maintenance-1-h0-1" scope="col" colspan="3">Classification of Structure</th></tr>
+<tr><th id="ct-preventive-maintenance-1-h1-1" scope="col">S1</th><th id="ct-preventive-maintenance-1-h1-2" scope="col">S2</th><th id="ct-preventive-maintenance-1-h1-3" scope="col">S3</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-preventive-maintenance-1-h2-0" scope="row">Risk Level 1</th><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-1 ct-preventive-maintenance-1-h2-0">V</td><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-2 ct-preventive-maintenance-1-h2-0">V</td><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-3 ct-preventive-maintenance-1-h2-0">V</td></tr>
+<tr><th id="ct-preventive-maintenance-1-h3-0" scope="row">Risk Level 2</th><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-1 ct-preventive-maintenance-1-h3-0">V</td><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-2 ct-preventive-maintenance-1-h3-0">W</td><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-3 ct-preventive-maintenance-1-h3-0">X</td></tr>
+<tr><th id="ct-preventive-maintenance-1-h4-0" scope="row">Risk Level 3</th><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-1 ct-preventive-maintenance-1-h4-0">W</td><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-2 ct-preventive-maintenance-1-h4-0">X</td><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-3 ct-preventive-maintenance-1-h4-0">Y</td></tr>
+<tr><th id="ct-preventive-maintenance-1-h5-0" scope="row">Risk Level 4</th><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-1 ct-preventive-maintenance-1-h5-0">X</td><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-2 ct-preventive-maintenance-1-h5-0">Y</td><td headers="ct-preventive-maintenance-1-h0-1 ct-preventive-maintenance-1-h1-3 ct-preventive-maintenance-1-h5-0">Z</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-preventive-maintenance-1-sum">Rows list Level of ASR Risk; columns give Classification of Structure (S1, S2, S3).</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 660.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 12 (pp. 211–213); [2] — SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<p>Preventive‑maintenance interventions are intended for pavements that remain in good overall condition, retain structural integrity, and possess a substantial amount of remaining service life, because the treatments act only on the surface or near‑surface layers. Consequently, the selected treatment must be compatible with the existing pavement material; for flexible pavements this typically means using asphalt crack sealing, while for rigid concrete slabs joint sealing is required. For concrete pavements the mix design itself imposes strict limits, notably that long‑term expansion of prisms measured after two years must not exceed 0.04 % and the total alkali content must stay within the thresholds defined in Section 704.1(g)3. Supplementary cementitious materials may be incorporated, but their dosage cannot cause excessive early‑age setting retardation or hinder strength development, a concern that becomes more pronounced under cool weather conditions. While the type of cement or SCM can be substituted provided the expansion and alkali constraints are satisfied, replacement of aggregates in the concrete mix is expressly prohibited. The condition of the subbase also governs treatment performance; a subbase constructed with No. OGS aggregate must remain free of all traffic, including construction traffic, whereas a No. 2A aggregate subbase may be used as a haul road only if it has not been exposed to weather for more than 60 calendar days, after which surface irregularities and depth must be retested and any deficiencies corrected. Subbases left uncovered during winter shutdowns must be protected by placing an asphalt base for flexible pavements or a cement‑concrete base for rigid pavements before exposure to the elements. Prior to placement of the final pavement layer, a proof roll is required; detection of instability during this step mandates removal of the subbase and repair of the underlying subgrade. Aggregates that are identified as potentially reactive—through field performance histories, petrographic examinations, or expansion tests such as ASTM C1293 or AASHTO T 303—must be paired only with cements or cement‑SCM blends approved for alkali‑silica reaction mitigation, and the most reactive aggregate present dictates the conservative level of protection required. Periodic retesting on a five‑year cycle can trigger updates to the mix design, ensuring that the pavement condition and service life are preserved while allowing preventive treatments to restore the surface to near its original condition without substantially increasing structural capacity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213); [2] — SECTION 300 BASE COURSES (p. 227), SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>Preventive maintenance of a pavement base begins with protecting the subbase by prohibiting all traffic on No. OGS aggregate and retesting any No. 2A subbase that has been exposed to weather for more than sixty days, correcting surface irregularities or depth deficiencies before further work. If the subbase must remain over winter, a protective asphalt base course (for flexible pavements) or cement concrete (for rigid pavements) is placed prior to the shutdown and the area is proof‑rolled to verify stability. Any sections that show instability are stripped, the underlying subgrade repaired or replaced, and the subbase is then reinstated to meet the design thickness. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (p. 227)</small></p>
+<p>Implementation of preventive‑maintenance treatments that incorporate high levels of supplementary cementitious materials must be planned with attention to ambient temperature; in cool or cold weather the additional SCMs can cause pronounced retardation of concrete setting and early‑age strength gain, so mitigation plans and appropriate construction and curing procedures must be submitted for departmental approval. The guidance does not prescribe particular equipment, but it imposes clear traffic and sequencing constraints on subbase work. Construction vehicles are prohibited from traveling on a subbase constructed with No. OGS aggregate. When a No. 2A aggregate subbase is used as a haul road, or when any subbase remains exposed to the elements for more than sixty calendar days, it must be retested for surface irregularities and depth, and any deficiencies corrected before further work proceeds. Subbases may not be left uncovered during winter shutdowns; instead an asphalt base course (for flexible pavements) or a cement‑concrete layer (for rigid pavements) must be placed prior to the end of the paving season. Any subbase that does remain exposed over the winter must be proof‑rolled before pavement placement, with unstable sections removed and the underlying subgrade repaired or replaced. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (p. 227), SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>Preventive maintenance inspections begin with material verification. The concrete mix must contain only approved supplementary cementitious materials or blended cements, used at the volumetric replacement levels allowed by the specifications, and any lithium nitrate admixture must be added to the mixing water together with the appropriate water‑correction factor. The alkali content of the cement or SCM substitution must remain within the limits set out in Section 704.1(g)3, and a plan to avoid excessive setting retardation—especially under cool‑weather conditions—must be submitted for department approval. Before placement, aggregate reactivity is confirmed by reviewing field performance history, conducting petrographic examinations, and performing expansion tests such as ASTM C1293 or AASHTO T 303; the resulting reactivity class determines the required cement‑or‑SCM combination and any ASR mitigation measures to be incorporated into the mix design.</p>
+<!-- concept-tabular:begin key=b06011f3 src=408_2020_11::tab:p660#2 -->
+<p>Table: Table DLevel of ASR Risk.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-preventive-maintenance-2-cap" tabindex="0"><table class="ct-table" id="ct-preventive-maintenance-2" aria-describedby="ct-preventive-maintenance-2-sum">
+<caption id="ct-preventive-maintenance-2-cap">Table DLevel of ASR Risk</caption>
+<thead>
+<tr><th scope="col">Aggregate Reactivity Class</th><th scope="col">R0</th><th scope="col">R1</th><th scope="col">R2</th><th scope="col">R3</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Level of ASRRisk</th><td>Risk Level 1</td><td>Risk Level 2</td><td>Risk Level 3</td><td>Risk Level 4</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-preventive-maintenance-2-sum">Rows list the Level of ASR Risk, columns give Aggregate Reactivity Class for each risk level.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 660.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p>Preparation of the subbase is also inspected. Traffic, including construction traffic, must be prohibited on a No. OGS aggregate base. When a No. 2A aggregate base serves as a haul road or has been exposed to weather for more than sixty calendar days, the subbase must be retested for surface irregularities and depth, and a proof roll—per Section 206.3(a)1—must be performed before any flexible or rigid pavement is placed. Any area showing instability or insufficient depth requires removal of the subbase, repair of the underlying subgrade, and installation of a new subbase prior to resuming paving operations.</p>
+<p>During installation, the mix used is inspected to verify compliance with the approved design based on the earlier material and reactivity checks. After placement, concrete prisms are taken from the work and tested for long‑term expansion; an expansion of less than 0.04 percent after two years confirms that the preventive measures have been effective. If a new ASTM C1293 result later changes an aggregate’s reactivity class, a revised concrete mix design must be submitted for approval within ninety calendar days. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=37d20632 src=408_2020_11::tab:p660#1 -->
+<p>Table: Table CClassification of Aggregate Reactivity.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-preventive-maintenance-3-cap" tabindex="0"><table class="ct-table" id="ct-preventive-maintenance-3" aria-describedby="ct-preventive-maintenance-3-sum">
+<caption id="ct-preventive-maintenance-3-cap">Table CClassification of Aggregate Reactivity</caption>
+<thead>
+<tr><th scope="col">Aggregate Reactivity Class</th><th scope="col">Description of Aggregate Reactivity</th><th scope="col">1-Year Expansion inASTM C1293 (percent)</th><th scope="col">14-d Expansion inAASHTO T 303(percent)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">RO</th><td>Non-reactive</td><td>≤ 0.04</td><td>≤ 0.10</td></tr>
+<tr><th scope="row">R1</th><td>Moderately reactive</td><td>&gt;0.04 to ≤ 0.12</td><td>&gt;0.10 to ≤ 0.30</td></tr>
+<tr><th scope="row">R2</th><td>Highly Reactive</td><td>&gt;0.12 to ≤0.24</td><td>&gt;0.30 to ≤0.45</td></tr>
+<tr><th scope="row">R3</th><td>Very Highly Reactive</td><td>&gt;0.24</td><td>&gt;0.45</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-preventive-maintenance-3-sum">Rows list Aggregate Reactivity Class; columns give Description of Aggregate Reactivity, 1-Year Expansion inASTM C1293 (percent), 14-d Expansion inAASHTO T 303(percent).</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 660.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[2] — SECTION 300 BASE COURSES (p. 227), SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<p>According to the concrete prism test procedure, a preventive maintenance treatment for reactive aggregates is considered satisfactory when the measured expansion of prisms does not exceed 0.04 percent after a two‑year monitoring period. This threshold serves as the primary indicator of effectiveness; if it is met, the measure is deemed effective and permits cement or SCM type substitutions provided overall alkali limits are respected, while aggregate substitution remains prohibited. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Preventive maintenance is a planned, cost‑effective program that targets pavements still in good condition with ample remaining service life. By applying low‑cost surface treatments such as crack sealing, chip or slurry seals, thin overlays, joint sealing, diamond grinding, dowel‑bar retrofits, and localized concrete repairs, the existing pavement’s functional performance is preserved or even enhanced without substantially increasing its structural capacity. This proactive preservation retards further deterioration, restores the original riding quality, improves safety and mobility for users, and reduces congestion. The resulting smoother, longer‑lasting surface translates into greater durability and pushes back the need for more expensive rehabilitation, thereby extending the pavement’s expected service life while protecting the investment made in the roadway. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 202–213)</small></p>
+<p>Preventive maintenance treatments aimed at mitigating alkali‑silica reaction can fail when concrete prisms expand beyond the 0.04 % limit after two years, indicating that the reactive aggregate is still deteriorating; likewise, using supplementary cementitious materials above the prescribed limits may cause excessive retardation of setting and early‑age strength loss, particularly in cool or cold weather. Effectiveness is judged by the ASTM C1293 prism expansion test and by keeping SCM dosages within specified bounds, with any plan to mitigate retardation requiring departmental approval. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After a preventive‑maintenance treatment is applied, the area should be monitored by conducting the ASTM C1293 concrete prism test on representative samples. The prisms are measured for dimensional change over time, and the expansion must remain below 0.04 percent after two years to consider the measure successful. This long‑term observation confirms that the preventive material is performing as intended and that the pavement’s service life has been extended. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<p>When the concrete prism test (ASTM C1293) shows expansion exceeding the 0.04 % limit after two years, the preventive measure is judged ineffective and signals that the treated pavement segment may require additional maintenance, repair, or rehabilitation; likewise, if the mixture’s alkali content surpasses the limits set in Section 704.1(g), the preventive protocol no longer applies and further action is indicated. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 659–660)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

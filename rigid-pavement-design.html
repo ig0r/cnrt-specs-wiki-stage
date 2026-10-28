@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rigid Pavement Design</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html" class="active" aria-current="page">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Rigid Pavement Design</span></nav>
+<article><h1>Rigid Pavement Design</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Rigid Pavement Design is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Rigid Pavement Design is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=rigid-pavement-design">rigid-pavement-design</a><a class="tag" href="index.html?q=rigid-pavement-designs">rigid-pavement-designs</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Rigid pavement design creates a Portland‑cement concrete slab that can safely support traffic loads over its service life while delivering the required durability and ride quality[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It translates the soil’s resilient modulus into an effective subgrade reaction modulus adjusted for seasonal moisture and temperature, provides uniform subgrade and drainage, quantifies lateral support at slab corners through a load‑transfer coefficient that reflects joint dowels, tied shoulders and traffic composition, and seeks an economical slab thickness capable of withstanding reduced support during spring thaws[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Designs are limited to Jointed Plain Concrete or Roller Compacted Concrete slabs resting on a permeable asphalt‑treated or cement‑treated base over a 2A subbase, and follow the 1993 AASHTO rigid‑pavement procedures using inputs such as ESALs, serviceability indices, concrete modulus of rupture and elastic modulus, reliability, and drainage coefficients[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Rigid pavement design is intended to provide a concrete slab that can safely carry traffic loads throughout its service life while meeting required durability and ride‑quality, by addressing several interrelated performance needs. First, the design must ensure sufficient structural support of the slab, which requires translating the soil’s resilient modulus into an effective subgrade reaction modulus appropriate for rigid‑pavement analysis; this conversion must reflect seasonal moisture and temperature changes, recognizing that frozen subgrade values are roughly twice those in normal conditions to avoid unrealistic stiffness inputs. Second, a uniform and stable subgrade together with a functional drainage system is required to sustain long‑term performance. Third, adequate lateral support at slab corners must be provided so that stresses and deflections across transverse joints are properly managed; this is achieved by quantifying the load‑transfer coefficient, which captures the effectiveness of joint dowels, tied concrete shoulders, concrete modulus, and traffic composition in transferring loads laterally, thereby preventing excessive corner stress. Fourth, the design seeks an economical slab thickness that still delivers the necessary structural capacity, especially during periods of reduced support such as spring thaws; while saturated‑subgrade strength tests provide ample reserve capacity for these conditions, increasing thickness offers limited mitigation of differential frost heave. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 141–143), Ch. 8 (pp. 160–164)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Rigid pavement design is appropriate whenever the intended surface is a concrete slab—most commonly Jointed Plain Concrete Pavement (JPCP) or Roller Compacted Concrete (RCC). Although older installations of Jointed Reinforced Concrete Pavement and Continuously Reinforced Concrete Pavement still exist, they are rarely the subject of new designs. The concrete layer must rest on a permeable supporting base that is either asphalt‑treated (ATPB) or cement‑treated (CTPB); this base is typically placed over a 2A subbase to provide a uniform, stable reaction from the subgrade. Seasonal variations in subgrade support are accounted for by adjusting the effective modulus of subgrade reaction: about 15 000 psi for spring‑thaw conditions, 30 000 psi for normal summer or fall conditions, and 50 000 psi when the ground is frozen. Open‑graded subbase material is not permitted; drainage must be achieved through the permeable base with a positive outlet. The design follows the 1993 AASHTO rigid‑pavement procedures, incorporating inputs such as equivalent single axle loads, serviceability levels, concrete modulus of rupture and elastic modulus, reliability, load‑transfer coefficient, and drainage coefficient. The approach is routinely applied to new interstate and expressway projects, as well as to rehabilitation schemes such as 3R or other CPR work when the existing foundation consists of ATPB, CTPB, or a suitable 2A subbase. In these cases the same base‑layer requirements apply, and any modification of the original pavement structure must be coordinated with the appropriate highway design team. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 160–162)</small></p>
+<p>When significant differential frost heave is anticipated, the rigid pavement design process becomes less attractive because increasing slab thickness offers only limited mitigation of that problem; in such cases designers should consider alternative pavement types or design methods better suited to handle frost‑induced movements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (p. 164)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>Rigid pavement design requires a comprehensive set of inputs that describe the traffic loading, material characteristics, site conditions, and reliability considerations. The traffic demand is quantified by the total number of 18‑kip equivalent single axle loads (ESALs) expected over the initial performance period together with an initial serviceability index that defines the condition of the pavement at construction; a target terminal serviceability may also be specified for later life. Concrete properties are represented by the 28‑day mean modulus of rupture and the slab elastic modulus, which capture the strength and stiffness of the Portland cement concrete slab. The subgrade contribution is expressed through an effective k‑value derived from the resilient modulus of the roadbed soil; this value may be adjusted seasonally to reflect changes in moisture or temperature. Subbase inputs include the type of material and its thickness, both of which influence the weighted effective k‑value, and a loss‑of‑support factor is applied to account for possible erosion or pumping of the subbase. If a rigid foundation such as bedrock lies within ten feet of the surface for any significant length of the project, its presence is incorporated into the determination of the effective k‑value. Environmental conditions are reflected in the selection of the appropriate base elastic modulus (spring thaw, normal, or frozen) and in an overall drainage coefficient that represents how effectively water is removed from the pavement structure. Finally, a reliability level and an overall standard deviation are chosen to capture variability, together with a load‑transfer coefficient that characterizes joint performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 160–162)</small></p>
+<p>Rigid pavement design in Pennsylvania follows the 1993 AASHTO Pavement Design Procedures, which are executed through the AASHTOWare® DARWin® 3.01 software and require a calibrated set of performance inputs. These inputs include projected 18‑kip equivalent single axle loads (ESALs), target initial and terminal serviceability indices, a 28‑day mean concrete modulus of rupture, an elastic modulus for the slab, an effective subgrade reaction coefficient (k‑value), a reliability level, an overall standard deviation fixed at 0.35, a load‑transfer coefficient (J) selected from departmental ranges, and a drainage coefficient. Subgrade properties are derived by converting the soil resilient modulus to an effective k‑value in accordance with Publication 293 of the Geotechnical Engineering Manual, and must be verified through laboratory testing that complies with PennDOT PTM No. 106 as well as AASHTO T 208 (unconfined compressive strength), AASHTO M 145 (soil classification) and AASHTO T 307 (resilient modulus). When CBR testing is employed, it must follow AASHTO T 193; values above 10 require recommendation by the District Geotechnical Engineer and approval by the Chief Geotechnical Engineer, while values below 5 demand justification for improvement measures. For interstate and expressway projects, laboratory Mr values are acceptable and falling‑weight deflectometer testing may be used to locate sampling points.</p>
+<p>Concrete material properties are prescribed by state specifications. The modulus of rupture is calculated with S′c = K√f′c where K equals nine; using the standard Class AA compressive strength of 4,925 psi yields a mean modulus of rupture of 631 psi, which must be used unless district experience indicates otherwise. The elastic modulus for Class AA paving concrete is taken as four million pounds per square inch, consistent with American Concrete Institute recommendations and the mean values embedded in the AASHTO procedures.</p>
+<p>Base and subbase layers are treated together when forming an effective k‑value. All interstate and expressway designs must incorporate an Asphalt or Cement Treated Permeable Base (ATPB or CTPB) over a 2A subbase, and the use of open‑graded subbase is prohibited. The base elastic modulus varies with seasonal conditions—15,000 psi for spring thaw, 30,000 psi for normal summer/fall, and 50,000 psi for frozen winter—and must be adjusted so that the ratio of subbase modulus to the roadbed soil resilient modulus does not exceed four. When bedrock lies within ten feet of the subgrade surface over a significant length, its effect on the k‑value must also be considered.</p>
+<p>The load‑transfer coefficient J is chosen from departmental ranges; lower values are applied when transverse joints are dowelled or concrete shoulders provide good lateral support and deflection testing confirms normal transfer efficiency, while higher values are required for poorer support conditions, lower k‑values, or higher percentages of truck traffic. Dimensional constraints dictate that the computed slab thickness be rounded to the nearest half‑inch, except when the required thickness exceeds seven inches and the total paving area is under thirty thousand square yards, in which case rounding occurs to the nearest inch. The final thickness must fall within the minimum and maximum limits specified in Table 8.3 of the governing standard. Frost design provisions are generally omitted, but if differential frost heave is anticipated the designer must refer to the frost‑design requirements outlined in Section 6.2.B. Ultimately, the design must satisfy durability, rideability, and economic criteria as guided by the district pavement manager. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 141–152), Ch. 8 (pp. 160–164)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>Rigid pavement design is governed by the 1993 AASHTO Pavement Design Procedures for rigid pavements and is most often carried out with the AASHTOWare® DARWin® 3.01 software. The designer must first supply a complete set of inputs that include the projected 18‑kip equivalent single axle loads (ESALs) for the design period, initial and terminal serviceability indices, concrete slab properties, subgrade support characteristics, a chosen reliability level, an overall standard deviation, and coefficients for load transfer and drainage. Concrete material properties are derived from compressive strength: the modulus of rupture is obtained by multiplying a constant K equal to nine by the square‑root of the specified compressive strength, which yields a default value of 631 psi for Class AA concrete unless local data dictate otherwise; the elastic modulus follows the relationship Ec = 57 000·(f′c)^0.5, giving a mean Ec of four million pounds per square inch that corresponds to an average 28‑day compressive strength of about 4 925 psi. Subgrade support is represented by the effective modulus of subgrade reaction (k), which is directly proportional to the resilient modulus (Mr) of the roadbed soil. Mr may be measured in the laboratory according to AASHTO T307 or estimated from a California Bearing Ratio test using the empirical expression Mr = 1500 × CBR. When laboratory testing is impractical, falling‑weight deflectometer surveys are first used to locate representative sampling points for subsequent Mr testing; seasonal moisture adjustments are then applied before converting Mr to k. For layered base and subbase systems a loss‑of‑support factor is computed as a weighted average of the individual layer factors, LS1·D1/(D1 + D2) + LS2·D2/(D1 + D2). Prescribed base elastic moduli are 15 000 psi for spring‑thaw conditions, 30 000 psi for normal (summer/fall) conditions, and 50 000 psi for frozen conditions, with the subbase‑to‑soil modulus ratio limited to four. The software uses these rules to generate an effective k value for each subbase type and depth. Lateral support at slab corners is accounted for by the load transfer coefficient J, which is selected from prescribed ranges based on observed joint performance; higher J values are assigned when k is low or truck traffic is high, while lower J values correspond to higher k or lighter traffic. The selection relies on past deflection testing of transverse joints, with good‑to‑normal load‑transfer efficiency prompting the use of a value toward the lower end of the range. Once all inputs are entered, DARWin activates its internal algorithm, applying the load‑transfer coefficient (which also captures the effect of tied concrete shoulders) to compute the minimum slab thickness that satisfies structural criteria. The raw thickness produced by the program is then rounded: for most slabs the value is adjusted to the nearest half‑inch (for example, 10.24 in becomes 10.0 in and 10.25 in becomes 10.5 in), while sections whose area does not exceed 30 000 sq yd may be rounded to the nearest whole inch. The rounded thickness is finally checked against the minimum and maximum limits listed in Table 8.3, and any result falling outside those bounds must be revised. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 141–152), Ch. 8 (pp. 160–164)</small></p>
+<!-- formulas-check:begin pub_242_change_10::f:2a7734d31256 x rigid-pavement-design -->
+
+<p>The calculator below computes resilient modulus from CBR.</p>
+<p><small>[1] — PDF p. 142</small></p>
+<details class="fc-calc"><summary>Calculator: Resilient modulus from CBR ([1] PDF p. 142)</summary><iframe src="_apps/pub-242-change-10-2a7734d31256.html" title="Calculator: Resilient modulus from CBR ([1] PDF p. 142)" loading="lazy"></iframe><p><a href="_apps/pub-242-change-10-2a7734d31256.html">Open the calculator on its own page</a></p></details>
+<!-- formulas-check:end -->
+
+<!-- formulas-check:begin pub_242_change_10::f:4173f33ecb26 x rigid-pavement-design -->
+
+<p>The publication gives E c as:</p>
+<!-- gaps: 08e1c7f5bc5fb53d -->
+
+<!-- formula-anchor: eq-pub-242-change-10-4173f33ecb26 -->
+
+<div class="fc-math" id="eq-pub-242-change-10-4173f33ecb26" role="region" aria-label="Formula 1" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="\mathrm { E _ { c } } = 57 , 000 ( \mathrm { f _ { c } } ^ { \prime } ) ^ { 0.5 }"><mrow><mrow><msub><mi mathvariant="normal">E</mi><mrow><mi mathvariant="normal">c</mi></mrow></msub></mrow><mo>&#x0003D;</mo><mn>57</mn><mo>&#x0002C;</mo><mn>000</mn><mo stretchy="false">&#x00028;</mo><msup><mrow><msub><mi mathvariant="normal">f</mi><mrow><mi mathvariant="normal">c</mi></mrow></msub></mrow><mrow><mi>&#x02032;</mi></mrow></msup><msup><mo stretchy="false">&#x00029;</mo><mrow><mn>0.5</mn></mrow></msup></mrow></math></div>
+<p>This formula computes the Concrete Elastic Modulus, a measure of stiffness or rigidity of concrete, from the PCC compressive strength. As the PCC compressive strength grows, with other factors held constant, the Concrete Elastic Modulus rises.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-1" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-1">Symbols: Concrete elastic modulus from compressive strength ([1] PDF p. 162)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="E_c"><mrow><msub><mi>E</mi><mi>c</mi></msub></mrow></math></td><td>Concrete Elastic Modulus</td><td>not stated near this formula</td><td>output</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="f&#x27;c"><mrow><msup><mi>f</mi><mi>&#x02032;</mi></msup><mi>c</mi></mrow></math></td><td>PCC compressive strength(pounds per square inch).</td><td>not stated near this formula</td><td>input</td><td></td><!-- gaps: 6d7515df518c9de0 --></tr>
+</table></div>
+
+<p><small>[1] — PDF p. 162</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats: not stated in the publication near this formula.</p>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<details class="fc-calc"><summary>Calculator: Concrete elastic modulus from compressive strength ([1] PDF p. 162)</summary><iframe src="_apps/pub-242-change-10-4173f33ecb26.html" title="Calculator: Concrete elastic modulus from compressive strength ([1] PDF p. 162)" loading="lazy"></iframe><p><a href="_apps/pub-242-change-10-4173f33ecb26.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-27.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 29 words before and 108 words after the formula.</p>
+<p>Found by the search:</p>
+<ul>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="E_c"><mrow><msub><mi>E</mi><mi>c</mi></msub></mrow></math> from PDF p. 162, beside the formula</li>
+</ul>
+</details>
+
+<!-- formulas-check:end -->
+
+<p>Rigid pavement designs must satisfy a comprehensive set of performance‑based criteria that together guarantee the required reliability and safety levels. The subgrade reaction modulus (k) is derived from the resilient modulus (M r ), which may be obtained through laboratory testing or estimated from California Bearing Ratio (CBR) values using the Heukelom‑Klomp relationship; seasonal adjustments are applied because spring moduli are typically ten to twenty percent lower than normal summer values and frozen conditions can double the modulus. CBR values are subject to strict thresholds: any value above ten must be recommended by the District Geotechnical Engineer and approved by the Chief Geotechnical Engineer, while values below five trigger a requirement for justified subgrade improvement measures, and all CBR results must be corroborated with complementary laboratory tests. An overall standard deviation (S o ) of 0.35 is employed throughout the AASHTO 1993 rigid‑pavement procedures to capture all sources of error and variability in the input data, and a reliability level is selected as part of the design inputs. The designer must provide the number of 18‑kip equivalent single axle loads (ESALs) for the initial service period, the initial and terminal serviceability indices, the load‑transfer coefficient (J), and the overall drainage coefficient (C d). Concrete properties are prescribed for Class AA material: using a constant K = 9 and the square‑root of the average compressive strength of 4,925 psi yields a 28‑day mean modulus of rupture of approximately 631 psi, which serves as the tensile‑strength threshold unless district experience justifies an alternative; the corresponding elastic modulus is taken as four million psi, reflecting the same compressive strength and may be altered only when local historical data indicate a significantly different strength. The effective subbase modulus is set at 15,000 psi for spring‑thaw conditions, 30,000 psi for normal summer/fall conditions, and 50,000 psi for frozen conditions, with the additional constraint that the ratio of subbase modulus to soil resilient modulus shall not exceed four. For Interstate and Expressway projects a permeable base layer—either an Asphalt‑Treated Permeable Base or Cement‑Treated Permeable Base—must be placed over a 2A subbase, and open‑graded subbases are prohibited. The load‑transfer coefficient J is chosen from the department’s prescribed range to reflect lateral support at slab corners; lower values are applied when transverse joints are dowelled, concrete shoulders are tied, or deflection testing indicates good to normal transfer efficiency, while higher values are required for poor lateral support, low subgrade k values, or high truck percentages. After the preliminary slab thickness is computed, it is rounded to the nearest half‑inch; if the slab exceeds seven inches and the total area to be placed is under thirty thousand square yards, rounding proceeds to the nearest inch. The final thickness must lie within the minimum and maximum limits specified in Table 8.3. No separate frost‑related criteria are imposed on rigid pavement designs; when differential frost heave is anticipated the designer should consult dedicated frost‑design guidance, recognizing that merely adding thickness provides only modest protection. In addition to meeting dimensional constraints, the pavement must satisfy durability and rideability requirements, with variable selection driven toward the most cost‑effective solution. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=0b4cbd84 src=pub_242_change_10::tab:p164#1 -->
+<p>Table 8.3 specifies the minimum and maximum concrete pavement depths for various road classes.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-rigid-pavement-design-1-cap" tabindex="0"><table class="ct-table" id="ct-rigid-pavement-design-1" aria-describedby="ct-rigid-pavement-design-1-sum">
+<caption id="ct-rigid-pavement-design-1-cap">TABLE 8.3MINIMUM AND MAXIMUM DEPTHS FOR CONCRETE PAVEMENTS</caption>
+<thead>
+<tr><th id="ct-rigid-pavement-design-1-h0-0" scope="col" rowspan="4">COURSES</th><th id="ct-rigid-pavement-design-1-h0-1" scope="col" colspan="5">MINIMUM DEPTHS</th><th id="ct-rigid-pavement-design-1-h0-6" scope="col">MAXIMUMDEPTHS</th></tr>
+<tr><th id="ct-rigid-pavement-design-1-h1-1" scope="col" colspan="2">INTERSTATES ANDOTHER LIMITED ACCESSFREEWAYS</th><th id="ct-rigid-pavement-design-1-h1-3" scope="col" rowspan="3">ARTERIALS</th><th id="ct-rigid-pavement-design-1-h1-4" scope="col" rowspan="3">COLLECTORS</th><th id="ct-rigid-pavement-design-1-h1-5" scope="col" rowspan="3">LOCALROADS</th><td rowspan="3"></td></tr>
+<tr><th id="ct-rigid-pavement-design-1-h2-1" scope="col" colspan="2">ALTERNATIVE</th></tr>
+<tr><th id="ct-rigid-pavement-design-1-h3-1" scope="col">A*</th><th id="ct-rigid-pavement-design-1-h3-2" scope="col">B*</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-rigid-pavement-design-1-h0-0">JPCP</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-1 ct-rigid-pavement-design-1-h2-1 ct-rigid-pavement-design-1-h3-1">8 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-1 ct-rigid-pavement-design-1-h2-1 ct-rigid-pavement-design-1-h3-2">8 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-3">8 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-4">6 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-5">6 in</td><td headers="ct-rigid-pavement-design-1-h0-6">15 in</td></tr>
+<tr><td headers="ct-rigid-pavement-design-1-h0-0">ATPB ORCTPB</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-1 ct-rigid-pavement-design-1-h2-1 ct-rigid-pavement-design-1-h3-1">4 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-1 ct-rigid-pavement-design-1-h2-1 ct-rigid-pavement-design-1-h3-2">3 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-3">4 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-4">4 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-5">4 in**</td><td headers="ct-rigid-pavement-design-1-h0-6">4 in</td></tr>
+<tr><td headers="ct-rigid-pavement-design-1-h0-0">2A</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-1 ct-rigid-pavement-design-1-h2-1 ct-rigid-pavement-design-1-h3-1">4 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-1 ct-rigid-pavement-design-1-h2-1 ct-rigid-pavement-design-1-h3-2">6 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-3">4 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-4">4 in</td><td headers="ct-rigid-pavement-design-1-h0-1 ct-rigid-pavement-design-1-h1-5">4 in</td><td headers="ct-rigid-pavement-design-1-h0-6">6 in</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-rigid-pavement-design-1-sum">Rows list concrete pavement courses, columns provide minimum and maximum depth specifications for different road types.</p>
+<p class="ct-notes">Notes: * Either Alternative A or B is acceptable. ** ATPB or CTPB may be eliminated on low volume/local roads, but the depth of 2A will be 6 inches.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 164.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 141–152), Ch. 8 (pp. 160–164)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>Rigid pavement design requires the explicit definition of each material and its governing properties. The subgrade must be characterized by an elastic response expressed as a resilient modulus (Mr), which is subsequently transformed into an effective modulus of subgrade reaction, k, for use in structural calculations. Designers must supply a complete set of soil data that includes either laboratory‑determined Mr or, where appropriate, CBR values; the soil classification and AASHTO group index; gradation curves together with the percent passing the #200 sieve; Atterberg limits (liquid limit, plastic limit, plasticity index); maximum dry density and optimum moisture content. The loss‑of‑support factor for the subgrade is also required. Above the subgrade a drainage layer, designated as an aggregate subbase, must be specified. Acceptable materials are Asphalt Treated Permeable Base (ATPB) or Cement Treated Permeable Base (CTPB); open‑graded subbase is prohibited. In addition, a 2A subbase may be placed beneath the permeable base, and its thickness must be defined. The design calls for seasonal elastic moduli of the subbase—15 000 psi for spring‑thaw conditions, 30 000 psi for normal (summer/fall) conditions, and 50 000 psi for frozen conditions—and requires that the ratio of subbase modulus to soil modulus not exceed four. The weighted average of the road‑bed soil resilient modulus, the subbase modulus, and the loss‑of‑support factors yields the effective k‑value governing slab deflection. The structural base supporting the concrete slab is normally constructed from ATPB or CTPB material, whose properties are incorporated into the same k‑value calculation. The surface layer must be either Jointed Plain Concrete Pavement (JPCP) or Roller Compacted Concrete (RCC), and the concrete type is specified as Class AA normal‑weight Portland cement concrete. For this concrete the design adopts a mean compressive strength of 4,925 psi with a standard deviation of 432 psi; the corresponding elastic modulus is taken as four million psi. The tensile capacity is expressed through the 28‑day mean modulus of rupture, calculated as 631 psi using S′c = K(σc′)^0.5 with K = 9. Additional slab properties required in the analysis include the joint load‑transfer coefficient, the overall drainage coefficient, and the reliability and serviceability parameters that define acceptable performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=4d613102 src=pub_242_change_10::tab:p143#1 -->
+<p>The table below lists typical compacted dry density and optimum moisture content ranges for various AASHTO soil classifications.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-rigid-pavement-design-2-cap" tabindex="0"><table class="ct-table" id="ct-rigid-pavement-design-2" aria-describedby="ct-rigid-pavement-design-2-sum">
+<caption id="ct-rigid-pavement-design-2-cap">TABLE 6.1TYPICAL COMPACTED DRY DENSITY AND OPTIMUM MOISTURE CONTENT RANGES OF SOILS (BASED ON FHWA NHI-05-037)</caption>
+<thead>
+<tr><th scope="col">AASHTO SOILCLASSIFICATION</th><th scope="col">COMPACTEDDRY UNIT WEIGHT(lb/ft³)</th><th scope="col">OPTIMUMMOISTURE CONTENT(%)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">A-1</th><td>115-134</td><td>5-15</td></tr>
+<tr><th scope="row">A-2</th><td>109-134</td><td>9-18</td></tr>
+<tr><th scope="row">A-3</th><td>100-119</td><td>5-12</td></tr>
+<tr><th scope="row">A-4</th><td>94-125</td><td>10-20</td></tr>
+<tr><th scope="row">A-5</th><td>84-100</td><td>20-35</td></tr>
+<tr><th scope="row">A-6</th><td>94-119</td><td>10-30</td></tr>
+<tr><th scope="row">A-7</th><td>81-115</td><td>15-35</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-rigid-pavement-design-2-sum">Rows list AASHTO soil classifications, columns give ranges for compacted dry unit weight and optimum moisture content.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 143.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 141–143), Ch. 8 (pp. 160–162)</small></p>
+<!-- formulas-check:begin pub_242_change_10::f:e139d9a65700 x rigid-pavement-design -->
+
+<p>The publication gives 631 pounds per square inch as:</p>
+<!-- gaps: f110f331a955244e -->
+
+<!-- formula-anchor: eq-pub-242-change-10-e139d9a65700 -->
+
+<div class="fc-math" id="eq-pub-242-change-10-e139d9a65700" role="region" aria-label="Formula 2" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="\mathrm { S _ { c } ^ { \prime } } = \mathrm { K } ( \mathrm { f _ { c } ^ { \prime } } ) ^ { 0.5 }"><mrow><mrow><msubsup><mi mathvariant="normal">S</mi><mrow><mi mathvariant="normal">c</mi></mrow><mrow><mi mathvariant="normal">&#x02032;</mi></mrow></msubsup></mrow><mo>&#x0003D;</mo><mrow><mi mathvariant="normal">K</mi></mrow><mo stretchy="false">&#x00028;</mo><mrow><msubsup><mi mathvariant="normal">f</mi><mrow><mi mathvariant="normal">c</mi></mrow><mrow><mi mathvariant="normal">&#x02032;</mi></mrow></msubsup></mrow><msup><mo stretchy="false">&#x00029;</mo><mrow><mn>0.5</mn></mrow></msup></mrow></math></div>
+<p>This formula computes the concrete modulus of rupture, defined as a measure of extreme fiber tensile stress under a breaking bond. It uses the constant K and the PCC compressive strength f'c. As K grows, the result rises. As f'c grows, the result also rises.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-4" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-4">Symbols: 28-day mean PCC modulus of rupture from compressive strength ([1] PDF p. 162)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="S&#x27;c"><mrow><msup><mi>S</mi><mi>&#x02032;</mi></msup><mi>c</mi></mrow></math></td><td>Concrete Modulus of Rupture</td><td>psi</td><td>output</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="K"><mrow><mi>K</mi></mrow></math></td><td>not stated near this formula</td><td>not stated near this formula</td><td>coefficient</td><td>9</td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="f&#x27;c"><mrow><msup><mi>f</mi><mi>&#x02032;</mi></msup><mi>c</mi></mrow></math></td><td>PCC compressive strength(pounds per square inch).</td><td>psi</td><td>input</td><td></td><!-- gaps: 915951e19cfe8603 --></tr>
+</table></div>
+
+<p><small>[1] — PDF p. 162</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats: not stated in the publication near this formula.</p>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<details class="fc-calc"><summary>Calculator: 28-day mean PCC modulus of rupture from compressive strength ([1] PDF p. 162)</summary><iframe src="_apps/pub-242-change-10-e139d9a65700.html" title="Calculator: 28-day mean PCC modulus of rupture from compressive strength ([1] PDF p. 162)" loading="lazy"></iframe><p><a href="_apps/pub-242-change-10-e139d9a65700.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-27.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 32 words before and 55 words after the formula.</p>
+<p>Found by the search:</p>
+<ul>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="S&#x27;c"><mrow><msup><mi>S</mi><mi>&#x02032;</mi></msup><mi>c</mi></mrow></math> from PDF p. 161, 1 step / 23 words before the formula</li>
+</ul>
+</details>
+
+<!-- formulas-check:end -->
+
+<p>In rigid‑pavement design the selection and proportioning of materials proceeds from a hierarchy that first secures the structural stiffness of the concrete slab and then ensures that the supporting layers provide compatible support, durability, and constructability. The concrete mix is targeted to achieve an elastic modulus on the order of four million pounds per square inch; this level of stiffness is obtained by aiming for a characteristic compressive strength of about 4,925 psi and applying the ACI relationship Ec = 57,000·√f′c. For Class AA paving concrete these benchmark values are adopted as default, and only when district‑specific historical data demonstrate a substantially different mean strength is an alternative modulus used. By proportioning cement, aggregates, water, and admixtures to meet the 4,925 psi target, designers satisfy the required structural performance while preserving constructability and long‑term serviceability of the slab. The supporting subbase and base are then chosen to deliver an effective modulus of subgrade reaction (k) that is compatible with the soil’s resilient modulus. The designer first selects a subbase material—typically asphalt or a cement‑treated permeable base (ATPB/CTPB)—and assigns a thickness that, together with loss‑of‑support factors for each layer and the depth to the rigid foundation, yields a weighted k value. Seasonal variations in the elastic response of the base are accounted for by using modulus values of 15,000 psi during spring thaw, 30,000 psi under normal conditions, and 50,000 psi when frozen. The combined subbase modulus must not exceed four times the underlying soil resilient modulus, a limit that guards against excessive differential settlement and ensures durability against erosion. Drainage functions are provided by ATPB or CTPB layers; open‑graded subbases are excluded because they do not meet the required structural and durability criteria. By adhering to these proportioning steps, the pavement system achieves the desired balance of stiffness, durability, ease of construction, and overall performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 161–162)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>Rigid pavement design normally specifies a Jointed Plain Concrete Pavement (JPCP) surface, or where appropriate a Roller Compacted Concrete (RCC) layer, as the primary structural element. When joints are incorporated, transverse contraction joints are provided and are doweled to enable load transfer across slab edges; the presence of tied concrete shoulders at the slab corners supplies additional lateral support. The combined effect of doweled joints and shoulder ties is expressed through a load‑transfer coefficient (J), which must be entered into the AASHTO design calculations. The selected J value reflects the anticipated quality of lateral support: good support calls for a lower J, whereas poorer support requires a higher J. Moreover, J is modified according to concrete modulus (k) and the proportion of heavy truck traffic—lower k or higher truck percentages lead to an increased J, while higher k or lighter traffic permit a reduced J. Reinforcement of the slab itself is generally unnecessary in new designs; older in‑service pavements may still employ Jointed Reinforced Concrete Pavement (JRCP) or Continuously Reinforced Concrete Pavement (CRCP), but these types are rarely designed today. The design also presumes that an effective drainage system is provided to maintain long‑term performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=1b75479b src=pub_242_change_10::tab:p163#1 -->
+<p>The table below specifies load-transfer coefficient values for various joint and shoulder configurations.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-rigid-pavement-design-3-cap" tabindex="0"><table class="ct-table" id="ct-rigid-pavement-design-3" aria-describedby="ct-rigid-pavement-design-3-sum">
+<caption id="ct-rigid-pavement-design-3-cap">TABLE 8.2 LOAD TRANSFER COEFFICIENT VALUES, J</caption>
+<thead>
+<tr><th scope="col">DESCRIPTION</th><th scope="col">VALUE</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">JPCP and unbonded concrete overlays (dowelledjoints) with tied concrete shoulders, widened lanewith asphalt or RCC shoulders, or monolithic ortied curb and gutter</th><td>2.7 - 3.1 (See notes)</td></tr>
+<tr><th scope="row">JPCP and unbonded concrete overlays (dowelledjoints) with untied concrete shoulders, untied curband gutter, or standard lane width with asphalt,RCC, aggregate, or turf shoulders</th><td>3.2</td></tr>
+<tr><th scope="row">Unbonded concrete overlays (undowelled joints)with tied concrete shoulders, widened lane withasphalt or RCC shoulders, or monolithic or tiedcurb and gutter</th><td>3.6 4.2 (See notes)</td></tr>
+<tr><th scope="row">Unbonded concrete overlays (undowelled joints)with untied concrete shoulders, untied curb andgutter, or asphalt, RCC, aggregate, or turf shoulders</th><td>3.8 4.4 (See notes)</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-rigid-pavement-design-3-sum">Rows list descriptions of pavement types and joint configurations, columns give load transfer coefficient values for each type.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 163.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 8 (pp. 160–163)</small></p>
+<p>In designing the interfaces of a rigid pavement, the interaction between the base course and the subbase is treated by computing a single effective modulus of subgrade reaction that represents both layers together. The loss‑of‑support factor for each layer is weighted according to its thickness, so that the combined value reflects any erosion or pumping that might affect the subbase material. For Interstate and Expressway projects the base must be an Asphalt or Cement Treated Permeable Base placed over a 2A subbase; open‑graded subbase is not allowed. Seasonal elastic moduli for the base are taken as 15 000, 30 000, and 50 000 psi, but they are adjusted to keep the ratio of subbase resilient modulus to soil resilient modulus at or below four. At slab corners the design uses a load‑transfer coefficient that quantifies the lateral support supplied by transverse joints, dowels, or tied concrete shoulders. The appropriate coefficient is chosen from observed load‑transfer efficiencies obtained in deflection testing; efficient transfer calls for values near the lower end of the prescribed range, while inefficient transfer requires higher values. The coefficient is increased when lateral support is weak—such as with low subgrade stiffness—or when truck traffic percentages are high, and it is reduced when the subgrade is stiff or truck traffic is light. This combined approach ensures that stresses at corners are mitigated and that the pavement’s interaction with adjacent joints and shoulders meets performance requirements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 161–163)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>The rigid‑pavement design process incorporates environmental effects primarily through a detailed subgrade characterization and an integrated drainage system. Subgrade stiffness is quantified by resilient‑modulus values obtained from laboratory or field tests that replicate the moisture and temperature conditions of spring thaw, normal summer/fall, and frozen winter. Because the modulus in spring can be ten to twenty percent lower than the summer value, while frozen conditions may produce a modulus roughly twice as high, designers adjust the effective subgrade reaction accordingly. The degree of moisture sensitivity is evaluated from fines content, Atterberg limits and group index, which also guide compaction and any required soil improvement.</p>
+<p>To translate these seasonal moduli into design inputs, base elastic moduli are assigned: fifteen thousand psi for spring thaw, thirty thousand psi for normal conditions, and fifty thousand psi for frozen periods. A loss‑of‑support factor is applied to the effective k‑value to account for possible erosion or pumping of the subbase material. The selected subbase must be compatible with the soil; its resilient modulus should not exceed four times that of the underlying subgrade.</p>
+<p>Drainage is built into the pavement structure by placing an aggregate subbase beneath the concrete slab and, where feasible, a dedicated functional drainage system. The overall drainage coefficient (Cd) supplied to the AASHTO design equation reflects this provision. Where a positive outlet can be provided, the drainage layer must consist of either an asphalt‑treated permeable base or a cement‑treated permeable base; open‑graded subbase material is prohibited. If a suitable outlet cannot be achieved, a dense base with longitudinal edge drains is required.</p>
+<p>Moisture and climate effects are further accommodated by using saturated‑subgrade strength test results, which furnish sufficient reserve capacity to endure the reduced support that occurs during spring thaws. Although rigid‑pavement design does not contain separate frost‑design provisions, designers are directed to consult the dedicated frost‑design section when differential frost heave is anticipated, recognizing that merely increasing slab thickness offers limited mitigation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 141–143), Ch. 8 (pp. 160–164)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>After the DARWin calculation, the designer verifies that the slab thickness follows the prescribed rounding—half‑inch increments generally, or whole‑inch increments for slabs over seven inches when the area is under thirty thousand square yards—and confirms the resulting depth falls between the minimum and maximum limits set out in Table 8.3. Because rigid pavements lack specific frost design criteria, the check focuses on ensuring sufficient structural capacity for spring‑thaw conditions unless differential frost heave is anticipated, in which case additional guidance is consulted. The design must also be evaluated for durability and rideability to satisfy performance requirements, and the designer should coordinate with the District Pavement Management Engineer or Pavement Manager to guarantee that the chosen combination of variables meets overall project specifications and cost objectives. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (p. 164)</small></p>
+<p>Rigid pavement design aims to achieve defined initial and terminal serviceability levels over the design period while accommodating a specified traffic load expressed as 18‑kip equivalent single axle loads (ESALs). These performance targets are quantified through the AASHTO Serviceability Index, which is calculated in the DARWin software using inputs such as the initial and terminal serviceability values, 28‑day mean PCC modulus of rupture, slab elastic modulus, effective k‑value, reliability level, load transfer coefficient, and drainage coefficient. By meeting these criteria, the design ensures that the concrete pavement will maintain acceptable ride quality and resist distress throughout its intended service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (p. 160)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-21.2: formula-block display math (md->html reverse builder; per-page inject) */
+div.fc-math { overflow-x: auto; margin: 1rem 0; }
+
+/* FR-MH-21.12(a): formula-block calculator disclosure (md->html reverse builder; per-page inject) */
+details.fc-calc { margin: 1rem 0; }
+details.fc-calc > summary { cursor: pointer; }
+details.fc-calc iframe { display: block; box-sizing: content-box; width: calc(100% - 2px);
+  height: 28rem; margin-top: .5rem; border: 1px solid var(--border); }
+</style>
+<script>
+window.addEventListener("message", function (e) {
+  if (!e.data || e.data.type !== "fc-calc-height") return;
+  var frames = document.querySelectorAll("details.fc-calc iframe");
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].contentWindow === e.source) frames[i].style.height = e.data.height + "px";
+  }
+});
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skid Resistance</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html" class="active" aria-current="page">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><span class="crumb-current">Skid Resistance</span></nav>
+<article><h1>Skid Resistance</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-condition-assessment.html">Pavement Condition Assessment</a> <span class="edge edge-taxonomic" title="Skid Resistance is a topic under Pavement Condition Assessment.">is-subtopic-of</span></div><div class="edge-reading">Skid Resistance is a topic under Pavement Condition Assessment.</div><div><a class="tag" href="index.html?q=skid-resistance">skid-resistance</a><a class="tag" href="index.html?q=skid-resistance">skid-resistance</a><a class="tag" href="index.html?q=skid-resistance-properties">skid-resistance-properties</a><a class="tag" href="index.html?q=skid-resistance-properties">skid-resistance-properties</a><a class="tag" href="index.html?q=friction-characteristics">friction-characteristics</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Skid resistance is the measure of a pavement’s ability to provide adequate tire‑pavement friction, especially under wet conditions where water pressure can develop at the interface, thereby ensuring safe vehicle operation. It is quantified primarily through field friction tests such as the AASHTO T 242 tire‑pavement test, which captures the combined effects of macro‑texture, micro‑texture and the polishing resistance of the coarse aggregate; the resulting value is expressed as a Skid Resistance Level (SRL) that guides material selection and treatment decisions. Because friction values exhibit a seasonal sinusoidal pattern—dropping to their lowest in late summer and fall—the SRL must reflect anticipated traffic volumes and aggregate properties to retain sufficient texture throughout the pavement’s service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-investigation-objectives">Purpose and investigation objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#existing-information-and-records">Existing information and records</a></li><li><a href="#visual-inspection-and-condition-assessment">Visual inspection and condition assessment</a></li><li><a href="#field-measurements-and-testing">Field measurements and testing</a></li><li><a href="#sampling-and-laboratory-investigation">Sampling and laboratory investigation</a></li><li><a href="#structural-and-functional-performance">Structural and functional performance</a></li><li><a href="#data-interpretation-and-diagnosis">Data interpretation and diagnosis</a></li><li><a href="#findings-confidence-and-next-actions">Findings, confidence, and next actions</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-investigation-objectives">Purpose and investigation objectives</h2>
+<p>Skid‑resistance investigations assess the friction condition of a pavement surface—whether an asphalt‑concrete wearing course or a Portland cement concrete slab, including sections constructed with Vanport Limestone. The study determines if the existing surface provides sufficient tire‑pavement grip for safe vehicle operation, especially under wet conditions where water pressure can develop at the tire‑pavement interface. It must answer whether the current friction level meets the required Skid Resistance Level, whether the macro‑texture (low‑speed gradient) is adequate to prevent hydroplaning at the posted speed, and whether the coarse aggregate’s polishing resistance will allow those properties to be retained throughout the service life under anticipated traffic and environmental exposure. When deficiencies are identified, the investigation also identifies the appropriate remedial treatment—such as diamond grinding, longitudinal grooving, or other friction‑enhancing measures—to raise skid resistance to an acceptable level. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (p. 110), Ch. 11 (p. 198), Ch. 13 (pp. 220–221)</small></p>
+<p>The skid‑resistance data gathered from field tests give engineers a concrete basis for making decisions throughout the project life cycle. During planning, the measured polishing resistance of each coarse‑aggregate source—expressed as a Skid Resistance Level (SRL) derived from the AASHTO T 242 test—is matched to the expected traffic volumes and placed on design approval forms, typical sections and contract documents. This ensures that the aggregate selected for the wearing course will retain adequate friction over seasonal cycles, preventing premature loss of traction. When the friction measurements reveal low skid resistance on an otherwise structurally sound pavement, the findings direct designers to apply surface‑treatment measures rather than adding unnecessary structural layers. For asphalt decks this may involve diamond grinding or longitudinal grooving, which create channels that improve wet‑weather grip and reduce hydroplaning risk; for Portland cement concrete decks similar treatments—or selective overlays—are specified to raise friction while preserving the existing structure. The results also feed directly into maintenance and rehabilitation prioritization. Sections that meet the Wet Pavement Accident Criteria (eight or more wet crashes within a 3,000‑ft segment over five years and a wet‑to‑total crash ratio of at least 0.30) are flagged for testing through BOPD, and any confirmed low‑friction condition adds points to the Project Prioritization forms used by BOMO. Consequently, those segments receive higher funding priority and are scheduled for corrective actions such as resurfacing, grinding or early overlay in the District Interstate plan. Finally, the annual submission of testing needs by May 15 allows statewide planners to allocate resources promptly, while research on new in‑place materials provides performance evidence that can be incorporated into future specifications. Special attention is given to concrete pavements containing Vanport Limestone or affected by ASR, which may experience aggravated skid problems after grinding and therefore require closer monitoring. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=92bc2a55 src=pub_242_change_10::tab:p111#1 -->
+<p>The table below specifies Skid Resistance Level designations based on traffic volume thresholds.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-skid-resistance-1-cap" tabindex="0"><table class="ct-table" id="ct-skid-resistance-1">
+<caption id="ct-skid-resistance-1-cap">TABLE 5.4SRL CRITERIA</caption>
+<thead>
+<tr><th scope="col">INITIAL OR CURRENTONE-WAY ADT</th><th scope="col">INITIAL OR CURRENTTWO-WAY ADT</th><th scope="col">SRL DESIGNATION</th></tr>
+</thead>
+<tbody>
+<tr><td>Above 10,000</td><td>Above 20,000</td><td>E</td></tr>
+<tr><td>2,501 - 10,000</td><td>5,001 - 20,000</td><td>H; Blend of E and M;Blend of E and G</td></tr>
+<tr><td>1,501 - 2,500</td><td>3,001 - 5,000</td><td>G; Blend of H and M;Blend of E and L</td></tr>
+<tr><td>501 - 1,500</td><td>1,001 - 3,000</td><td>M; Blend of H and L;Blend of G and L;Blend of E and L</td></tr>
+<tr><td>0 - 500</td><td>0 - 1,000</td><td>L</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: *E = Excellent, H = High, G = Good, M = Medium, L = Low</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 111.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (p. 110), Ch. 11 (p. 198), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Skid‑resistance considerations are appropriate for both asphalt concrete and Portland‑cement‑concrete (PCC) pavements whenever the objective is to improve surface friction rather than add structural capacity. For asphalt, the requirement applies specifically to wearing courses—typically dense‑graded surface layers that depend on coarse aggregate—to provide sufficient macrotexture that prevents water pressure buildup at the tire–pavement interface. The polishing resistance of the coarse aggregate governs the achievable Skid Resistance Level (SRL), and an SRL designation must be recorded on the pavement design approval form; such designations are not permitted for non‑wearing layers, leveling courses, or shoulders. For PCC slabs that are structurally sound, skid‑resistance treatment is indicated when wheel ruts are shallow—less than 0.5 in.—and can be achieved through diamond grinding, grooving, or micro‑surfacing to raise wet‑weather friction and reduce hydroplaning risk. Concrete mixes containing Vanport Limestone require particular attention because they are prone to reduced friction, an effect that may be amplified after diamond grinding. Skid‑resistance testing is triggered whenever a roadway segment exhibits evidence of inadequate friction under wet conditions. The primary indicator is a cluster of wet‑pavement crashes meeting the defined threshold of eight or more crashes within 3 000 ft over five years together with a wet‑to‑total crash ratio of at least 0.30. Such sites are placed on the Wet‑Pavement Accident Cluster (WPAC) list and become candidates for SRL testing of existing aggregate stockpiles as well as friction evaluation of newly placed materials before they are approved for future use. In all cases where a skid‑friction problem has been verified—whether on asphalt wearing courses, structurally sound concrete slabs, or sections containing Vanport Limestone—the district should request testing from the Bureau of Materials Operations (BOMO). The results inform corrective actions such as specifying an appropriate SRL, applying surface treatments, or assigning additional priority points in project selection. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (p. 110), Ch. 11 (p. 198), Ch. 13 (pp. 220–221)</small></p>
+<p>Skid‑resistance assessment using the Skid Resistance Level (SRL) is limited in several respects. The friction values it provides are primarily linked to the polishing resistance of coarse aggregate in properly designed dense‑graded wearing courses, and they exhibit a pronounced seasonal cycle that roughly follows a sine curve, with the lowest values typically occurring in late summer and fall; the magnitude of this dip depends on the characteristics of the coarse aggregate and the traffic volume. Early‑stage SRL measurements are therefore not reliable predictors of long‑term performance, and an SRL rating derived from AASHTO T 242 testing is prohibited for use on non‑wearing courses, leveling courses, or shoulders. When verification of long‑term or seasonal behavior is required, or when the pavement type falls outside the scope of dense‑graded asphalt wearing layers, additional investigations such as texture profiling or water‑pressure testing should be employed.</p>
+<p>A further limitation arises because skid‑resistance testing is generally initiated only after a problem has been confirmed or specifically requested. This reactive approach can overlook underlying material deficiencies that are not captured by automated pavement condition surveys—for example, concrete pavements constructed with Vanport Limestone or those affected by alkali‑silica reaction may develop low friction that is exacerbated by processes such as diamond grinding. Since these aggregate‑related issues are invisible to the standard data set, field observations and targeted testing become necessary whenever such conditions are suspected or when existing condition data are known to have imperfections. In those situations, prompt skid‑resistance testing by the responsible agency should be complemented with the aforementioned alternative methods to ensure a comprehensive assessment of pavement safety. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 110), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="existing-information-and-records">Existing information and records</h2>
+<p>A comprehensive skid‑resistance review begins by gathering traffic volume records, using the projected initial average daily traffic for new facilities or the current ADT for resurfacing projects. These traffic data are complemented by friction test results obtained through the AASHTO T 242 method, which serve to assign or reassess Skid Resistance Level designations. The reviewer must also retrieve crash information from the CDART system, concentrating on a five‑year span of wet‑pavement crashes; sections that have experienced at least eight wet‑pavement crashes within a 3,000‑foot corridor and exhibit a wet‑to‑total crash ratio of 0.30 or higher are flagged for further analysis. Recent skid‑test outcomes for those locations should be checked to avoid unnecessary retesting, and this information is coordinated with the district’s annual testing plan submitted each May. In addition, Skid Friction test reports generated by BOMO for any sections identified as problematic are examined alongside automated pavement condition survey data from STAMPP, which records surface distress and notes special material conditions such as Vanport Limestone concrete that may affect friction. Maintenance histories that document texture‑altering treatments—including diamond grinding, micro‑surfacing, overlays, and joint or crack sealing—are reviewed because they can modify skid resistance. Finally, traffic loading information in the form of Equivalent Single Axle Load (ESAL) figures is considered when prioritizing actions, and if existing data indicate a potential issue, additional testing requests are submitted to BOMO. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=ea35dae6 src=pub_242_change_10::tab:p220#1 -->
+<p>The table below specifies maintenance activity frequencies for asphalt pavements.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-skid-resistance-2-cap" tabindex="0"><table class="ct-table" id="ct-skid-resistance-2" aria-describedby="ct-skid-resistance-2-sum">
+<caption id="ct-skid-resistance-2-cap">Asphalt Pavements</caption>
+<thead>
+<tr><th scope="col">Activity</th><th scope="col">Frequency</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Crack sealing</th><td>3 to 5 years</td></tr>
+<tr><th scope="row">Micro Surfacing (optional)</th><td>5 to 10 years</td></tr>
+<tr><th scope="row">Resurfacing</th><td>8 to 12 years (with no interim Micro Surfacing) 13 to 17 years (with an interim Micro Surfacing)</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-skid-resistance-2-sum">Rows list pavement maintenance activities and columns provide their recommended frequency intervals.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 220.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (p. 110), Ch. 11 (p. 198), Ch. 13 (pp. 220–221)</small></p>
+<p>The available records on pavement skid resistance are incomplete and sometimes contradictory, leaving several critical uncertainties that can only be resolved through targeted field investigations. First, friction measurements in the existing datasets represent isolated snapshots and do not capture how skid resistance changes over a pavement’s service life; this makes it difficult to predict long‑term safety performance. Seasonal trends—approximately sinusoidal fluctuations in friction values that peak low in late summer and fall—are noted, but their magnitude appears to depend on coarse aggregate type and traffic volume, creating uncertainty about when and where the most hazardous low‑friction periods will occur and whether SRL designations truly reflect field conditions throughout a pavement’s lifespan. Second, crash data used for identifying problem locations suffer from a reporting lag; the most recent year’s wet‑pavement crashes are not fully available until April or May of the following year, which can mask emerging safety issues. Moreover, the WPAC screening criteria (a minimum of eight wet‑pavement crashes within 3,000 ft over five years and a wet‑to‑total crash ratio of at least 0.30) rely on CDART analyses that may overlook nascent problem sites, leading to uncertainty about which sections actually lack adequate friction and raising the risk of redundant retesting of already evaluated locations. Third, automated STAMPP surveys that populate pavement condition matrices frequently omit factors directly influencing skid resistance, such as aggregate‑related deficiencies in concrete pavements. In particular, Vanport Limestone surfaces can develop reduced friction, a condition that may be aggravated by diamond grinding and is not flagged by routine data collection. Because these material‑specific issues are absent from the current records, on‑site friction testing—such as the BOMO quality‑assurance program—is required to verify surface safety before any corrective actions are planned. Collectively, these gaps in temporal friction trends, crash‑data timeliness and completeness, and material‑specific condition monitoring necessitate comprehensive field investigations to resolve the uncertainties and ensure reliable skid‑resistance assessments. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 110), Ch. 11 (p. 198), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="visual-inspection-and-condition-assessment">Visual inspection and condition assessment</h2>
+<p>Skid‑resistance assessments should look for any condition that compromises surface friction, including poor drainage of surface or subsurface water, areas of obvious failure in the base, faulted or sunken slabs, voids beneath the pavement, spalling at joints, cracks, high or warped sections and even minor rutting. These visible distresses are listed as items to be evaluated when improving surface friction for both asphalt and Portland‑cement concrete pavements. Addressing them through drainage improvements, base repair, slabjacking, joint rehabilitation, crack sealing, or diamond grinding helps restore the texture needed for adequate skid resistance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57)</small></p>
+<h2 id="field-measurements-and-testing">Field measurements and testing</h2>
+<p>Skid resistance on pavement surfaces is evaluated in the field primarily through two nondestructive friction‑testing procedures. The AASHTO T 242 tire‑pavement friction test, commonly employed on asphalt wearing courses, determines the coefficient of friction between a standard tire and the roadway. This coefficient reflects the combined effect of macrotexture, microtexture, and the polishing resistance of the coarse aggregate; the resulting value is compared to predetermined thresholds and used to assign or verify a Skid Resistance Level (SRL) for the aggregate, thereby confirming that the selected material will provide adequate traction under the expected traffic loads. In parallel, the Bureau of Maintenance Operations conducts Skid Friction testing, which also quantifies tire‑pavement friction but is applied as an agency‑wide screening tool to verify compliance with acceptable skid‑resistance criteria for any roadway segment. When the measured friction falls below the accepted limit, the deficiency is recorded and triggers additional prioritization points on project forms; if a potential problem is identified, agencies are required to request BOMO testing to obtain the necessary measurements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 110), Ch. 13 (pp. 220–221)</small></p>
+<p>PennDOT evaluates skid resistance by applying the AASHTO T 242 test method, but the source does not describe the exact test configuration, measurement spacing, or how frequently tests must be conducted. It does note that friction values follow an annual sinusoidal pattern with lower readings typically in late summer and fall, highlighting a seasonal environmental effect on skid‑resistance performance. Consequently, while the equipment is identified, the remaining procedural parameters are not specified in the excerpt. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 110)</small></p>
+<h2 id="sampling-and-laboratory-investigation">Sampling and laboratory investigation</h2>
+<p>Skid‑resistance assessment in the laboratory relies on the AASHTO T 242 friction test, which quantifies the ability of coarse aggregate to generate and retain surface friction under traffic and environmental exposure; the test essentially measures the polishing resistance of the aggregate, a key property that governs how well the pavement texture can prevent water pressure buildup and maintain safe tire‑pavement interaction throughout its service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 110)</small></p>
+<h2 id="structural-and-functional-performance">Structural and functional performance</h2>
+<p>The measured skid‑resistance of asphalt wearing courses shows a predictable seasonal pattern, dropping to its lowest levels in late summer and fall; the depth of that drop is controlled by the coarse‑aggregate properties and the traffic volume applied to the surface. Design practice therefore selects an aggregate Skid Resistance Level (SRL) based on the anticipated average daily traffic so that the friction values remain above safety thresholds for the entire service life, even during the low‑value portion of the annual cycle. When the chosen SRL matches the expected loading and environmental conditions, the pavement is considered capable of retaining adequate texture and friction throughout its remaining lifespan; otherwise a higher‑SRL aggregate or blend must be used to meet the required performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 110)</small></p>
+<h2 id="data-interpretation-and-diagnosis">Data interpretation and diagnosis</h2>
+<p>Skid Resistance is managed by combining measured friction values from field tests (such as the AASHTO T 242 method) with laboratory‑derived aggregate polishing resistance and observed annual performance trends to assign or adjust a Skid Resistance Level (SRL) for the coarse aggregate; the selected SRL reflects anticipated traffic volumes and the aggregate’s ability to retain texture over the pavement’s life. The guidance does not specify visual inspections, so integration relies on quantitative test results and performance data. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 110)</small></p>
+<p>The observed loss of skid resistance is chiefly linked to the deterioration of pavement surface material. Polishing of coarse aggregates—particularly those with low polishing resistance such as Vanport Limestone or aggregates prone to alkali‑silica reaction—reduces texture and friction. Inadequate mix design and construction practices that fail to preserve the intended macro‑texture further exacerbate this loss. Seasonal environmental exposure, with friction values typically declining in late summer and fall, together with higher traffic volumes, intensifies the deterioration. Insufficient drainage of surface and subsurface water also impairs skid resistance by allowing moisture to remain on the treaded surface. Weak structural support, overload conditions, or aging are not identified as primary contributors in the cited sources. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (p. 110), Ch. 13 (pp. 220–221)</small></p>
+<h2 id="findings-confidence-and-next-actions">Findings, confidence, and next actions</h2>
+<p>The investigation shows that skid‑resistance measurements can be used to confirm whether a pavement segment meets required friction levels and to guide safety improvements. Treatments such as diamond grinding or longitudinal grooving raise the surface friction temporarily, reducing hydroplaning risk and improving safety, but only when the underlying pavement is structurally sound and wheel ruts are shallower than 0.5 inches; the effect wanes over time, leaving uncertainty about long‑term performance especially under severe loading or with different aggregate types. The dominant material property influencing friction is the polishing resistance of the coarse aggregate, which permits the use of Skid Resistance Level (SRL) designations to select aggregates that are likely to retain adequate friction throughout service life. Nevertheless, friction values exhibit a seasonal sinusoidal pattern—lower in late summer and fall—and initial friction measurements do not reliably predict future performance, creating uncertainty linked to traffic volume and environmental conditions. Skid‑resistance testing is prioritized for locations identified by crash data: sections with eight or more wet‑weather crashes within a 3,000‑ft stretch over five years and a wet‑to‑total crash ratio of at least 0.30. While this approach helps target remedial work and verify new aggregate performance, it is limited by the lag in availability of the most recent crash data (not complete until April/May), by reliance on predefined thresholds that may miss problematic segments outside the clusters, and by scheduling constraints such as annual submission deadlines. Additional testing requests are required when skid‑friction issues are suspected; confirmed deficiencies add priority points in project selection and trigger corrective actions in the District Interstate plan. Concrete pavements containing Vanport Limestone are especially prone to reduced skid resistance after diamond grinding and therefore demand prompt monitoring, yet dependence on test requests and imperfect overall condition data means some problems may remain undetected until field verification, introducing further uncertainty. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (p. 110), Ch. 11 (p. 198), Ch. 13 (pp. 220–221)</small></p>
+<p>When a skid‑resistance evaluation reveals that the pavement surface does not provide adequate friction, the project team must first add a formal surface‑friction assessment to the design checklist and require AASHTO T‑242 testing of the coarse aggregate so that the Skid Resistance Level (SRL) can be confirmed or updated. The appropriate SRL is then selected by applying the Table 5.4 guidelines for the anticipated average daily traffic and recorded on design approval forms and contract documents, avoiding unnecessarily high SRL specifications on layers that are not part of the wearing course. Because measured friction follows an annual sine‑shaped cycle with its lowest values in late summer and fall, periodic monitoring—especially on high‑traffic sections—is required to detect any loss of texture or polishing of the aggregate. If monitoring shows a decline in friction or indicates that an inappropriate SRL was used, corrective actions may include resurfacing with aggregates of equal or higher SRL, blending aggregates to improve polishing resistance, or applying friction‑enhancing preservation treatments. For asphalt pavements these treatments can be micro‑surfacing or thin overlays that raise tire‑pavement interaction without adding structural layers; for concrete pavements the options include diamond grinding—provided the slab is structurally sound and wheel ruts are less than 0.5 inches deep—and longitudinal or transverse grooving to create water‑draining channels that improve wet‑weather friction and reduce hydroplaning potential. Segments identified with low skid resistance receive extra priority points in project prioritization, and districts must plan the necessary corrective actions, incorporating them into the District Interstate plan. Pavements known to be prone to skid issues—such as those containing Vanport limestone or those that have been diamond‑ground—require ongoing monitoring and prompt re‑testing, with early preservation measures such as an asphalt overlay considered before the normal replacement cycle would otherwise dictate. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (p. 110), Ch. 13 (pp. 220–221)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

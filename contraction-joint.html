@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contraction Joint</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html" class="active" aria-current="page">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="rigid-pavement.html">Rigid Pavement</a><span class="crumb-sep">›</span><span class="crumb-current">Contraction Joint</span></nav>
+<article><h1>Contraction Joint</h1>
+<div class="meta"><div class="part-of">Part of: <a href="rigid-pavement.html">Rigid Pavement</a> <span class="edge edge-taxonomic" title="Contraction Joint is a topic under Rigid Pavement.">is-subtopic-of</span></div><div class="edge-reading">Contraction Joint is a topic under Rigid Pavement.</div><div><a class="tag" href="index.html?q=contraction-joints">contraction-joints</a><a class="tag" href="index.html?q=control-joints">control-joints</a><a class="tag" href="index.html?q=transverse-contraction-joints">transverse-contraction-joints</a><a class="tag" href="index.html?q=sawcut-contraction-joints">sawcut-contraction-joints</a><a class="tag" href="index.html?q=longitudinal-contraction-joints">longitudinal-contraction-joints</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Contraction joints are engineered weak planes introduced into reinforced cement concrete pavements to deliberately initiate shrinkage‑ or temperature‑induced cracks at predetermined locations, thereby preventing random cracking that could jeopardize slab integrity and durability[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. They are created by sawing a transverse cut approximately one‑eighth inch wide to a depth equal to one‑third of the slab thickness, with the centreline positioned within plus‑or‑minus one inch of the dowel‑basket or mechanically implanted dowel centre, and are cut as soon as the concrete has hardened enough to avoid excessive raveling[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. This controlled weakness limits crack openings to roughly 0.5–1 mm, maintains load‑transfer efficiency (enhanced by macrofibers or dowels), and when flushed, back‑filled with an oversized backer rod and sealed, contributes to long‑term serviceability and ride quality[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Concrete pavements contract because of temperature changes and drying shrinkage, creating a tendency for random cracking that can jeopardize structural integrity, slab alignment, and long‑term durability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The contraction joint is introduced to provide an engineered weak plane that deliberately guides these inevitable cracks to predetermined locations, thereby preventing uncontrolled fracture patterns [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By cutting the slab at the appropriate time—once the concrete has hardened sufficiently to permit sawing without excessive raveling—and at a suitable depth, the joint activates early enough to keep crack openings small, typically less than 0.5 to 1.0 mm [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Maintaining such tight crack widths limits damage and improves durability of the pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Proper spacing, alignment, and documentation of joints on plan sheets ensure that induced cracks remain coordinated across the network, including matching shoulder joints to the mainline layout [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Incorporating macrofibers at these joints enhances load‑transfer efficiency under repeated traffic loads and has been shown to reduce both the number of cracks and their average width [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>Contraction joints are required to establish a predetermined weakness that deliberately initiates shrinkage or temperature cracks, thereby shielding the remaining pavement from random cracking. The functional aim of crack control is achieved by locating each joint precisely over the dowel‑basket or mechanically implanted dowels, with the centre marked within one inch of the intended line, and by cutting the joint as soon as the concrete has hardened enough to avoid raveling. Structurally, the guides prescribe that joints on slabs thinner than eight inches be spaced between fifteen and twenty feet, while for thicker slabs the spacing equals the slab thickness multiplied by 2.5 feet; on shoulders the joints must align with the spacing and alignment of the adjacent mainline to preserve continuity. The saw‑cut depth is specified as one‑third of the slab thickness and a width of approximately one‑eighth inch, dimensions that create the intended weakness without compromising the slab’s load‑transfer capacity. To meet durability objectives the joint opening after curing is limited to roughly 0.5 mm–1 mm, a range shown to improve resistance to further crack propagation and to maintain load‑transfer efficiency under repeated traffic loading; the joint is then flushed, filled with an oversized backer rod, protected during cure, and finally sealed before traffic is permitted. By keeping openings within this narrow band and by sealing the joint, moisture intrusion is prevented and the long‑term performance of the pavement is enhanced, satisfying durability requirements. The safety of the traveling public is addressed through the prevention of uncontrolled cracking, which yields a smooth, crack‑free riding surface and reduces the risk of vehicle damage or loss of control. Serviceability is further ensured by maintaining load‑transfer efficiency across the joint, preserving ride quality, and delivering a surface that remains functional throughout its design life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Contraction joints are employed in concrete pavements where control of shrinkage‑induced cracking is needed, particularly on roller‑compacted concrete (RCC) sections that serve as shoulders, temporary median crossovers, or low‑volume roadways limited to an average daily traffic of 2 000 vehicles and a speed limit of 55 mph or less. When RCC is used in these contexts the joints must be aligned with the adjacent mainline concrete joints to maintain continuity across the pavement structure. For RCC slabs thinner than eight inches the recommended joint spacing ranges from fifteen to twenty feet, whereas for thicknesses of eight inches or greater the spacing is calculated as the slab thickness multiplied by 2.5 feet. In addition, plain cement concrete (PCC) shoulders that are placed with the slip‑form paving method also require contraction joints; in these applications the transverse joints must be precisely located, sawed, and subsequently cured and protected in accordance with contract specifications. The requirement for sawed contraction joints is limited to PCC shoulder work and does not extend to RCC shoulders.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 564–565)</small></p>
+<p>When the gutter meets other structures or when concrete placement stops at the end of a workday, the specification requires an expansion joint instead of relying only on contraction joints. In these cases the contractor must cut and install 3/4‑inch premolded expansion joint material to fit the gutter’s cross‑section and then seal or caulk the joint per the manufacturer’s recommendations. Contraction joints are still formed or sawed elsewhere as shown on the Standard Drawing, but at structural interfaces and daily termination points an alternative joint design is preferred. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 600 INCIDENTAL CONSTRU… (p. 549)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The design of contraction (control) joints on reinforced cement concrete pavements is governed by the Pennsylvania Department of Transportation specifications, principally Publication 408 together with the Roadway Construction Standards set out in Publication 72M RC‑27M, and also by the contract provisions identified in Section 501.3(i) and (j) of the project specifications. Joint spacing is prescribed according to pavement thickness, with slabs thinner than eight inches requiring joints every fifteen to twenty feet and slabs eight inches thick or greater spaced at a distance equal to the slab thickness multiplied by 2.5 feet; these spacing rules are drawn from the Roadway Construction Standards. When control joints are placed on shoulders they must be aligned with the spacing and centreline of the adjacent concrete mainline, ensuring continuity across the pavement width. Both transverse and longitudinal joints must be accurately located on the prepared slab surface by means of tacks or another approved marking method so that the centre of each joint falls within plus‑or‑minus one inch of the dowel‑basket assembly or mechanically implanted dowel centreline, as required by the contract specifications. The joints are then sawed to the dimensions shown on the Standard Drawing, with a cut depth equal to one‑third of the slab thickness and a nominal width of one‑eighth inch. Sawing equipment must be equipped with guides, a blade guard, water‑cooling, and cut‑depth control, and the contractor is required to maintain an adequate supply of spare tools and parts on site throughout placement and sawing operations. After cutting, each contraction joint must be cured and protected in accordance with the same specifications that govern joint placement, providing the performance criteria for durability and crack control. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (pp. 549–565)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The design of contraction joints in reinforced cement concrete (RCC) pavements is governed by a thickness‑based spacing rule that prescribes joint intervals of fifteen to twenty feet for slabs thinner than eight inches and, for slabs eight inches thick or greater, an interval equal to the slab thickness multiplied by 2.5 feet [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In shoulder sections the joints are required to line up with the adjacent mainline concrete joints and the locations are indicated on the construction plans [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The layout of each joint begins with a precise marking of the joint centre, typically accomplished with tacks or other approved methods, and the marked line must fall within plus‑or‑minus one inch of the dowel‑basket or mechanically implanted dowel centreline [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Once the centreline is established, the joints are formed or sawed to the dimensions prescribed in the standard drawing and Section 501.3(i), with the saw cut extending to a depth equal to one‑third of the slab thickness and a width of one‑eighth inch [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Sawing is performed as soon as the concrete has hardened sufficiently to allow cutting without excessive raveling, thereby providing a controlled crack path and preventing random cracking [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. At structural interfaces and at each day&rsquo;s end of gutter placement, a three‑quarter‑inch premolded expansion joint material is trimmed to fit the gutter cross‑section and installed before the concrete cures further [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After the saw cut, the joint face is flushed, an oversized backer rod is placed within the groove, and the movement of the joint is monitored throughout curing until it can be sealed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Finally, all joints are prepared and sealed or caulked in accordance with the manufacturer’s recommendations to complete the controlled crack path [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 98–99); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (p. 549)</small></p>
+<p>Contraction joints in reinforced cement concrete (RCC) pavements are required to be provided so that cracking occurs at predetermined locations, and their spacing is governed primarily by slab thickness and the type of project. For slabs thinner than eight inches the joint spacing shall range from fifteen to twenty feet, while for slabs eight inches thick or greater the spacing shall equal two‑point‑five times the slab thickness expressed in feet, with these values drawn from the standard roadway construction guidelines; shoulder joints must be aligned with the adjacent mainline concrete joints and may follow the patterns set out in Publication 72M where applicable. No additional safety factors or explicit reliability limits are prescribed for joint spacing, indicating that compliance with the dimensional criteria constitutes the design requirement. The transverse contraction joint must be positioned no farther than one inch from the centreline of either a dowel‑basket assembly or a mechanically installed dowel, and its exact location is to be marked with tacks or other approved methods. Geometrically, the sawed joint shall have a depth equal to one‑third of the slab thickness and a width of one‑eighth inch, conforming to the dimensions shown on the standard drawing and the specifications of Section 501.3(i). Sawing is to be performed as soon as the concrete has attained sufficient hardness to prevent excessive raveling and to avoid uncontrolled cracking, with the removal of curing covers for this operation limited to a maximum of thirty minutes. After cutting, the joint must be flushed and filled with an oversized backer rod whose width exceeds that of the joint by fifty percent, and it shall be inspected during the curing period; any observed opening requires replacement of the backer rod, and failure to meet these tolerances or timing requirements mandates repair at no cost to the owner. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (p. 549)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>Contraction joints are created by sawing a transverse cut that is one‑third of the slab thickness deep (D/3) and about one‑eighth inch wide; the saw line must be placed within plus or minus one inch of the dowel centreline, but no other specific dimensions for pavement, base, subbase, treated soil, shoulder, edge support, or reinforcement are prescribed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>Contraction joints are created by sawing a transverse cut to a depth equal to one‑third the slab thickness and a width of one‑eighth inch after any curing cover has been removed; the cut is immediately flushed with water and an oversized backer rod—sized at the joint width plus fifty percent—is placed in the joint reservoir to retain moisture during cure. When dowel bars are used, bond‑breaker lubricant must be applied to the dowels before concrete placement as directed by the Representative. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>To meet structural, durability, constructability and performance goals for contraction joints in a concrete overlay, the engineer should specify the required residual flexural strength (f150) rather than a particular fiber type, then choose a macro‑fiber that can achieve that value at a typical dosage of 0.2 %–0.5 % by volume; mix adjustments such as water‑reducing and air‑entraining admixtures are used to restore workability and meet fresh‑property limits, while the saw‑cut joint must be placed at the proper depth and timing so that the fiber‑reinforced concrete activates early, limiting crack widths and preserving load transfer efficiency. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>Contraction joints are installed as control joints whose spacing follows prescribed criteria: for slabs thinner than eight inches they are placed at intervals of roughly fifteen to twenty feet, while for slabs eight inches thick or greater the interval equals the slab thickness multiplied by 2.5 feet[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The joint pattern in shoulder sections must be aligned with the adjacent conventional concrete pavement[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When a fiber‑reinforced concrete overlay is used, the joint should be created by a properly timed deep sawcut so that it becomes active early and helps limit premature cracking[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The location of each transverse contraction joint is first marked on the prepared surface with tacks or another approved method, ensuring that its centreline falls within plus‑or‑minus one inch of the centreline of any dowel‑bar assembly or mechanically implanted dowels that will serve as load‑transfer units[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The joint is then cut using a guided saw equipped with a blade guard, water‑cooling system and depth‑control capability to a width of one‑eighth inch and to a depth equal to one‑third of the slab thickness (D/3) as shown on the standard drawing[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After cutting, an oversized backer rod is placed in the groove to retain moisture during curing, and the joint is subsequently cured and protected according to specifications[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. No formwork, steel reinforcement, or dowel bars are required for the joint itself under normal conditions, although dowel bars may be provided when faulting control is needed[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Load transfer across joints that require it is supplied by Type B coated dowel bars that are staked in advance; a bond‑breaker lubricant is applied to at least half of each dowel’s length before concrete placement to prevent bonding while still allowing load transfer[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In fiber‑reinforced overlays, the embedded macro‑fibers can maintain load‑transfer efficiency across the cut, functioning similarly to tie bars, but they do not replace conventional dowel bar reinforcement where faulting control is required[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. At structures and at the termination of each day’s gutter work, a three‑quarter‑inch premolded expansion joint material is cut to match the gutter cross‑section and installed within the contraction joint, after which all joints—including those containing the expansion material—are sealed or caulked in accordance with the manufacturer’s recommendations[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (pp. 549–565)</small></p>
+<p>Contraction joints are cut to a depth equal to one‑third of the slab thickness and a width of one‑eighth inch, with the centre line positioned within plus‑or‑minus one inch of the dowel‑basket or mechanically implanted dowel centreline. An oversized backer rod, sized fifty percent greater than the joint width, is placed in the sawed groove to retain the curing material and support the sealant. When macrofibers are incorporated into a fiber‑reinforced concrete overlay, they maintain load‑transfer efficiency across the joint under repeated traffic loads but do not replace dowel bars where faulting must be restrained; therefore conventional dowel bar installation is still required in joints that require fault control. The selection of a bonded or unbonded overlay bond is made according to the condition of the underlying pavement rather than the presence of fibers, ensuring appropriate interface performance. At locations where new pavement, shoulders, or structures adjoin an existing slab, the dominant contraction joints are aligned with those already present so that the first activating joint coincides across the interface, and the ends of all transverse joints are sealed to prevent mortar intrusion. Where a concrete gutter meets other structures or terminates for the day, a three‑quarter‑inch premolded expansion‑joint filler is cut to match the gutter’s cross‑section and installed, with the adjoining edges sealed using approved asphalt cement. All joint faces are subsequently sealed or caulked in accordance with the manufacturer’s recommendations, providing a controlled interface among pavement layers, materials, structures and adjacent features. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (p. 549)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>Contraction joints must be sawed once the concrete is hard enough, any curing compound at the joint location removed, and the cut immediately flushed; an oversized backer rod (about 50 % wider than the joint) is placed in the top of the joint to retain moisture during cure, and the joint’s movement is watched through the curing period until a permanent seal is applied. Moisture loss is controlled by using the specified curing method—white membrane or, if delayed, an intermediate monomolecular film—and by protecting the slab from rain and maintaining concrete temperature above 40 °F (with insulation or blankets in cold weather) so that temperature changes do not exceed prescribed limits. Joint sealing is only performed after the joint has been cleaned, dried, and verified free of contaminants. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>Contraction joints in reinforced cement concrete pavements are spaced according to slab thickness so that a predictable cracking pattern is achieved and driver comfort is preserved; slabs thinner than eight inches require joints every fifteen to twenty feet, while slabs eight inches thick or greater use a spacing equal to two‑point‑five times the thickness expressed in feet, and joint lines on shoulder sections must be coordinated with the adjoining mainline to keep the joint pattern continuous across the roadway [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The centre of each transverse sawed joint is marked with tacks or other approved methods and must fall within plus or minus one inch of the dowel‑bar basket assembly or mechanically implanted dowel centreline, ensuring accurate load transfer and reducing the risk of misalignment that could affect vehicle stability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Longitudinal joints are required to avoid crossing any driving lane and shall be placed parallel to, and no farther than twelve inches from, the final pavement markings unless the construction drawings specify an alternative arrangement, thereby protecting traffic users from unexpected discontinuities in the riding surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Saw cuts are made at a depth equal to one‑third of the slab thickness and a width of approximately one‑eighth inch, with timing that allows the cuts to be extended through the slab edge as soon as it can be done without damaging green concrete, preventing blowouts and supporting the intended cracking behavior [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The cutting equipment must be equipped with guides, a blade guard, a water‑cooling system and cut‑depth control, and sufficient extra equipment and spare parts shall be on site before concrete placement and remain available throughout the sawing process to provide safe, controlled operation for workers and to maintain joint quality [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Joint geometry follows the dimensions shown on the Standard Drawing and those required by Section 501.3(i), providing a consistent geometric definition that contributes to both structural performance and user confidence [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The inclusion of macrofibers within these joints further helps to maintain load‑transfer efficiency under repeated traffic loading, enhancing durability for road users [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. At structures and at each day’s end where gutter placement terminates, a three‑quarter‑inch premolded expansion joint material cut to match the gutter cross‑section is installed, supplying a smooth transition that safeguards vehicle wheels from damage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Finally, all joints are sealed or caulked in accordance with the manufacturer’s recommendations, ensuring durability and maintaining safety for traffic users by preventing water infiltration and debris accumulation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (pp. 549–565)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed contraction joint is verified by first confirming that the saw line was accurately marked and cut within one inch of the dowel‑basket or mechanically implanted dowel centreline, then checking that the saw cut reaches a depth equal to one‑third of slab thickness and a width of about one‑eighth inch. Immediately after cutting, the joint must be flushed to remove all slurry, an oversized backer rod (approximately 150 % of the joint width) placed on top, and the joint’s movement monitored throughout curing until the permanent seal is applied. Prior to sealing, a QC wipe test is performed to ensure the joint faces are clean and dry, and any opening of the joint during cure triggers replacement of the backer rod. These steps confirm constructability, performance, and compliance with the project specifications. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>Contraction joints are intended to control cracking in concrete pavements by providing a weakened plane that directs shrinkage and temperature stresses into predictable openings, thereby extending slab service life and enhancing distress resistance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The expected performance includes higher load‑transfer efficiency, tighter crack widths and slower propagation of any cracks that do develop, which together contribute to longer serviceability periods [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Load‑transfer efficiency is typically quantified in laboratory slab tests, where the jointed overlay shows an increase of roughly thirty percent over plain concrete [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Crack control is monitored by measuring crack openings under restrained shrinkage or repeated loading conditions, with reduced crack deterioration serving as an indicator of extended service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Residual flexural strength of the jointed slab is evaluated according to ASTM C1609 to confirm that the joint does not compromise structural capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Proper execution of the joint requires sawing at a depth equal to one third of the slab thickness and a width of one‑eighth inch as soon as the concrete has hardened sufficiently to avoid excessive raveling, which helps prevent random cracking [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The joint must remain closed throughout curing, and its movement is tracked from placement through the cure period to ensure no opening occurs; any observed opening triggers replacement of the backer rod with an appropriately oversized one [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Surface flatness across the joint is verified after hardening using a twelve‑foot straightedge, with allowable variation limited to three‑sixteenths inch, providing assurance of acceptable ride quality [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A quality‑control wipe test is performed before sealant placement to confirm that the joint surface is clean and ready for sealing, supporting long‑term durability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Macrotexture may be assessed in accordance with ASTM E965, adding an additional check on surface characteristics that influence skid resistance and ride comfort [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Together these inspection and testing procedures provide measurable evidence that the contraction joint meets its intended performance goals of crack control, distress resistance, extended service life, and satisfactory ride quality [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pumping</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html" class="active" aria-current="page">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><a href="distress.html">Distress</a><span class="crumb-sep">›</span><span class="crumb-current">Pumping</span></nav>
+<article><h1>Pumping</h1>
+<div class="meta"><div class="part-of">Part of: <a href="distress.html">Distress</a> <span class="edge edge-taxonomic" title="Pumping is a topic under Distress.">is-subtopic-of</span></div><div class="edge-reading">Pumping is a topic under Distress.</div><div><a class="tag" href="index.html?q=pumping">pumping</a><a class="tag" href="index.html?q=pumped-under-the-slab">pumped-under-the-slab</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Pumping is a slab‑level distress that occurs when water and fine particles infiltrate beneath a concrete pavement and, because subsurface drainage is inadequate, are forced upward through joints or cracks, creating voids that rob the base or subgrade of support [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The loss of bearing capacity produces excessive slab deflection, transverse joint faulting, fines accumulation at joints, blow‑hole depressions, corner breaks and overall settlement, which together compromise structural integrity and can lead to premature failure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Treatment is aimed at extending the pavement’s service life by stabilizing the affected slab—typically through grout, hot‑asphalt or polyurethane injection that fills the voids and restores full sub‑base support—while work must be halted as soon as any additional vertical movement is observed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Pumping is identified as a slab‑level distress that occurs when water and fine particles accumulated beneath the pavement are forced upward through cracks or joints, creating voids in the base or subgrade and reducing support for the surface course. This loss of support manifests as excessive slab deflection, transverse joint faulting, fines at joints, blow‑hole depressions, corner breaks, and overall slab settlement, which together compromise structural integrity and can lead to premature failure. The underlying condition that pumping seeks to remediate is inadequate subsurface drainage and the resulting subgrade deterioration caused by excess moisture within or beneath pavement layers. Accordingly, the guides prescribe stabilizing any joint or crack where the loaded slab corner deflection equals or exceeds 0.02 in and the joint efficiency is at least approximately 65 %, with the requirement to cease pumping if further vertical movement is observed. Prior to specifying slab stabilization, visual verification of active pumping or poor joint performance is required, and treatment must be halted as soon as any additional vertical movement is detected. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 91–98), Ch. 5 (pp. 115–120); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>The treatment of pumping is principally aimed at extending the pavement’s service life. By stabilizing a slab that exhibits water and fine‑material ejection—typically through filling the voids at the slab‑subbase interface with grout, hot asphalt or polyurethane—the full sub‑base support is reestablished, which restores the structural capacity of the concrete slab. This restoration of functional support not only returns the pavement to its intended load‑bearing performance but also curtails further deterioration such as additional pumping, faulting or cracking. Because an overlay, whether bonded jointed plain concrete pavement (JPCP) or unbonded, is applied only after stabilization, the combined effect of regained functionality and added structural capacity serves to prolong the useful life of the pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–98)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>Pumping manifests as loss of support beneath concrete slabs, creating small voids that form chiefly at transverse joints and cracks, especially at the outer corners of slabs. The resulting lack of support produces excessive slab deflection and stress, leading to joint faulting, corner breaks, diagonal cracking and ultimately complete slab breakup; observable signs include fines near joints or cracks, blow‑hole depressions in shoulders, and overall slab settlement. If left untreated these conditions can progress from minor surface depressions to full structural failure, compromising the pavement’s integrity and safe traffic operation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92)</small></p>
+<p>Pumping develops when water penetrates the pavement through joints, cracks or other surface openings and is unable to escape because subsurface drainage paths are insufficient, blocked or improperly graded. The infiltrated moisture saturates the subgrade and any fine‑grained base material, reducing their bearing capacity and allowing them to deform under traffic loads. In saturated conditions the subgrade may consolidate and settle, creating voids beneath the concrete slab; these voids diminish support, cause excessive slab deflection and generate stresses that manifest as joint faulting, corner breaks, diagonal cracking and ultimately slab breakup. When temperatures drop, trapped water can freeze and expand, forcing fine particles upward through the joints or cracks—a process amplified by the loss of structural capacity in the underlying layers. The combined effect of inadequate drainage, weakened support, freeze‑thaw cycling, and repeated vehicular loading accelerates the ejection of water and fines, producing the characteristic rocking, faulting and material loss associated with pumping. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 91–98), Ch. 5 (pp. 115–120)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Pump stabilization (pumping) is applied only after qualified crews have been confirmed and a field QC plan approved. It may be used on joints or cracks where a loaded slab‑corner deflection of at least 0.02 in is measured; if the joint efficiency is 65 % or higher it is stabilized, and even lower efficiencies can be treated when specifically authorized. All testing and pumping must occur in ambient conditions above 40 °F (and below 70 °F for deflection testing) with unfrozen subgrade, avoiding spring‑thaw periods; work stops immediately if any vertical movement of the slab is observed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Pumping is considered inappropriate whenever the observed conditions indicate that slab support is compromised and surface defects such as depressions, corner breaks, diagonal cracking or faulting are present, because stabilization alone cannot correct ride quality or add structural capacity. Likewise, if a slab exhibits rocking, pumping, or faulting it must be stabilized by crack‑and‑seat, slab jacking, rubblizing, full‑depth patching, or similar methods before any bonded overlay can be placed; otherwise an overlay would be applied to an unstable base. When stabilization cannot be achieved economically, the guides recommend using an unbonded concrete overlay on a prepared stable platform rather than attempting pumping as the primary treatment. Active pumping also signals deficient subgrade and water intrusion, so preservation layers, rigid or flexible overlays, or interlayers should only follow drainage improvements or subgrade repair; otherwise they would be placed over an unsound foundation. Pumping must be stopped if vertical movement of the slab is detected during grout injection, because such movement indicates that further material placement would be uneconomical or ineffective. The appearance of radial cracks radiating from injection holes likewise requires cessation of work until the cause is identified and corrected, as these cracks reflect poor quality or improper method. If transverse cracks develop between adjacent grout holes, the guides require full‑depth slab replacement rather than continued pumping. Moreover, when after two grout injections the joint still deflects 0.02 inch (0.5 mm) or more, the representative may order removal and replacement with a concrete patch instead of persisting with stabilization. In all such situations—whether due to extensive surface distress, unstable support, inadequate subgrade conditions, observed slab movement, or crack patterns—a different maintenance, preservation, rehabilitation, or repair approach must be selected. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–98), Ch. 5 (pp. 115–120); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>To determine whether pumping treatment is required and to locate the affected zones, engineers first conduct a thorough visual inspection of the concrete slab surface looking for loss‑of‑support indications such as transverse joint faulting, accumulation of fine material at joints or cracks on either traffic lane or shoulder, small depressions or blow holes in the shoulder adjacent to a transverse joint or crack, corner breaks, and any general settlement of the slab. When ambient temperature is outside the range needed for deflection testing (40 °F to 70 °F), this visual verification of water ejection, pumping, or poor joint performance becomes the primary basis for deciding on slab stabilization. If the air temperature falls within the acceptable range, a quantitative deflection test is performed on each transverse joint and crack in accordance with ASTM D4695, using a falling weight deflectometer or equivalent device to measure loaded‑slab corner deflection and joint efficiency. The test results are evaluated against defined thresholds; any joint that exhibits a loaded‑slab corner deflection of at least 0.02 in and a joint efficiency of 65 % or higher (or lower if specifically approved) is identified for pumping treatment. In addition to the joint‑level deflection testing, an overall structural assessment with a Falling Weight Deflectometer applied to the existing Portland cement concrete pavement prior to any overlay design provides slab‑wide capacity data and helps pinpoint locations where sub‑drainage improvement or slab stabilization such as jacking is needed. When visual signs of slab movement, rocking, pumping, faulting, or the quantitative FWD results indicate insufficient support, the appropriate remedial action—typically slab stabilization or jacking—must be undertaken before overlay placement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–98); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Pumping should be applied when a pavement has progressed to a moderate‑to‑severe stage of structural deterioration that is evident through active pumping signs such as transverse joint faulting, the buildup of fines at joints or adjacent cracks, small blow‑hole depressions in the shoulder, corner breaks, overall slab settlement, and rocking slabs [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The detection of a loaded‑slab corner deflection of at least 0.02 inch at any joint or crack also indicates that stabilization is required [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If the measured joint efficiency meets or exceeds 65 %, full slab stabilization—commonly achieved by filling voids with cement grout, hot‑asphalt undersealing, high‑density polyurethane, or by jacking—is prescribed; when joint efficiency is below 65 %, a combination of patching and stabilization may be employed provided the representative approves it [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When ambient temperature conditions preclude deflection testing, visual verification of pumping or poor joint performance serves as the trigger for specifying slab stabilization [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Across the guides, these interventions must be completed before any overlay or interlayer is placed to restore full support and prevent further faulting and structural failure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 91–98), Ch. 5 (pp. 115–120); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>The repair of pumping begins by drilling a prescribed pattern of holes through the affected transverse joints or cracks, with the hole spacing, depth and diameter dictated by the field quality‑control plan or the specifications such as Publication 72M. The drilled openings are then filled using injection equipment that includes supply pumps, valves, mixers and injection guns to place a stabilizing grout into the voids beneath the slab. Acceptable grout materials listed across the guides are a cement‑based fluid grout, hot liquid asphalt, or a high‑density polyurethane foam. For the cement grout approximately one cubic foot of mixture – roughly a quarter bag of cement per hole – is required; for hot asphalt between thirty and fifty gallons are pumped into each hole; and the polyurethane is supplied as a two‑component low‑viscosity foam that penetrates the voids at about 0.4 lb per square foot. After injection the material must be allowed to cure, with cement grout typically needing twelve hours and asphalt or polyurethane hardening in at least thirty minutes. If slab movement such as rocking, faulting, or a loaded corner deflection of 0.02 in or more together with joint efficiency of at least 65 % is observed, the slab should be stabilized – often by grout injection and, when necessary, slab jacking – before any overlay is placed. Upon completion of the injection, wooden plugs are removed and each hole is filled full‑depth with a rapid‑set, non‑shrink concrete patching material that is struck flush with the surrounding pavement surface. Pumping must be stopped if any vertical movement occurs during the operation, and any raised surface exceeding the 0.05 in allowable tolerance is ground back to grade. After the grout has set, the joints and cracks are sealed and adequate sub‑drainage is provided to prevent recurrence of water ejection; if movement persists, re‑grouting or full‑depth slab replacement is mandated. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–98); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Performance of pumping mitigation is controlled chiefly by the permeability and moisture‑holding characteristics of the base and sub‑base materials, as fine‑grained soils retain water through capillary action while highly permeable granular layers provide voids that permit rapid gravity drainage. Selecting aggregates with gradations that create sufficient void space yet maintain stability, providing adequate longitudinal slope, and protecting drain outlets from crushing or plugging further enhances drainage and reduces the potential for pumping. The condition of joints, cracks, and underlying slabs also governs treatment success; transverse joint faulting, accumulation of fines at joints or cracks, small depressions (blow‑holes), and rocking or faulted slabs reveal voids beneath concrete that must be remedied before any overlay or interlayer is placed. For grout or stabilization treatments the material must be compatible with these site conditions; a low‑viscosity two‑component polyurethane can infiltrate fine voids and expand into a rigid closed‑cell foam resistant to water and chemical attack, while cementitious or hot‑asphalt grouts are viable alternatives when dictated by the environment. Bonded concrete‑on‑concrete overlays are appropriate only when the existing pavement is in good to fair condition, the subgrade is stable, and subsurface drainage functions properly; otherwise an unbonded overlay or other treatment is required. Interlayer systems placed beneath asphalt overlays must achieve a strong bond with the asphalt matrix, retain thermal stability, remain physically durable throughout construction and service, and act as an effective moisture barrier to prevent water intrusion. Active pumping signals a weak subgrade that must be repaired before treatment can succeed, and inadequate drainage will exacerbate pumping regardless of overlay thickness. In addition to material compatibility, environmental constraints dictate that pumping work not commence when daytime temperatures are below 40 °F or when the subgrade or base course is frozen. During grout injection any observed vertical movement must cause an immediate stop of pumping to avoid further destabilization. Acceptance criteria for stabilization rely on measured slab performance; joints or cracks exhibiting a loaded corner deflection of at least 0.02 inch and a joint efficiency of 65 % or greater are suitable candidates, though lower efficiencies may be treated if approved. Surface integrity after injection is restored by sealing holes with a rapid‑set, non‑shrink concrete patch, and the appearance of radial cracks radiating from injection points indicates poor material quality or improper method, requiring correction before proceeding. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 91–98), Ch. 5 (pp. 115–120); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>Preparation begins with ensuring that qualified personnel are present on site, including a supervisor who has at least five years of comparable experience, and that the contractor has submitted three references and written notice ten working days before work commences. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A field quality‑control plan is then prepared that details hole spacing, depth, diameter, drilling method and injection sequence for the stabilization operation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Prior to any grout injection the pavement joints and cracks are sealed and existing subsurface drainage systems are verified as functional, while temporary traffic control is established to protect workers and motorists. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Deflection testing is performed within a temperature window of 40 °F to 70 °F to locate joints or cracks whose loaded slab‑corner deflections equal or exceed 0.02 inch and whose joint efficiencies are at least 65 percent, which are the locations that will be treated. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Once the target locations have been identified, holes are drilled at the indicated joints or cracks immediately before grout injection, following the patterns prescribed in Publication 72M. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The selected grout—either a cement‑based mix, hot liquid asphalt, or a two‑component high‑density polyurethane—is pumped into each drilled hole according to the approved sequence. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] During placement any observed vertical movement of the slab requires an immediate cessation of injection. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After the voids are filled, raised panels that exceed a tolerance of 0.05 inch are ground back to grade before traffic is restored. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The drilled holes are then cleared of wooden plugs and patched full‑depth with a rapid‑set, non‑shrink concrete material that is struck flush with the surrounding pavement surface. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Curing time depends on the grout type; cement‑based grout must be allowed to cure for approximately twelve hours before traffic can resume, whereas hot liquid asphalt and polyurethane require at least thirty minutes for cooling or expansion before reopening. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The slab is reopened to traffic only after the curing period specified in the quality‑control plan has elapsed, and a follow‑up deflection test is performed after twenty‑four hours to verify that the stabilization criteria have been met, with re‑grouting scheduled if necessary. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Throughout the process the functional subsurface drains are monitored to ensure they remain operative, completing the treatment sequence. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Implementation of pumping for slab stabilization requires a set of specialized equipment that includes drilling rigs capable of creating access holes, a pump system able to deliver cement grout, hot asphalt, or high‑density polyurethane, and ancillary items such as supply pumps, valves, mixing units and injection guns; safety gear is also mandatory when handling hot liquid materials [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The work sequence is prescribed so that drilling is performed immediately before material injection, allowing the drilling crew and the stabilization crew to share a single temporary traffic‑control arrangement and restricting operations to one lane at a time until the injected material has cured or cooled—typically about twelve hours for cement grout or a minimum of thirty minutes for asphalt or polyurethane, with project‑specific curing periods documented in the field‑QC plan [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The approved plan must also define hole spacing, the order of drilling and injection, and the point at which the pavement may be reopened to traffic, with any observed vertical movement requiring an immediate halt of pumping activities [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Pumping may only commence when daytime air temperatures are at least forty degrees Fahrenheit and the underlying subgrade is unfrozen; deflection testing further limits acceptable temperatures to a range between forty and seventy degrees Fahrenheit and prohibits work during spring thaw or any frozen base condition [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Throughout the operation, traffic‑control devices in accordance with Publication 213 must remain in place, and only one travel lane may be used for the duration of drilling and injection, after which the slab cannot be reopened until the prescribed cure or cool period has elapsed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Maintaining effective subsurface drainage and sealing joints before pumping helps reduce water ingress that could otherwise exacerbate pumping distress [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 91–92); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>When inspecting a pavement for pumping distress, the inspector first looks for loss‑of‑support indicators such as transverse joint faulting, accumulation of fines at joints or cracks, small depressions or blow holes near joints, corner breaks and overall slab settlement, all of which are documented in slab‑stabilization guidelines [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The materials selected to fill voids must be suitable for the site conditions; acceptable options include cement grout, hot‑asphalt undersealing, or high‑density polyurethane, and they must be placed according to the prescribed drilling pattern and specified quantities [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Joint and crack sealing as well as the condition of subsurface drainage systems are verified because they limit water ingress that drives pumping [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Prior to any pumping activity the contractor is required to assign qualified personnel and obtain approval for a detailed field‑quality‑control plan that specifies hole spacing, depth, diameter, drilling method, injection sequence, equipment list, reinforcement location, line‑and‑grade control, waste handling procedures, curing time and traffic opening criteria [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During installation each joint or crack is subjected to deflection testing in accordance with ASTM D4695, or visual verification when temperature limits preclude testing, and the measured loaded‑slab corner deflection is compared against a 0.02‑inch threshold while joint efficiency must meet or exceed 65 % to determine whether stabilization, patching, or slab replacement is required [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Pumping operations are halted immediately if any vertical movement of the slab, radial cracks around injection holes, or transverse cracks between holes are observed, ensuring that further deterioration does not occur [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After grout or sealant placement the drill holes are removed and patched with rapid‑set non‑shrink concrete, after which a retest is performed 24 hours later to confirm that deflection remains below the acceptance limit [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Finally, traffic may not be reopened until the selected fill material has fully cured or hardened for the minimum time specified—typically twelve hours for cement grout and at least thirty minutes for hot‑asphalt or polyurethane sealants—providing assurance that the repaired area can sustain service loads [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–92); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>A pumping operation is considered satisfactory when the injection is stopped at any sign of vertical movement, the finished panel surface does not exceed the 0.05 inch allowable raise tolerance after grinding, and post‑grouting deflection at each treated joint or crack is reduced below the 0.02 inch threshold while achieving a joint efficiency of at least 65 percent (when required). If after two groutings the slab still shows movement beyond these limits, the representative may reject the work. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Pumping is the upward ejection of water and fine particles through cracks or joints when subsurface drainage is inadequate, creating voids beneath the concrete slab that diminish subgrade support. The loss of support leads to excessive slab deflection, joint faulting, corner breaks, diagonal cracking and ultimately slab breakup, producing surface roughness and reduced ride quality. In addition, the pathways created by pumping allow moisture to infiltrate structural layers, accelerating stripping, potholes, crack propagation and freeze‑thaw damage. These combined effects degrade the pavement’s condition, limit its functional performance, reduce durability and shorten the expected service life. Remediation that fills the voids restores full support, lowers deflections, and reduces the likelihood of further pumping or cracking, thereby recovering structural integrity and extending useful life, especially when performed before an overlay or interlayer is applied. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 91–98), Ch. 5 (pp. 115–120)</small></p>
+<p>Pumping causes loss of subgrade support leading to a suite of recurring distresses observable in both concrete and asphalt pavements. In concrete slabs the most apparent symptoms are transverse joint faulting, development of transverse cracks, winter tenting caused by frozen trapped moisture, small depressions or blow‑holes at shoulders near joints, accumulation of fines along joints and traffic lanes, corner breaks at slab edges, diagonal cracking that can evolve into full‑depth breakup, and in severe cases slab settlement producing uneven ride quality. Asphalt layers exhibit surface rutting, increased roughness, stripping of the asphalt‑aggregate bond, potholes, localized failures, and accelerated crack propagation as manifestations of the same loss of support. When grout‑pumping is employed to stabilize cracked or jointed concrete, additional failure modes may appear, notably radial cracks radiating from injection holes and transverse cracks forming between adjacent holes, both indicating poor grout quality or improper pumping technique. Continued vertical slab movement during grout injection, especially when upward or downward displacement exceeds the allowable 0.05‑inch tolerance, signals a failure that requires cessation of pumping and corrective grinding to restore grade. The emergence of these distresses is governed by interrelated factors, beginning with excessive subsurface moisture that cannot drain by gravity because fine‑grained bases retain water capillarily, high groundwater tables, or insufficient edge and lateral drainage; inadequate slope or overly spaced outlets further slow removal. Unsealed joints or cracks permit additional water ingress, while freeze–thaw cycles expand trapped water into frost heave that lifts joints (tenting) and accelerates crack growth. Subgrade consolidation and settlement create voids beneath slabs, increasing deflection stresses that produce joint faulting, corner breaks, and slab breakup; high traffic loads repeatedly stress the weakened foundation, promoting rutting in asphalt and binder stripping. In grout‑pumping operations, low ambient temperatures below 40 °F, frozen subgrade conditions, inadequate joint efficiency (below about 65 %), loaded slab corner deflections of 0.02 in or greater, and improper hole spacing or drilling techniques all increase the likelihood of radial or transverse cracking and premature slab movement. Because these factors are often concurrent, effective treatment must first address drainage improvement, subgrade stabilization, and joint sealing before applying overlays or interlayers, and during grout‑pumping any indication of excessive movement or crack formation requires immediate stop, re‑grouting after corrective actions, and if unresolved, replacement with a full‑depth concrete patch. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 91–92), Ch. 5 (pp. 115–120); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After the pumping work is finished, the crew must remove any wooden plugs and fill each drill hole completely with a rapid‑set, non‑shrink concrete patch that is struck flush with the surrounding pavement. Within 24 hours—if the Representative requires it—the stabilized joints or cracks are retested for deflection; any slab showing a loaded corner deflection of 0.02 inch or more must be re‑grouted and tested again, and visual checks for radial or transverse cracking are also performed before final acceptance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>When pumping is observed, the presence of active water and fine‑material ejection itself signals that the subgrade has been compromised and that further treatment is required before any overlay can be placed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Observable loss of slab support such as faulting of transverse joints, accumulation of fines along joints or cracks on either the traffic lane or shoulder, corner breaks, and depressions commonly called blow‑holes are all clear triggers for additional maintenance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Slabs that begin to rock, move independently, or continue to pump indicate a loss of bearing capacity and must be stabilized—often by jacking—prior to resurfacing. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Any indication of inadequate subsurface drainage, including water intrusion into the structural layer, requires installation or improvement of subdrainage systems because moisture contributes to stripping of the asphalt‑aggregate bond, potholes, localized failures, progressive crack propagation and freeze‑thaw deterioration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Vertical movement detected during pumping is another condition that mandates cessation of pumping activities and prompts corrective action. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Deflection testing that shows a loaded slab corner deflection of 0.02 inch or greater, together with joint efficiency at or above the acceptable limit (typically 65 % when approved) signals that the joint or crack must be patched and stabilized; if joint efficiency falls below this limit, more extensive rehabilitation such as full‑depth replacement may be required. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The appearance of radial cracks radiating from grout injection holes or transverse cracks between adjacent holes indicates poor grout placement and calls for regrouting or, where necessary, full‑depth repair. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–98), Ch. 5 (pp. 115–120); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

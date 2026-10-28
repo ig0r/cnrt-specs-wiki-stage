@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geotextile</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html" class="active" aria-current="page">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><span class="crumb-current">Geotextile</span></nav>
+<article><h1>Geotextile</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-structure.html">Pavement Structure</a> <span class="edge edge-taxonomic" title="Geotextile is a topic under Pavement Structure.">is-subtopic-of</span></div><div class="edge-reading">Geotextile is a topic under Pavement Structure.</div><div><a class="tag" href="index.html?q=geotextile">geotextile</a><a class="tag" href="index.html?q=geotextiles">geotextiles</a><a class="tag" href="index.html?q=geotextile-properties">geotextile-properties</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Geotextile is a permeable fabric made from long‑chain polymeric filaments or yarns that are mechanically entangled into a stable, needle‑punched non‑woven network containing at least 85 % polyolefins, polyesters or polyamides and commonly featuring a heat‑set surface on one side [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. It is placed as a distinct interlayer—typically between subgrade and subbase—in pavement structures to keep those layers separate while allowing water and air to flow and retaining fine particles, thereby serving as both drainage medium and filter [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When used for stabilization (Class 4 Type C) the fabric also provides lateral restraint that reduces stress on weak subgrades, and its chemical inertness, resistance to rot, mildew and elevated temperatures ensures long‑term durability and performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#influence-of-production-and-placement">Influence of production and placement</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>Geotextile is a permeable fabric made from long‑chain polymeric filaments or yarns bonded into a stable network, typically a non‑woven needle‑punched material containing at least 85 % polyolefins, polyesters or polyamides and often heat‑set on one side for asphalt applications. In pavement construction the geotextile is placed as a distinct layer at the interface of dissimilar structural layers, most commonly between subgrade and subbase, where it keeps those layers separate and preserves the integrity of each material. By allowing water to pass through while retaining fine particles, the fabric functions as a drainage medium and as a filter that prevents soil migration into overlying aggregates or around prefabricated drains. When specified for separation it is classified as a Class 4 Type A layer, and when used for both separation and lateral restraint it is treated as a Class 4 Type C stabilization application that reduces load stresses transmitted to the subgrade. The geotextile also provides erosion and sediment control on construction sites and protects underlying membranes, repaired pavement surfaces, utilities or concrete slabs during placement of fill or base material. As a debonding or slip layer it prevents bonding between existing concrete slabs and new overlays while maintaining free drainage, and when saturated with asphalt binder it reinforces the bond between an existing surface and an overlay. These functions collectively enable the pavement system to maintain structural performance, control moisture, and extend service life without requiring experimental or special‑approval uses beyond those listed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 166–199), SECTION 400 FLEXIBLE PAVEMENTS (pp. 301–311), SECTION 500—RIGID PAVEMENTS (pp. 446–463), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510)</small></p>
+<p>Geotextiles are appropriate when a permeable fabric is needed to separate the subgrade from the subbase across the full lane width, especially in weak soils where the subgrade CBR is less than three; in those cases a Class 4‑Stabilization (Type C) geotextile provides both separation and lateral reinforcement, while a Class 4‑Layer Separation (Type A) fabric is used for general layer separation on all completed subgrades. When the subgrade has higher strength (CBR ≥ 3) or when other functional requirements such as load‑bearing capacity are met without reinforcement, a granular base or alternative material may be selected instead of geotextile. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>Geotextiles are permeable fabric systems constructed from long‑chain polymeric filaments or yarns that are arranged so that each strand retains a fixed relative position, creating a stable network that provides both permeability and mechanical integrity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The guides describe two principal structural families: woven or bonded fabrics that interlace the filaments into a continuous mesh, and non‑woven needle‑punched sheets in which the fibers are mechanically entangled to form a durable lattice; slit‑film woven fabrics are permitted only for Class 3 applications while chemically‑ or thermally‑bonded fabrics are excluded from all classes [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Compositionally, the material must consist of at least eighty‑five percent by weight of polyolefins (such as polyethylene or polypropylene), polyesters or polyamides, and it is required to be manufactured from virgin polymer resin unless an approved alternative is documented in the certification statement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The constituent yarns may include polyethylene, polypropylene, polyamide, polyester or polyvinyl‑chloride, and the resulting fabric can serve as a separation layer between dissimilar soils such as subgrade and subbase, while higher‑class grades also provide lateral restraint and reinforcement functions (Class 4‑Stabilization) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Physical characteristics mandated by the guides include a heat‑set surface on one side to prevent asphalt bleed‑through and to reduce pick‑up during placement, inertness to typical construction chemicals, resistance to rot, mildew and chemical attack, freedom from tears or defects that could alter performance, and protection against excessive ultraviolet exposure and temperatures above 140 °F during storage and service [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 309), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–509), SECTION 700 MATERIAL (p. 703)</small></p>
+<p>The performance of a geotextile paving fabric is directly tied to its material makeup and how it is processed; the specification requires that at least 85 % of the weight be polyolefins, polyesters or polyamides, which provides the chemical‑attack resistance, rot and mildew durability, and the tensile integrity needed for pavement use. Processing such as heat‑setting one side of the fabric further enhances performance by limiting asphalt bleed‑through and reducing the likelihood that construction equipment will pick up the material during installation. Consequently, any deviation from these composition thresholds or omission of the heat‑set treatment would compromise the fabric’s resistance to degradation and its functional properties in the pavement structure. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 309)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>The performance of a geotextile in pavement applications depends on its ability to allow water and air to pass while maintaining a stable, permeable structure formed by long‑chain polymeric filaments or yarns [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Physically the fabric is required to be a needle‑punched nonwoven in which at least eighty‑five percent by weight of the fibers are polyolefins, polyesters or polyamides such as polyethylene, polypropylene, polyester, polyamide or PVC, and the filaments must retain their relative positions to create a coherent sheet without tears or other defects [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. This stable lattice provides lateral restraint that reduces stress on the subgrade and supplies reinforcement at the base‑subgrade interface [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Mechanically the geotextile must resist construction traffic, avoiding folding or tearing, and it should be installed so that overlapping layers are minimized in order to preserve its load‑bearing capacity [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Prior to placement the material is lightly dampened—enough to suppress dust but not so much as to become saturated—and kept clean and free of loose debris to prevent contamination of the overlay [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Chemically, the fabric must be inert to the range of chemicals typically encountered on construction sites and must resist attack from rot, mildew and other degradative agents; consequently chemically‑ or thermally‑bonded fabrics are prohibited because such bonds compromise durability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Thermally, the geotextile may not be exposed to surface temperatures exceeding 120 °F during placement, and during shipment or storage it must be protected from temperatures above about 140 °F to avoid thermal damage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. One side of the fabric is heat‑set to inhibit asphalt bleed‑through and to ensure that the material is not inadvertently lifted by equipment during construction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 309), SECTION 500—RIGID PAVEMENTS (pp. 460–462), SECTION 700 MATERIAL (p. 703)</small></p>
+<p>Designers determine the relevant geotextile properties for each pavement project by consulting FHWA Publication 408, especially Sections 212 and 735, together with data from the National Transportation Product Evaluation Program and manufacturers’ published product information. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The classification of a geotextile in pavement applications follows the class‑type code defined in these references, where Class 4 fabrics are used for layer separation (Type A), erosion control or stabilization (Types B or C). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The class‑type designation appears on project drawings and governs installation requirements such as required overlaps and handling precautions. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Acceptance of a geotextile requires both the manufacturer’s certified test data and independent laboratory testing performed in accordance with the criteria listed for the specified construction class and type. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Physical properties are quantified through standardized tests, with component strand tensile strength required to be at least 560 lb/in measured per ASTM D‑6637. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Elongation may not exceed 3 % as determined by the same ASTM D‑6637 method. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The melting point must be a minimum of 420 °F, verified according to ASTM D‑276. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Mass per unit area is required to be no less than 10 oz/yd², measured in accordance with ASTM D‑5261. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For mesh fabrics, aperture size is also prescribed where applicable. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The material composition must consist of long‑chain polymeric filaments—such as polyethylene, polyamide, polyvinyl‑chloride, polypropylene, or polyester—or stable‑fiber needle‑punched nonwoven fabrics containing at least 85 % of those polymers and forming a stable network in which yarns retain their relative positions. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Certain fabric structures are limited to particular classes; for example slit‑film woven fabrics may only be used in Class 3 applications. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When a geotextile serves as a stabilization layer (Class 4 Type C), the installed plan‑view area is measured and recorded in square yards, with seam or roll‑edge overlaps treated as incidental. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] By cross‑referencing these classification criteria and test results, designers verify that permeability, tensile strength, aperture size, and other performance parameters satisfy the intended separation, filtration, or reinforcement function. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 168–199), SECTION 400 FLEXIBLE PAVEMENTS (p. 309), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510), SECTION 700 MATERIAL (p. 703)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>The geotextile employed as an interlayer or drainage fabric acts as a permeable, shape‑retaining membrane that can endure construction handling and permanent service loads without loss of its filtration function. Prior to placement the fabric must be kept clean and only lightly dampened; saturation is prohibited because excess moisture impairs bonding to the underlying surface and compromises free‑drainage. The material is not intended to support vehicular traffic, so construction traffic should be avoided and its load‑bearing role is limited to supporting the overlying concrete or asphalt while remaining free‑draining. To preserve permeability it must be terminated in a drainable layer or at a daylighted location.</p>
+<p>Temperature control is critical: surface temperatures of the fabric must not exceed 120 °F before the concrete overlay is placed, and during asphalt paving the hot mix temperature must stay below 320 °F to prevent thermal damage. The geotextile is a stable, needle‑punched nonwoven composed of at least 85 % polyolefins, polyesters or polyamides derived from virgin resin; one side is heat‑set, which limits asphalt bleed‑through and helps maintain performance despite temperature fluctuations.</p>
+<p>The polymer composition renders the fabric resistant to chemical attack, rot and mildew, and it must be free of tears or defects that could alter its physical properties under service loads. Seams, spot‑bonded attachments, fittings and splice connections are required to have sufficient strength to survive construction handling and continuous loading without deformation that would diminish flow capacity.</p>
+<p>During storage the fabric should be elevated, wrapped, and shielded from ultraviolet light, precipitation, chemicals and sparks. Installation must avoid excessive wrinkling, folding or abrupt vehicle movements; turning of pavers and other equipment should be gradual to prevent movement and damage. By remaining dry, free‑draining, and protected, the geotextile retains its structural integrity throughout its service life. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 460–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–509)</small></p>
+<p>The behavior of geotextiles in pavement work is governed by intertwined physical, chemical and mechanical mechanisms that together determine their ability to separate layers, allow drainage, resist degradation, and reinforce the structure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Physically, the permeable fabric network creates a continuous barrier that separates subgrade from subbase while permitting water to flow through at least half of its area, a function achieved by a non‑woven needle‑punched structure whose apertures are defined by a stable matrix of long‑chain polymeric filaments [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. To realize this physical performance the fabric must be laid flat on a clean, repaired surface with smooth side and bottom trench faces so that it does not bridge depressions or become damaged by rock projections, and edges are overlapped according to prescribed lapping practices while limiting the total number of layers to three in any location [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During installation the material is kept clean, free of loose debris, dampened without saturation, its surface temperature limited to 120 °F before overlay placement and, when bonded with an asphalt tack coat, the binder temperature is restricted to about 320 °F to avoid thermal damage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Protection from ultraviolet radiation, temperatures above 140 °F, mud, dust and other contaminants is required during storage and handling to preserve the physical integrity of the fabric [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Chemically, the long‑chain polymeric filaments—typically polyethylene, polyamide, polypropylene, polyester or PVC comprising at least 85 % of the mass—are selected for inertness toward construction chemicals, rot and mildew, limiting water absorption to 0.01 % after twenty‑four hours and preventing fungal growth, thereby ensuring that moisture exposure does not degrade strength or permeability over the service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. This chemical stability allows the geotextile to retain its mechanical properties while resisting attack from typical pavement chemicals throughout its intended lifespan [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Mechanically, the fabric provides lateral restraint at the base‑subgrade interface that reduces load stresses on the soil and reinforces the pavement structure, a function supported by minimum tensile strength of 1,200 psi (ASTM D638) and crush strength of 40 psi (GRI‑GC4) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Ground pressures applied during compaction are limited to the range of 625 to 1,025 lb/ft² to avoid crushing the fabric or altering surrounding fill, and installation practices such as rolling or brooming produce a smooth, wrinkle‑free laydown while abrupt equipment turns that could pull, fold or tension the material are avoided [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any punctures, tears or other damage must be repaired promptly, anchoring pins, bedding layers and careful compaction protect against wind lift, puncture and deformation, and heat‑setting one side of the fabric reduces asphalt bleed‑through and minimizes pick‑up by construction equipment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Throughout manufacture, shipment, storage and construction handling the amount of handling is minimized to prevent physical damage, and the material is stored away from flood‑prone areas and kept dry until use [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=6536b403 src=408_2020_11::tab:p508#1 -->
+<p>The table below specifies the physical requirements and test methods for prefabricated pavement base drain geotextile.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-geotextile-1-cap" tabindex="0"><table class="ct-table" id="ct-geotextile-1" aria-describedby="ct-geotextile-1-sum">
+<caption id="ct-geotextile-1-cap">TABLE APrefabricated Pavement Base Drain - Geotextile Physical Requirements</caption>
+<thead>
+<tr><th scope="col">Fabric Properties</th><th scope="col">Test Method</th><th scope="col">Required Value (1)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">1. Grab Tensile Strength, lbs.</th><td>ASTM D4632</td><td>158</td></tr>
+<tr><th scope="row">2. Grab Tensile Elongation, %</th><td>ASTM D4632</td><td>50</td></tr>
+<tr><th scope="row">3. Puncture, lbs. (2-inch flat-end rod)</th><td>ASTM D6241</td><td>400</td></tr>
+<tr><th scope="row">4. Trapezoid Tear Strength, lbs.</th><td>ASTM D4533</td><td>56</td></tr>
+<tr><th scope="row">5. Apparent Opening Size (AOS), Sieve No.</th><td>ASTM D4751</td><td>100 to 50</td></tr>
+<tr><th scope="row">7. Permittivity, sec-1</th><td>ASTM D4491</td><td>1.1</td></tr>
+<tr><th scope="row">9. Ultraviolet Resistance Strength Retention, %</th><td>ASTM D4355</td><td>70 @ 500 hrs.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-geotextile-1-sum">Rows list physical properties of fabric for pavement base drain, columns provide the test method and required value.</p>
+<p class="ct-notes">Notes: (1) The numerical values indicate average minimum roll value or minimum to maximum range, except as noted.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 508.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 168–174), SECTION 300 BASE COURSES (pp. 226–227), SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 460–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–509), SECTION 700 MATERIAL (p. 703)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>Geotextile durability is principally compromised by mechanical injury that can arise at any point from manufacture through placement. Rough handling, dragging the fabric across the ground, folding, pulling, abrupt vehicle turns and direct contact with rollers or other heavy equipment may generate tears, punctures, abrasions or crushing of the polymer fibers. Construction traffic on an uncovered sheet—particularly pneumatic‑tire or tracked equipment making sharp, sudden turns—must be avoided; if traffic cannot be eliminated, smooth trench surfaces that prevent bridging over depressions and rock projections should be provided. When damage occurs, sections smaller than three square feet (and not located on a slope face) are repaired by patching with the same geotextile material, extending at least three feet beyond the defect in all directions and overlapping the existing fabric by a minimum of twelve inches; larger damaged areas must be removed and replaced entirely. All seams and repairs are to be bonded with non‑water‑soluble, virgin‑resin adhesive unless otherwise approved, and the repaired area sealed over a minimum six‑inch width.</p>
+<p>Environmental exposure also limits service life. Direct sunlight, ultraviolet radiation and temperatures exceeding 140 °F can degrade the polymeric filaments, while surface temperatures of the fabric must remain below 120 °F before overlay placement and any asphalt tack coat applied over it must not exceed 320 °F. The material should be dampened but never saturated prior to backfill, and exposure without protective cover should not exceed two weeks. Chemical attack, rot and mildew are concerns unless the geotextile is a stable needle‑punched nonwoven composed of at least 85 % by weight polyolefins, polyesters or polyamides; physical contamination with mud, dirt, dust or other debris can abrade the yarn network. The heat‑set coating on one side helps prevent asphalt bleed‑through but also indicates that excessive handling or high temperatures may soften the fabric below its melting point.</p>
+<p>Proper storage and handling are essential to preserve durability. Geotextiles must be stored off the ground on an elevated platform, wrapped or covered to shield them from precipitation, ultraviolet light, chemicals, sparks and flooding. Visual inspection before placement is required; any damaged or contaminated material must be rejected or repaired according to manufacturer recommendations. During installation, handling should be minimized, rollers must not be placed directly on the fabric, and abrupt starts, stops or equipment maneuvers that could pull, fold or tension the sheet are prohibited. Finally, under sustained pavement‑base loads the geotextile must retain its shape so that its open area and flow capacity are not reduced. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 168–199), SECTION 300 BASE COURSES (pp. 226–227), SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 460–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510), SECTION 700 MATERIAL (p. 703)</small></p>
+<p>Geotextile durability is chiefly governed by the intrinsic qualities of the fabric and the conditions it encounters before becoming a permanent part of the pavement. Fabrics that are non‑woven, needle‑punched and composed of at least eighty‑five percent by weight of polyolefin, polyester or polyamide fibers—preferably long‑chain polymeric filaments such as polyethylene, polyamide, PVC, polypropylene or polyester—provide a stable matrix that resists mechanical breakdown. When the resin is virgin material and the product meets the specified performance thresholds—a minimum tensile strength of 1,200 psi (ASTM D638) and water absorption not exceeding 0.01 % after 24 hours (ASTM D570)—the fabric limits moisture uptake, chemical attack and biological growth. Additional design features that further reduce susceptibility include classification as a Class 4, Type A geotextile with seams bonded by a non‑water‑soluble adhesive, heat‑setting one surface to act as a barrier against asphalt bleed‑through, and inherent resistance to rot, mildew and common construction chemicals.</p>
+<p>Conversely, exposure to adverse mechanical and environmental actions markedly accelerates deterioration. Mechanical abuse such as heavy construction traffic, abrupt turning or braking of tracked equipment, folding, dragging across the ground, puncturing by rocks dropped from heights greater than one foot, and layering more than three overlapping sheets in any location introduces tensile stresses and abrasion that compromise integrity. High surface temperatures above 120 °F during placement, ambient temperatures exceeding 140 °F, prolonged ultraviolet exposure, and leaving the fabric uncovered for longer than two weeks create chemical and polymeric degradation. Moisture is especially detrimental; saturation, standing water deeper than six inches, ice on the subgrade, storage in flood‑prone areas, or direct contact with mud, dirt, dust, chemicals, and other construction substances all promote decay. Direct loads from vehicles, rollers placed on the fine‑graded aggregate layer, and any tears or defects that alter the physical properties provide pathways for aggressive agents.</p>
+<p>To mitigate these risks, protective measures focus on limiting exposure to the identified damaging conditions. Overlapping should be restricted to three layers, the fabric must remain flat with proper lapping, and construction traffic should be avoided until immediately before concrete placement while ensuring surface temperatures stay below 120 °F. Handling should be minimized throughout manufacture, shipment, storage and installation to prevent tears, and the material should be stored on an elevated platform away from flood zones, wrapped in a heavy‑duty cover that shields it from sunlight, precipitation, chemicals and sparks. All standing water and ice must be removed before placing the fine‑graded aggregate layer, rollers are prohibited directly on this layer, and the geotextile must be covered with at least six inches of compacted aggregate within two weeks of exposure, keeping the cover dry and clean. Visual inspection prior to installation, prompt repair of any damage at no additional cost, and retention of the manufacturer’s protective wrapping until ready for placement further ensure that the geotextile retains its designed performance throughout service. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 168–174), SECTION 300 BASE COURSES (pp. 226–227), SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 460–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510), SECTION 700 MATERIAL (p. 703)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>The geotextile is laid flat on the cleaned pavement surface and its edges are overlapped by about eight inches, give or take two inches, to ensure continuity. Before the overlay is placed the fabric is lightly dampened while keeping its temperature below 120 °F; this condition prevents any chemical bonding with cement paste, soil minerals or aggregates and preserves free drainage, so the geotextile functions solely as a physical separator, filter or reinforcement. The long‑chain polymeric filaments—commonly polyethylene, polypropylene, polyester, polyolefin or polyamide—are chemically inert toward construction chemicals, binders and aggregate constituents, providing resistance to chemical attack, rot and mildew without reacting with cement or asphalt. In hot‑mix asphalt applications the fabric is deliberately saturated with 0.22 to 0.28 gallons per square yard of liquid binder before the binder cools, creating a strong mechanical‑adhesive link that transfers loads and prevents slippage while still allowing drainage; this practice is limited to sections where the compacted asphalt thickness will be at least 1.5 in, ensuring sufficient support and avoiding exposed unbonded edges. The fabric’s one‑sided heat‑set treatment reduces bleed‑through of the performance‑graded binder, limiting unwanted absorption into the fibers and preserving the fiber‑matrix bond while also minimizing pick‑up by equipment. When installed beneath a concrete overlay on a treated base course or existing concrete slab, the geotextile acts as a debonding layer that intentionally separates the fresh cementitious material from the substrate, allowing independent movement and mitigating stress transfer at the interface. Throughout shipment, storage and handling the material must be protected from direct sunlight, ultraviolet radiation and temperatures above about 140 °F; any damage or deterioration results in rejection to maintain its integrity. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 446–462), SECTION 700 MATERIAL (p. 703)</small></p>
+<h2 id="influence-of-production-and-placement">Influence of production and placement</h2>
+<p>The performance of a geotextile in pavement systems depends on the quality of mixing, placement, compaction, finishing and curing actions applied to the surrounding materials. Proper mixing of subbase or backfill material to achieve sufficient moisture prevents segregation and provides uniform support for the fabric; maintaining this moisture through placement ensures stability when later compacted. During placement the geotextile must be delivered, stored and handled according to the manufacturer’s recommendations, laid flat on a clean, repaired surface without folds, wrinkles or tension, and kept free of debris. Overlaps are required—typically twelve inches in all directions, or eight inches plus‑or‑minus two inches where specified—and must be secured either with an approved spray adhesive applied over at least six inches of the lap, by sewing, heat bonding, or simple overlapping. The fabric temperature should not exceed 120 °F before overlay placement, and any damaged sections must be removed and replaced or repaired before the cover is placed.</p>
+<p>The covering material—whether fine‑graded aggregate, coarse backfill, or asphalt binder—must be applied promptly, generally within two weeks of laying the geotextile, to protect it from exposure. When asphalt is used, the binder temperature must be kept between 290 °F and 320 °F, and applied at a rate of 0.22 to 0.28 gallons per square yard so that the fabric becomes fully saturated before the binder cools. Smooth lay‑down equipment that minimizes wrinkling, followed by brooming or rubber‑tire rolling, presses the fabric into intimate contact with the binder; any uncovered overlaps are filled manually or trimmed to a minimum one‑inch overlap.</p>
+<p>Compaction is performed without allowing equipment to travel directly on the geotextile. Static smooth‑drum rollers in non‑vibratory mode, tracked or plate compactors, and hydraulic compaction of lifts not exceeding nine inches are used to achieve a non‑movement condition as defined by the relevant specifications. Backfill is commonly placed in two six‑inch layers, each compacted before the next, or in hydraulically compacted lifts up to nine inches thick; overlapping passes from the sides toward the centre lock the subbase and geotextile together. Compaction must be completed within the prescribed time frame so that the fabric remains correctly oriented—typically within half an inch of the design elevation—and its continuity is preserved.</p>
+<p>Finishing operations, including the application of adhesive to seams, brooming or rolling of asphalt, and removal of excess material, complete the installation while protecting the permeability and structural contribution of the geotextile. Finally, curing of the surrounding binder—allowing the surface to remain dry until the asphalt has attained sufficient strength to support traffic—prevents delamination and ensures that the separation, filtration and reinforcement functions of the geotextile are retained throughout service life. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 168–199), SECTION 300 BASE COURSES (pp. 226–227), SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 460–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<p>The durability of a geotextile installed in a pavement structure is governed chiefly by the defects that are introduced during delivery, storage, handling and placement. Any damage incurred before the fabric becomes part of the pavement—such as tears, punctures, crushing, abrasion, or exposure to ultraviolet radiation or temperatures above the limits specified for the product (140 °F for stored material and 120 °F for the exposed surface prior to overlay)—must be eliminated because even minor deterioration compromises the polymeric filament network that provides separation, filtration, reinforcement and drainage. The fabric must be kept dry, clean and free of mud, dirt, dust, debris or oil, and it should be stored in a location protected from flooding and direct sunlight.</p>
+<p>During placement the geotextile must be laid within a tight elevation tolerance of plus‑or‑minus one‑half inch; deviations beyond this range create stress concentrations that can lead to premature tearing or loss of filtration capacity. Adjacent rolls are required to overlap by at least twelve inches along their parallel edges, and no more than three layers may be stacked in any location. Overlaps must be secured with manufacturer‑approved methods such as spray adhesive, sewing, heat‑bonding or non‑water‑soluble adhesives, and the fabric must never be bonded to a geomembrane. Surface defects larger than four square inches and deeper than one inch must be patched before the geotextile is laid, and any damaged area smaller than three square feet may be repaired with an approved patch; damage exceeding that size mandates complete removal and replacement of the affected section.</p>
+<p>Handling practices are critical: pulling, folding, abrupt turns of tracked equipment, excessive tension, or direct contact with rollers and construction traffic must be avoided to prevent new punctures or tears. Rock projections should not be dropped onto the fabric from heights greater than one foot, and subgrade irregularities exceeding a half‑inch must be corrected so that the geotextile does not bridge depressions. The exposed side of the fabric should be heat‑set before asphalt placement to reduce bleed‑through and minimize pick‑up by equipment. Asphalt must be applied at a rate of 0.22 to 0.28 gallons per square yard to ensure full saturation and bonding. Visual inspection prior to installation, prompt repair or replacement of any damaged sections, and careful back‑filling to achieve complete contact are required to preserve the intended long‑term separation, filtration and reinforcement functions of the geotextile. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 166–199), SECTION 300 BASE COURSES (pp. 226–227), SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 500—RIGID PAVEMENTS (pp. 460–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510), SECTION 700 MATERIAL (p. 703)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>The selection of a geotextile begins with identifying the required function—drainage, sediment capture, layer separation or reinforcement—and assigning the appropriate class‑type designation; Class 1 fabrics serve drainage, Class 3 address sediment capture, and Class 4 fabrics (Types A, B, or C) are used for separation or stabilization functions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Once the functional class is fixed, the designer must verify that the proposed material satisfies the project‑specific design parameters documented in FHWA Publication 408, the NTPEP database, the manufacturer’s product data and any other applicable technical references, and that it conforms to the limited set of approved PennDOT uses (drainage, layer separation, erosion or sediment control, and reinforcement of soft subgrade or aggregate layers) – applications beyond these are treated as experimental [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For a separation application (Class 4 Type A), the fabric must extend across the entire lane width, defined as at least eight feet, and be used on patches longer than twenty feet where the subbase has been removed; for reinforcement (Class 4 Type C) it is specified only when the underlying subgrade CBR is less than three and the installation occurs on a positive drainage slope [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The material itself must be a non‑woven, needle‑punched fabric composed of long‑chain polymeric filaments such as polyethylene, polyamide, PVC, polypropylene or polyester, with at least 85 % of the fiber weight consisting of polyolefins, polyesters or polyamides, and the resin must be virgin unless an exemption is recorded on the certification statement; chemically‑ or thermally‑bonded fabrics are expressly prohibited [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The geotextile must meet the performance limits for aperture size, tensile strength, elongation, melting point and mass per unit area set out in Table A and the AASHTO M 288 Type II standard, be chemically inert to typical construction chemicals, resist rot, mildew and UV exposure, retain a heat‑set surface on one side to limit asphalt bleed‑through, and remain stable at temperatures up to 140 °F [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Acceptance is based on certified test data supplied by the manufacturer and, when required, independent testing by the Laboratory Testing Section; only fabrics listed in Bulletin 15 with proper labeling and certification are permitted [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Installation criteria further narrow the choice: the subgrade must be accepted, compacted and proof‑rolled after remaining in place for at least sixty days or one winter season before a Class 4 Type A separator is laid, and the fabric must be placed on its smooth side over a dry, clean surface free of debris, oil, gravel and vegetation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Overlap of adjacent rolls must be at least twelve inches (or equal to the trench width), with transverse limits between six and twelve inches from the interior edge of a base drain, and any damage incurred during construction must be repaired with the same type of geotextile extending three feet beyond the defect or by replacing the damaged portion [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Prior to placement a tack coat of asphalt binder is applied at 0.22–0.28 gallons per square yard, heated between 290 °F and 320 °F and extended six inches beyond each edge of the fabric; the overlying asphalt layer must achieve a minimum compacted thickness of 1.5 inches wherever geotextile is present, and the fabric must be covered within two weeks to prevent exposure [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Throughout handling, shipment and storage the material must be protected from mud, dust, debris and ultraviolet radiation to preserve its integrity [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<!-- concept-tabular:begin key=59b19ed0 src=408_2020_11::tab:p704#1 -->
+<p>Table A specifies the physical requirements and test methods for geotextiles across different construction classes.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-geotextile-2-cap" tabindex="0"><table class="ct-table" id="ct-geotextile-2" aria-describedby="ct-geotextile-2-sum">
+<caption id="ct-geotextile-2-cap">TABLE AGeotextile Physical Requirements(1) (2)</caption>
+<thead>
+<tr><th id="ct-geotextile-2-h0-0" scope="col" rowspan="4">Fabric Properties</th><th id="ct-geotextile-2-h0-1" scope="col" rowspan="4">Test Method</th><th id="ct-geotextile-2-h0-2" scope="col" colspan="5">Construction Class</th></tr>
+<tr><th id="ct-geotextile-2-h1-2" scope="col">Class 1</th><th id="ct-geotextile-2-h1-3" scope="col" colspan="2">Class 3</th><th id="ct-geotextile-2-h1-5" scope="col" colspan="2">Class 4</th></tr>
+<tr><th id="ct-geotextile-2-h2-2" scope="col" rowspan="2">SubsurfaceDrainage</th><th id="ct-geotextile-2-h2-3" scope="col" colspan="2">Sediment Control</th><th id="ct-geotextile-2-h2-5" scope="col">Separation andErosion Control</th><th id="ct-geotextile-2-h2-6" scope="col">Stabilization andGRS Abutments</th></tr>
+<tr><th id="ct-geotextile-2-h3-3" scope="col">Type A</th><th id="ct-geotextile-2-h3-4" scope="col">Type B</th><th id="ct-geotextile-2-h3-5" scope="col">Type A</th><th id="ct-geotextile-2-h3-6" scope="col">Type C</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-geotextile-2-h4-0" scope="row">Fabric Structure</th><th id="ct-geotextile-2-h4-1" scope="row">N/A</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h4-0 ct-geotextile-2-h4-1">WovenMonofilament</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h4-0 ct-geotextile-2-h4-1">Woven SlitFilm</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h4-0 ct-geotextile-2-h4-1">Woven SlitFilm</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h4-0 ct-geotextile-2-h4-1">Non-woven NeedlePunched</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h4-0 ct-geotextile-2-h4-1">WovenPolypropylene</td></tr>
+<tr><th id="ct-geotextile-2-h5-0" scope="row">Weight, oz/sy</th><th id="ct-geotextile-2-h5-1" scope="row">ASTM D5261</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h5-0 ct-geotextile-2-h5-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h5-0 ct-geotextile-2-h5-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h5-0 ct-geotextile-2-h5-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h5-0 ct-geotextile-2-h5-1">12.0 min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h5-0 ct-geotextile-2-h5-1">N/A</td></tr>
+<tr><th id="ct-geotextile-2-h6-0" scope="row">Grab Tensile Strength, lbs. (3)</th><th id="ct-geotextile-2-h6-1" scope="row">ASTM D4632</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h6-0 ct-geotextile-2-h6-1">365 min MD x190 min XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h6-0 ct-geotextile-2-h6-1">185 minMD and XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h6-0 ct-geotextile-2-h6-1">115 minMD and XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h6-0 ct-geotextile-2-h6-1">305 minMD and XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h6-0 ct-geotextile-2-h6-1">N/A</td></tr>
+<tr><th id="ct-geotextile-2-h7-0" scope="row">Grab Tensile Elongation, %(3),(5)</th><th id="ct-geotextile-2-h7-1" scope="row">ASTM D4632</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h7-0 ct-geotextile-2-h7-1">22 to 34 MD x9 to 26 XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h7-0 ct-geotextile-2-h7-1">13 to 31MD and XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h7-0 ct-geotextile-2-h7-1">13 to 31MD and XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h7-0 ct-geotextile-2-h7-1">50 minMD and XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h7-0 ct-geotextile-2-h7-1">N/A</td></tr>
+<tr><th id="ct-geotextile-2-h8-0" scope="row">Ultimate Wide Width Tensile Strength, lb/ft</th><th id="ct-geotextile-2-h8-1" scope="row">ASTM D4595</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h8-0 ct-geotextile-2-h8-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h8-0 ct-geotextile-2-h8-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h8-0 ct-geotextile-2-h8-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h8-0 ct-geotextile-2-h8-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h8-0 ct-geotextile-2-h8-1">4,800 minMD and XD</td></tr>
+<tr><th id="ct-geotextile-2-h9-0" scope="row">Wide Width Tensile Strength @ 2% Strain, lb/ft</th><th id="ct-geotextile-2-h9-1" scope="row">ASTM D4595</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h9-0 ct-geotextile-2-h9-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h9-0 ct-geotextile-2-h9-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h9-0 ct-geotextile-2-h9-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h9-0 ct-geotextile-2-h9-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h9-0 ct-geotextile-2-h9-1">Design Specific(4)</td></tr>
+<tr><th id="ct-geotextile-2-h10-0" scope="row">Puncture, lbs. (2-in flat- end rod)</th><th id="ct-geotextile-2-h10-1" scope="row">ASTM D6241</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h10-0 ct-geotextile-2-h10-1">660 min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h10-0 ct-geotextile-2-h10-1">700 min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h10-0 ct-geotextile-2-h10-1">440 min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h10-0 ct-geotextile-2-h10-1">830 min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h10-0 ct-geotextile-2-h10-1">1,700 min</td></tr>
+<tr><th id="ct-geotextile-2-h11-0" scope="row">Trapezoid Tear Strength, lbs.</th><th id="ct-geotextile-2-h11-1" scope="row">ASTM D4533</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h11-0 ct-geotextile-2-h11-1">95 min MD x75 min XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h11-0 ct-geotextile-2-h11-1">70 minMD and XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h11-0 ct-geotextile-2-h11-1">50 minMD and XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h11-0 ct-geotextile-2-h11-1">110 minMD and XD</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h11-0 ct-geotextile-2-h11-1">170 minMD and XD</td></tr>
+<tr><th id="ct-geotextile-2-h12-0" scope="row">Apparent Opening Size, mm (Sieve No.)</th><th id="ct-geotextile-2-h12-1" scope="row">ASTM D4751</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h12-0 ct-geotextile-2-h12-1">0.30 to 0.60(No. 50 to No. 30sieve )(5)</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h12-0 ct-geotextile-2-h12-1">0.21 to 0.43(No. 70 to No.40 sieve)(s)</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h12-0 ct-geotextile-2-h12-1">0.30 to 0.60(No. 50 to No.30 sieve )()</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h12-0 ct-geotextile-2-h12-1">0.15 max</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h12-0 ct-geotextile-2-h12-1">0.425 to 0.85(No. 40 to No. 20sievee ()</td></tr>
+<tr><th id="ct-geotextile-2-h13-0" scope="row">Percent Open Area, %</th><th id="ct-geotextile-2-h13-1" scope="row">COE CW-02215</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h13-0 ct-geotextile-2-h13-1">9.0 to 12.0(5)</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h13-0 ct-geotextile-2-h13-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h13-0 ct-geotextile-2-h13-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h13-0 ct-geotextile-2-h13-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h13-0 ct-geotextile-2-h13-1">N/A</td></tr>
+<tr><th id="ct-geotextile-2-h14-0" scope="row">Permittivity, sec-1</th><th id="ct-geotextile-2-h14-1" scope="row">ASTM D4491</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h14-0 ct-geotextile-2-h14-1">1.9 min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h14-0 ct-geotextile-2-h14-1">0.05 min(5)</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h14-0 ct-geotextile-2-h14-1">0.05 min(5)</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h14-0 ct-geotextile-2-h14-1">0.70 min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h14-0 ct-geotextile-2-h14-1">0.40 min(5)</td></tr>
+<tr><th id="ct-geotextile-2-h15-0" scope="row">Water Flow Rate, g/min/sf</th><th id="ct-geotextile-2-h15-1" scope="row">ASTM D4491</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h15-0 ct-geotextile-2-h15-1">130 min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h15-0 ct-geotextile-2-h15-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h15-0 ct-geotextile-2-h15-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h15-0 ct-geotextile-2-h15-1">N/A</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h15-0 ct-geotextile-2-h15-1">25 min</td></tr>
+<tr><th id="ct-geotextile-2-h16-0" scope="row">Ultraviolet Resistance Strength Retention, %</th><th id="ct-geotextile-2-h16-1" scope="row">ASTM D4355</th><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-2 ct-geotextile-2-h2-2 ct-geotextile-2-h16-0 ct-geotextile-2-h16-1">90 @500 hrs min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-3 ct-geotextile-2-h16-0 ct-geotextile-2-h16-1">70 @500 hrs min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-3 ct-geotextile-2-h2-3 ct-geotextile-2-h3-4 ct-geotextile-2-h16-0 ct-geotextile-2-h16-1">70 @500 hrs min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-5 ct-geotextile-2-h3-5 ct-geotextile-2-h16-0 ct-geotextile-2-h16-1">70 @500 hrs min</td><td headers="ct-geotextile-2-h0-2 ct-geotextile-2-h1-5 ct-geotextile-2-h2-6 ct-geotextile-2-h3-6 ct-geotextile-2-h16-0 ct-geotextile-2-h16-1">70 @500 hrs min</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-geotextile-2-sum">Rows list Fabric Properties; columns give Test Method, Construction Class (Class 1, Class 3, Class 4, SubsurfaceDrainage, Sediment Control … and five more).</p>
+<p class="ct-notes">Notes: (1) The numerical values indicate the required minimum or maximum (as indicated) average values for ten test specimens. No more than 20% of the individual specimens may have a value less than the required minimum value or greater than the required maximum value (as indicated), except as noted (see Note 5). (2) MD = Machine Direction, XD = Cross Machine Direction (3) Test conducted using 1/32 inch thick neoprene pads on grip faces having a Shore A durometer value of 70±5. (4) Wide width tensile strength at 2% strain in both the machine and cross machine directions (MD x XD), must be greater than or equal to required design tensile strength. (5) The numerical values indicate the allowable range or required minimum (as indicated) based upon the numerical average of all test specimens from a sample.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 704.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 166–199), SECTION 400 FLEXIBLE PAVEMENTS (pp. 309–311), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510), SECTION 700 MATERIAL (p. 703)</small></p>
+<p>To achieve reliable performance of geotextiles in pavement applications, the fabric must first meet defined material specifications. Manufacturers are required to use virgin‑resin polymers unless an approved substitute is documented on the certification statement, and the fibers should be long‑chain polymeric filaments such as polyethylene, polyamide, PVC, polypropylene or polyester, with at least 85 % of the weight comprised of polyolefins, polyesters or polyamides. Class designations (for example, Class 1 for base drains, Class 4 Type A for high‑traffic lanes, and Class 4 Type C when no face wrap is needed) guide selection of strength and filtration characteristics.</p>
+<p>During shipment and storage the rolls must be kept off the ground on elevated platforms, wrapped, dry, and shielded from flood‑prone areas, direct sunlight, ultraviolet radiation and temperatures exceeding 140 °F (the fabric temperature during handling should not exceed 120 °F). All rolls are to be visually inspected for tears, punctures or other defects; any material showing damage is rejected or repaired according to the manufacturer’s procedure. Labels identifying the fabric type, lot number and quantity provide traceability.</p>
+<p>Prior to placement the subgrade or existing pavement surface must be cleared of debris, oil, vegetation and loose material, swept clean, and any surface irregularities greater than one‑half inch reshaped, compacted or removed. A bedding layer may be placed under large stones to protect the fabric from puncture, and trench walls should be smooth to prevent bridging.</p>
+<p>Installation controls further enhance durability. The fabric is laid flat without stretch, dampened but not saturated, and its temperature kept below 120 °F. Overlap of adjacent edges must be at least eight inches plus or minus two inches (or a minimum of twelve inches for Class 4 Type A fabrics) and no more than three layers may be stacked in any location; the overlap length should equal the trench width where applicable. Placement elevation must be within ±0.5 inch of the design grade. Seams are secured with manufacturer‑approved methods such as a non‑water‑soluble seaming adhesive applied over at least six inches, heat‑bonding or sewing. For drainage applications flow tests under load may be required to confirm that the geotextile does not deform and reduce capacity.</p>
+<p>Damaged areas are addressed by removing and replacing sections whose tears exceed four square inches or one inch depth; smaller punctures covering less than three square feet are patched with the same material extending at least three feet beyond the defect on all sides. All repairs, as well as any required seam work, must be performed at no additional cost to the agency.</p>
+<p>Quality‑control measures include documenting lot numbers, conducting infiltration tests on two test sections in accordance with ASTM C1701 (average rate greater than 200 in/hr), and performing flow tests on loaded drainage sections when specified. Construction traffic is avoided on exposed fabric, exposure time without cover is limited to two weeks, and steel pins or other anchoring devices are installed at prescribed spacings before back‑filling.</p>
+<p>Where higher tensile capacity or thermal stability is required, alternative interlayer products such as high‑strength fiberglass mesh grids, composite reinforcing grids that combine glass filaments with the fabric, or biaxial geogrids used as backing can be substituted, provided they meet defined criteria for strength, elongation and melting point. Non‑woven geotextile may also be wrapped around basin sides for side protection. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 166–199), SECTION 300 BASE COURSES (pp. 226–227), SECTION 400 FLEXIBLE PAVEMENTS (pp. 301–311), SECTION 500—RIGID PAVEMENTS (pp. 460–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510), SECTION 700 MATERIAL (p. 703)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>Evaluation of geotextile for pavement applications is conducted entirely through laboratory‑based certification testing. Acceptance hinges on certified test data supplied by the manufacturer and, when required, additional verification by the Laboratory Testing Section. The primary properties that must be demonstrated include a minimum tensile strength of 1,200 psi measured in accordance with ASTM D638 for non‑woven needle‑punched fabrics, and, for reinforcing meshes, a strand strength of at least 560 lb per inch as determined by ASTM D6637. Elongation is limited to a maximum of three percent using the same ASTM D6637 procedure. Water absorption must not exceed 0.01 percent after a 24‑hour immersion according to ASTM D570. Thermal resistance is confirmed by a melting point no lower than 420 °F measured per ASTM D276, and areal mass must be at least ten ounces per square yard as verified by ASTM D5261. The product must conform to the specified type—non‑woven, needle‑punched—as indicated in Table A of the specification. No field‑based or long‑term performance monitoring is prescribed; however, any geotextile found to have defects, deterioration, or damage arising from manufacture, transport, or storage is rejected at installation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 309), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–509), SECTION 700 MATERIAL (p. 703)</small></p>
+<p>Geotextiles are permeable polymeric fabrics that serve to separate dissimilar layers, convey water, control erosion and sediment, and when required provide lateral restraint that reinforces a weak subgrade [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Their effectiveness depends on intrinsic properties such as permeability, tensile strength, chemical inertness, durability, and resistance to rot, mildew and construction chemicals, which together preserve the strengths of subgrade and sub‑base while allowing drainage, thereby enhancing overall pavement performance and extending service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Low bearing capacity soils (CBR &lt; 3) can be accommodated by using a Class 4 Type C geotextile that supplies additional lateral support, reducing load stresses on the subgrade and permitting thinner or more economical structural layers without sacrificing reliability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The tensile strength of at least 560 lb/in in each direction and low elongation provided by a needle‑punched nonwoven matrix of ≥85 % polyolefins, polyesters or polyamides enables the fabric to distribute loads evenly, control cracking, and allow reduced base thickness while still meeting design criteria [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The heat‑set side that blocks asphalt bleed‑through and limits pick‑up by equipment helps maintain structural integrity throughout service life, supporting its role as separator, filter, and reinforcement layer [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Design specifications therefore require a continuous full‑width separator of at least eight feet across the pavement width, typically a Class 4 Type A fabric for all new subgrades, with Type C material specified wherever reinforcement is needed; overlap, edge extensions, and anchorage details are prescribed to ensure continuity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Placement must be flat, unstretched and free of folds before any fine‑grained aggregate or subbase is laid, with seams overlapping a minimum of twelve inches (or eight inches ± 2 inches for edges) and tolerances within ±½ inch of design elevation; no more than three layers may be stacked in any location [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. During construction the geotextile must be handled, stored and installed to minimize physical damage; damaged areas smaller than three square feet are patched with the same material extending at least three feet beyond the defect, while larger defects require full replacement before overlay placement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The fabric should remain damp but not saturated during placement, surface temperature below 120 °F, and direct traffic or equipment contact on the exposed material is prohibited; prompt covering with aggregate or subbase protects permeability and strength [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In drainage applications the geotextile completely wraps the drainage core, is firmly attached to protrusions and spot‑bonded on shoulders, preserving tensile strength under traffic loads and ensuring the specified minimum flow rate [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By adhering to these design and construction practices designers can rely on the geotextile’s load‑distribution, filtration and reinforcement functions to improve pavement performance, enhance durability, reduce maintenance frequency, and extend service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 166–199), SECTION 300 BASE COURSES (pp. 226–227), SECTION 400 FLEXIBLE PAVEMENTS (pp. 301–311), SECTION 500—RIGID PAVEMENTS (pp. 446–462), SECTION 600 INCIDENTAL CONSTRU… (pp. 506–510), SECTION 700 MATERIAL (p. 703)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

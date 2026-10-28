@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slabjacking</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html" class="active" aria-current="page">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-preservation.html">Pavement Preservation</a><span class="crumb-sep">›</span><a href="slab-stabilization.html">Slab Stabilization</a><span class="crumb-sep">›</span><span class="crumb-current">Slabjacking</span></nav>
+<article><h1>Slabjacking</h1>
+<div class="meta"><div class="part-of">Part of: <a href="slab-stabilization.html">Slab Stabilization</a> <span class="edge edge-taxonomic" title="Slabjacking is a topic under Slab Stabilization.">is-subtopic-of</span></div><div class="edge-reading">Slabjacking is a topic under Slab Stabilization.</div><div><a class="tag" href="index.html?q=slabjacking">slabjacking</a><a class="tag" href="index.html?q=slab-jacking">slab-jacking</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Slabjacking is a remedial technique applied to rigid concrete pavement slabs that have become faulted, sunken, or otherwise depressed relative to their original design elevation because voids have developed beneath the slab‑subbase interface [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The method restores full subgrade support by drilling holes—typically at transverse joints, existing cracks, or corners—and injecting a lift material such as cement‑based grout, hot asphalt, or high‑density polyurethane to fill the voids while incrementally raising the slab under the control of a string line positioned about one inch above the target grade [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By re‑establishing uniform bearing capacity, slabjacking eliminates excessive deflection, joint faulting, corner breaks and blow‑hole depressions, thereby returning the pavement to its intended structural integrity, rideability and surface profile [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Slabjacking is employed when a concrete pavement slab has become faulted, sunken, or otherwise depressed relative to its design elevation, producing low spots, uneven ride quality and loss of structural support. The distress originates from voids that develop beneath the slab as a result of pumping action, subgrade consolidation, or general settlement, which reduce the bearing capacity of the underlying material. These voids cause excessive slab deflection and stress, manifesting as transverse joint faulting, corner breaks, diagonal cracking, small depressions or blow‑holes at joints and cracks, and overall slab settlement. By drilling holes at joints or cracks and injecting a cement‑based grout, hot asphalt, or high‑density polyurethane, the voids are filled and the slab is lifted incrementally—typically using a string line positioned about one inch above the desired grade—until it regains full support, structural integrity, rideability and an acceptable surface profile. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 91–93)</small></p>
+<p>Slabjacking is applied when a rigid concrete slab has become faulted or sunken relative to its original grade. The treatment consists of injecting grout beneath the slab to fill voids at the slab‑subbase interface, thereby lifting the slab back to the designed elevation. By re‑establishing full subgrade support the deflection of the slab is reduced and its structural integrity and rideability are recovered. Consequently the primary purpose of slabjacking is to repair the damage caused by settlement and to return the pavement to a serviceable condition, restoring its intended functionality rather than merely slowing further deterioration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 91–93)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress that slabjacking is intended to remediate originates beneath concrete pavements where small voids develop, most commonly at transverse joints, existing cracks and the outer corners of slabs. These voids reduce sub‑grade support and produce a localized settlement or depression whose physical extent is described by the length or area of the sunken portion and the magnitude of lift required to restore the design grade; field determination of hole patterns must consider that size together with joint locations, subgrade conditions and drainage. As the lack of support progresses, the slab exhibits excessive deflection, transverse‑joint faulting, fines or blow‑holes on shoulders, corner breaks and diagonal cracking, eventually leading to complete breakup if left untreated. The rate of progression is such that an initially small void can quickly evolve into pronounced settlement, tilting and faulting, creating unsafe riding conditions that may necessitate lane closures until the injected grout cures. Consequently, the safety and operational impacts include reduced rideability, increased crash risk, and traffic disruption, whereas successful slabjacking restores structural integrity and profile with minimal interruption. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–93)</small></p>
+<p>The distress that calls for slabjacking originates when a rigid concrete pavement loses its uniform support and settles below the designed grade. This loss of support is driven by several interrelated mechanisms. Inadequate removal of surface and subsurface water allows infiltration into the pavement, creating drainage deficiencies that promote hydraulic pumping at joints and cracks. The resulting pumping action, together with subgrade consolidation and settlement, generates small voids beneath the slab, especially near transverse joints and existing cracks. These voids diminish the bearing capacity of the underlying soil, producing excessive deflection of the concrete slab and leading to joint faulting, corner breaks, diagonal cracking and eventual slab breakup. Load‑related stresses from traffic further exacerbate the condition when the structural capacity has been reduced by the loss of support. Climate‑ and material‑related influences such as frost action and aggregate deterioration also weaken the subgrade and accelerate settlement. When these mechanisms—poor drainage, water infiltration, pumping, void formation, subgrade consolidation, inadequate bearing capacity, and overload from traffic—operate together, depressions, cracking and faulting appear that must be corrected by filling the voids with grout and lifting the slab back to its original profile, as required by Publication 408, Specifications, Section 679 for void filling and Section 681 for restoring grade. Joint and crack sealing, along with proper maintenance of subsurface drains, are essential adjunct actions to prevent recurrence. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 82–93)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Slabjacking is indicated for concrete pavements that exhibit a loss of support, which is manifested by transverse joint faulting, accumulation of fines near joints or cracks, small blow‑hole depressions at shoulders, corner breaks, or general slab settlement. These symptoms arise from pumping action, subgrade consolidation and the formation of voids beneath the slab, especially adjacent to transverse joints and corners. The method is suitable when traffic can be restricted long enough for the injected material to set – a cement grout typically requires about twelve hours of cure time, whereas hot‑asphalt or high‑density polyurethane harden in roughly thirty minutes – and when the work can be confined to a single lane that is protected by a temporary traffic control arrangement. High ambient temperatures should be avoided because expanded slabs place joints in compression, reducing the effectiveness of the lift. Site conditions must allow reasonable drilling patterns that correspond to the size or length of the depressed area, the amount of correction needed, the characteristics of the subgrade and drainage, and the proximity of joints or cracks; functional subsurface drainage together with joint and crack sealing is essential to limit water infiltration that drives pumping. When these pavement, traffic, environmental and site criteria are met, either cement grout (approximately 0.40 bags per hole) or high‑density polyurethane (about 0.7 lb per square foot) can be selected according to moisture exposure, chemical environment and desired durability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–93)</small></p>
+<p>Slabjacking, also called slab stabilization, is appropriate only when the loss of support beneath a concrete pavement is due to voids that manifest as transverse joint faulting, fines accumulating near joints or cracks on the traffic lane or shoulder, small depressions such as blow‑holes at shoulders adjacent to joints, corner breaks, or general settlement. In those cases the technique works by drilling holes in accordance with Publication 72M and injecting a grout material—commonly cement grout, hot asphalt, or high‑density polyurethane—to fill the voids, seal cracks and joints, maintain subsurface drainage, and allow traffic to resume after the material cures. However, because slabjacking merely fills voids it does not correct pronounced surface depressions, increase the pavement’s designed structural capacity, or eliminate persistent faulting; when any of those conditions are present a more extensive repair such as full‑depth patching, resurfacing, or reconstruction should be selected instead. The method is also unsuitable in hot weather when ambient temperatures cause the concrete slabs to expand enough that joints become compressed, making lifting impractical or impossible. Under such thermal conditions a different preservation strategy—often slab replacement—is preferred. Moreover, if slabjacking is performed improperly it can introduce additional damage, including cracking, tilting, or new faulting, reinforcing the need to choose an alternative repair when these risks are likely. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–93)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>Determining whether slabjacking is required begins with a thorough visual inspection that records every sign of loss‑of‑support. The inspector documents transverse joint faulting, the presence of fines at joints or cracks on the traffic lane or shoulder, small blow‑hole depressions in the shoulder near those locations, corner breaks and any observable slab settlement, measuring the exact quantities of each distress so they can be tabulated. When settled or depressed sections are identified, a profile survey is performed by stretching string lines roughly one inch above the desired finished grade and placing gauge blocks on the concrete to locate low points and measure the depth of settlement. The size or length of the depressed area, the amount of lift required, subgrade drainage characteristics and the proximity of joints or cracks are then evaluated to design the grout‑injection hole pattern. To confirm that voids exist beneath the slab, non‑destructive testing such as deflection tests and faulting measurements is carried out; excessive deflection indicates underlying voids and helps pinpoint the joints that need stabilization. In addition, core samples are taken from deteriorated joints and from random locations to assess subbase or subgrade soil conditions and determine the extent of deterioration below the pavement surface. This combination of visual distress documentation, profile measurement with string lines and gauge blocks, deflection/faulting testing, and targeted coring provides the complete set of inspections, measurements and tests needed to decide if slabjacking is necessary and to locate precisely where grout injection should be applied. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–93)</small></p>
+<p>Slabjacking should be applied once a rigid Portland‑cement concrete pavement exhibits faulted or sunken sections that have settled below the original design grade, indicating loss of sub‑base support. Typical signs include transverse joint faulting, accumulation of fines near joints or cracks, small blow‑hole depressions at shoulders, corner breaks, and general slab settlement that creates an unacceptable profile such as a depression caused by embankment settlement. At this stage voids have formed beneath the slab; if at least 25 % of the transverse joints and all patch joints show these symptoms, stabilization is required. The treatment involves drilling holes at the lowest points of the depression and injecting a grout—either a cement‑based mix, hot asphalt, or high‑density polyurethane—according to specifications, raising the slab in controlled increments until the original elevation or an acceptable profile is restored. Slabjacking works best when the slab can be lifted while under compression and should be avoided during high ambient temperatures unless compression already exists. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 91–93)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Slabjacking is carried out by drilling a series of holes through the concrete slab, typically positioned along transverse joints or existing cracks, and injecting a lift material beneath the slab. The lift medium may be a cement‑based grout, hot liquid asphalt, or a two‑component high‑density polyurethane foam. The cement grout consists of Portland cement mixed with water, supplementary cementitious materials and, when required, admixtures to achieve a pumpable consistency; roughly one cubic foot of this mixture – equivalent to about 0.25 to 0.40 bags of cement per hole – is placed in each borehole. When hot asphalt is selected, between thirty and fifty gallons are pumped into each opening, while the polyurethane foam is applied at an estimated rate of 0.4 to 0.7 pounds for every square foot of slab surface. Hole spacing and drilling patterns must follow the guidelines set out in Publication 72M RC‑26M and are sized according to the dimensions of the settlement depression, required correction, subgrade conditions and the location of joints. Prior to injection the joints or cracks are sealed and functional subsurface drains are installed to limit water infiltration. Lift height is monitored with string lines positioned about one inch above the desired grade together with gauge blocks placed on the slab surface. Temporary traffic control protects the work area until the material has cured or cooled – a minimum of thirty minutes for asphalt and polyurethane, and up to twelve hours for cement grout. After the slab is raised, dowel‑bar retrofits are often added to restore proper load transfer across joints. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–93)</small></p>
+<p>Performance of slabjacking is governed first by the condition of the existing concrete slab. The compressive strength and air content of the concrete, together with any visible durability problems such as aggregate loss or frost damage, set the structural capacity that must accept the injected grout. When more than ten percent of the slab requires patching—excluding patches that are already sound—a cost‑effectiveness analysis is required before proceeding. Ambient temperature also plays a role; high temperatures cause slab expansion and place joints in compression, making lifting impractical, whereas slabs already in compression from settlement respond better to uplift. Compatibility between grout and pavement depends on the material properties of the injection mix. Cement‑based grouts provide a fluid mixture that must be allowed to cure for approximately twelve hours before traffic can be reopened, while high‑density polyurethane is a two‑component system with low viscosity that penetrates voids more completely, hardens in as little as thirty minutes, and forms a closed‑cell foam resistant to water and chemical attack. The choice of grout is dictated by site conditions such as the size of underlying voids, presence of fines, drainage quality, and whether rapid traffic return is required. Existing pavement distress indicators—transverse joint faulting, fines accumulating near joints or cracks, small depressions, corner breaks, and overall slab settlement—determine where voids must be filled and whether additional joint sealing or drain maintenance is needed. Hole patterns for injection are laid out in the field after evaluating subgrade strength, drainage characteristics, and the location of joints or cracks, because these factors control grout flow and lift uniformity. Together, concrete material properties, the percentage of required patching, temperature conditions, grout viscosity, cure time, resistance to moisture and chemicals, and the subgrade‑drainage‑joint configuration define the performance envelope for a successful slabjacking operation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–93)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>Prior to slabjacking the crew first inspects the pavement for transverse joint faulting, corner breaks or other settlement indications; any identified joints and cracks are sealed and subsurface drains are verified as functional. String lines are then stretched across the slab about one inch above the desired final grade and gauge blocks are positioned on the surface to provide a reference for lift monitoring. A hole pattern is selected in accordance with the size of the depression, required correction, subgrade conditions and existing joint locations, and the work lane is protected by temporary traffic control. Holes are drilled immediately before jacking, following the prescribed pattern, and grout—chosen from cement‑based, hot‑asphalt or high‑density polyurethane mixtures—is pumped into the voids at the slab‑subbase interface. Pumping begins at the lowest point of the depression and proceeds outward in increments, slowing as the gauge blocks approach the string line; pumping stops when the blocks contact the line, and additional holes are added if grout extrudes from joints or edges. Once the slab has been raised to the target elevation, it is left undisturbed until the grout cures: cement‑based grout requires roughly twelve hours, hot asphalt at least thirty minutes after cooling, and polyurethane a minimum of thirty minutes for expansion and hardening. Only after the appropriate cure time may traffic be restored. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–93)</small></p>
+<p>Slabjacking is typically scheduled early in a concrete‑pavement restoration project and can be performed at the same time as partial‑depth or full‑depth patching, while later activities such as diamond grinding must be completed before joint cleaning and sealing. The operation relies on a drilling rig to bore holes at joints or cracks immediately before injection, a pump capable of delivering the selected grout—whether a cement‑based mix, hot liquid asphalt, or low‑viscosity high‑density polyurethane—and a layout of string lines and gauge blocks that define the desired slab elevation. Pumping begins at the lowest point of any depression and proceeds outward in incremental lifts until the blocks contact the string line, establishing the target profile. Hole patterns are planned with attention to subgrade conditions, drainage pathways, and the locations of joints and cracks. High ambient temperatures should be avoided because thermal expansion places joints under compression, making lifting impractical. All drilling and grouting activities are confined to a single traffic lane that is protected by temporary traffic‑control devices; both crews share this setup to economize on Maintenance and Protection of Traffic (MPT). The lane remains closed until the injected material hardens—approximately twelve hours for cement grout or at least thirty minutes for asphalt or polyurethane. When hot asphalt is used, crew members must wear appropriate safety equipment to guard against splatter. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–93)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>During slabjacking the inspector should verify that the correct grout material and quantity are used (cement or high‑density polyurethane as specified), that drilling locations and patterns were selected based on depression size, required correction, subgrade conditions and joint/crack locations, and that the lifting process is monitored with string lines and gauge blocks to ensure the slab reaches the target profile without excessive stress.  The installation must be observed for any grout extrusion from joints, cracks or edges, which would require additional holes, and after placement the cured condition of the grout must be confirmed (12 hours for cement, at least 30 minutes for polyurethane) before traffic is allowed on the slab. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 92–93)</small></p>
+<p>A satisfactory slabjacking treatment is deemed successful when the lifted concrete slab regains the same elevation as the surrounding undisturbed pavement, satisfying the grade requirement of Publication 408, Specifications Section 681. The work must also re‑establish full support beneath the slab; this is confirmed by the elimination of loss‑of‑support indications such as transverse joint faulting, fines at joints or cracks, small depressions, corner breaks and overall settlement, which occur when voids have been adequately filled. Elevation control is achieved with a string‑line and gauge‑block setup: the string line is positioned roughly one inch above the intended grade and pumping is reduced as the blocks approach, stopping completely when the blocks make contact with the line. The lift is acceptable only if the slab reaches this target without grout extruding from joints, cracks or edges before the desired level is attained. After the grout has fully cured—approximately twelve hours for cement‑based grout or at least thirty minutes for polyurethane—the pavement may be reopened to traffic, and no traffic should be allowed until the material has cured or cooled as specified. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 91–93)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>When slabjacking is performed correctly it restores the lost sub‑grade support beneath a concrete pavement by filling voids and lifting the slab to an acceptable profile. This reinstated support eliminates excessive deflection, joint faulting, corner breaks and cracking that would otherwise compromise the slab’s integrity, thereby improving overall pavement condition and rideability. By reestablishing load transfer—especially when combined with dowel‑bar retrofits—the treatment enhances functional performance and allows the repaired section to behave like a sound structure. The use of durable grout materials such as high‑density polyurethane creates a lightweight, rigid, closed‑cell foam that resists water infiltration and chemical attack, contributing to long‑term durability. Consequently, the pavement’s structural integrity is maintained, future pumping, faulting and cracking are reduced, and the expected service life of the repaired area is extended—often exceeding the lifespan that would be achieved by slab replacement. However, if the procedure is poorly executed it can introduce new cracks, tilting or additional faulting, which would diminish durability and shorten the anticipated service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–93)</small></p>
+<p>Slabjacking failures commonly arise from the creation or persistence of voids beneath the slab, especially adjacent to transverse joints, cracks and exterior corners, where loss of support leads to excessive deflection, joint faulting, fines accumulation, small depressions (blow‑holes), corner breaks, diagonal cracking and ultimately slab breakup. When grout is injected without proper control, new distress such as cracking, tilting or further faulting can develop, and grout may escape through joints, cracks or edges before the target elevation is reached, requiring additional holes. These problems are amplified when pumping is not performed in incremental lifts, when hole patterns do not reflect the size of the depression, required correction, subgrade drainage conditions or proximity to joints, and when high ambient temperatures cause slab expansion and joint compression. Effective long‑term performance depends on using an appropriate grout—cement‑based mix, hot asphalt, or high‑density polyurethane—allowing it to cure (typically 12 hours for cement grout) before reopening to traffic, sealing joints and cracks after the lift, and maintaining subsurface drainage to limit water infiltration that drives further pumping. Controlling the lift with a string line set about one inch above the desired grade and gauge blocks that stop pumping when they contact the line provides an acceptance criterion that helps prevent over‑lifting and associated damage. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 91–93)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After a slabjacking operation, any remaining measurable distress—such as excessive faulting or deflection values identified through non‑destructive testing—or the need to patch more than ten percent of the treated area (excluding existing patches in good condition) signals that further maintenance, repair, or rehabilitation is required. Additional warning signs include transverse joint faulting, accumulation of fines at joints or cracks on the traffic lane or shoulder, small depressions (blow‑holes) in the shoulder adjacent to those joints, corner breaks, new or widening cracks, slab tilting, loss of load transfer evident as faulting, grout leaking from joints, cracks or edges before the prescribed profile is reached, and persistent settlement that prevents achieving the target elevation. When these conditions appear, they indicate that voids remain, support has been lost, or underlying subgrade problems persist, necessitating additional actions such as further injections, dowel‑bar retrofits, or alternative rehabilitation measures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–93)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

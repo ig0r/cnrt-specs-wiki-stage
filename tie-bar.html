@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tie Bar</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html" class="active" aria-current="page">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="rigid-pavement.html">Rigid Pavement</a><span class="crumb-sep">›</span><span class="crumb-current">Tie Bar</span></nav>
+<article><h1>Tie Bar</h1>
+<div class="meta"><div class="part-of">Part of: <a href="rigid-pavement.html">Rigid Pavement</a> <span class="edge edge-taxonomic" title="Tie Bar is a topic under Rigid Pavement.">is-subtopic-of</span></div><div class="edge-reading">Tie Bar is a topic under Rigid Pavement.</div><div><a class="tag" href="index.html?q=tie-bars">tie-bars</a><a class="tag" href="index.html?q=epoxy-coated-deformed-tie-bars">epoxy-coated-deformed-tie-bars</a><a class="tag" href="index.html?q=epoxy-coated-deformed-tie-bars">epoxy-coated-deformed-tie-bars</a><a class="tag" href="index.html?q=longitudinal-tie-bars">longitudinal-tie-bars</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Tie bars are steel reinforcement members embedded in concrete pavements to provide near‑full load transfer across longitudinal joints or cracks, preventing slab migration and preserving aggregate interlock[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. They are employed when a continuous paving section or full‑depth repair exceeds roughly 65 ft, because the longer span makes load transfer critical for performance[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The bars consist of epoxy‑coated mild‑steel deformed billets—typically a 9/16‑in. rolled‑thread bar or a 5/8‑in. cut‑thread bar—cast into slots per approved shop drawings and positioned at least 24 in from dowelled contraction joints and away from cracks wider than 1/8 in to avoid restricting joint movement[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Anchored with epoxy grout that must achieve a minimum 2,500 psi compressive strength and verified by pull‑out testing after the concrete reaches 3,500 psi, tie bars create a controlled load‑transfer path that allows limited joint articulation while maintaining lane‑to‑lane continuity under traffic loading[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Tie bars are employed in concrete pavement to address the fundamental problem of inadequate load transfer across longitudinal joints, a condition that can lead to slab migration, differential settlement, and shear‑crack development [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When slabs or patch repairs extend beyond approximately 65 feet, the lack of a tie bar permits traffic‑induced displacement of the newly placed concrete relative to the adjacent lane, degrading performance; embedding steel bars restrains that movement and preserves lane‑to‑lane continuity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The bars are also used in cross‑stitching repairs, where epoxy‑coated deformed ties are installed at an angle across longitudinal cracks to restore near‑complete load transfer, strengthen the slab, halt crack migration, and maintain aggregate interlock [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Design practice requires placement according to approved shop drawings, a minimum clearance of 24 in from dowelled contraction joints, and omission adjacent to joints with openings greater than 1/8 in, measures intended to avoid interference with joint articulation and to minimize shear‑cracking potential [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By providing a load‑transfer path that allows limited joint movement while keeping adjacent slabs aligned, tie bars satisfy the performance need for uniform support under the pavement and sustained lane continuity under traffic loading [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435)</small></p>
+<p>Tie bars are installed across longitudinal cracks or joints to provide essentially full load transfer, preserving structural continuity and preventing slab migration while maintaining aggregate interlock. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] By tying together lanes, shoulders, or centerline sections that are separating, the bars sustain roadway safety and serviceability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The bars also serve as a remedial measure for omitted reinforcement in contraction joints, restoring the intended load‑transfer capacity of the pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Structurally, each tie bar must be fabricated from mild steel and protected against corrosion by an epoxy coating or galvanizing, excluding the threads, in accordance with ASTM A775, to ensure long‑term durability within the concrete environment. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The bars shall have a minimum yielding load of 15 000 lb and are limited to either a 9⁄16‑in diameter bar with rolled threads or a 5⁄8‑in diameter bar with cut threads, providing sufficient capacity for slab load transfer. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Installation tolerances require the bars to be cast square to the slab edge and parallel within ±1⁄8 in of the indicated locations, with joint gaps not exceeding three‑quarters of an inch and vertical differentials across any joint limited to one‑quarter of an inch. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For non‑standard slab lengths, bars must be kept at least twenty‑four inches from dowelled contraction joints and thirty inches from transverse joints, and no bar is placed adjacent to a crack wider than one‑eighth inch, preventing interference with joint movement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Holes drilled for the bars shall be no more than three‑eighths of an inch larger than the bar, positioned at the required angle and spacing, and filled with epoxy bonding compound that is rotated three to five times during insertion to purge air, leaving a minimum one‑inch surface layer visible and troweled flush, creating a durable bond. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After concrete reaches a compressive strength of 3 500 psi, fifteen bars are selected for pull‑out testing with a hydraulic jack up to 12 000 lb or until a slip of one‑thirty‑second inch occurs; the average resistance per spacing must meet prescribed values, and any deficient bar is replaced or supplemented to guarantee adequate load transfer. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The grout placed around the tie‑bar slots must achieve at least 2 500 psi compressive strength before traffic is allowed, and work shall not be performed when ambient or pavement surface temperature is below 40 °F, with traffic resumed only after epoxy has fully cured per manufacturer recommendations, thereby addressing construction safety and long‑term serviceability. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–438), SECTION 700 MATERIAL (p. 670)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Tie bars are employed in rigid Portland‑cement concrete pavements, including both jointed reinforced slabs and plain slabs, as well as in precast slab installations, slip‑form placements, prestressed slab structures, and Type C patch applications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Their primary purpose is to provide near‑full load transfer across longitudinal discontinuities such as joints or cracks, thereby preventing slab migration and preserving aggregate interlock. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The guides agree that tie bars are required when continuous paving sections exceed roughly 65 feet in length, because maintaining load transfer over such distances is critical for performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For full‑depth patch repairs longer than about 65 feet, longitudinal tie bars (or tie bolts) must be installed; shorter patches may not benefit due to the potential movement of the bar in partially set concrete. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Tie bars are also indicated for corner‑repair work and Type C patches that lack a bond breaker, as well as when the design explicitly calls for them. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When a longitudinal crack or joint remains in reasonably good condition, epoxy‑coated deformed tie bars placed at an angle across the discontinuity are used to achieve the desired load transfer and to strengthen the crack. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The installation must follow the fabricator’s shop drawings, with bars cast into each slab and positioned in longitudinal joint slots, and a full‑depth saw cut is made in the existing joint before drilling angled holes for bar placement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All reinforcement steel, including tie bars, must be epoxy‑coated to ASTM A775 standards, and the grout placed in the slots must attain at least 2,500 psi compressive strength prior to opening to traffic. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Acceptable steel includes deformed billet‑steel tie bars meeting AASHTO M 31 (ASTM A615) Grade 60—Grade 40 only where explicitly indicated or for bent bars—and plain bars per AASHTO M 227 or M 255 in Grades 70, 75, or 80, as well as suitable rail‑steel that is not welded or bent. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Tie bars must be omitted within 24 inches of a dowelled contraction joint on non‑standard slab lengths, adjacent to dominant joints during the cold season (October 1 through April 1), and next to cracks that have opened one‑eighth inch or more, to avoid restricting joint movement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Work may only be performed when both ambient air temperature and pavement surface temperature are at least 40 °F. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Additional applications include compensating for tie bars omitted from contraction joints, tying separating lanes or shoulders that are moving apart, and securing centerline longitudinal joints that are beginning to fault as part of a cross‑stitching repair. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–438), SECTION 700 MATERIAL (p. 681)</small></p>
+<p>Tie bars are limited to full‑depth concrete repairs that extend beyond approximately 65 ft; when the patch length is 65 ft or less designers normally select dowel bars, slab jacking, or other load‑transfer devices because the potential for bar movement in still‑setting concrete, especially from traffic on an adjacent lane, outweighs any benefit. The guides also require that tie bars be omitted when the repair is a Type A or Type B patch, since those categories mandate a ¼‑inch full‑depth polystyrene bond breaker and allow full‑depth saw cuts to relieve dowel or tie‑bar restraints, making alternative methods preferable. Even for long continuous precast sections, tie bars must not be placed within about two feet of an existing dowelled contraction joint, and if shear cracking with openings of at least one‑eighth inch occurs near a joint the bar should be eliminated in favor of another approach. When the subgrade is unstable or drainage is deficient, tie bars are ineffective because they cannot compensate for settlement or water infiltration, so designers turn to full‑depth patching, slab stabilization, jacking, dowel‑bar retrofit, or joint rehabilitation instead. Cross‑stitching with tie bars is appropriate only for longitudinal cracks that still retain aggregate interlock; it must be avoided on transverse joints, when ambient or pavement surface temperatures are below 40 °F, when slabs have drifted and need to be repositioned, or when drilling would penetrate the slab bottom, all conditions that trigger a different repair technique. During the cold season—from October 1 through April 1—any slab adjacent to a dominant joint should forgo a tie bar, relying instead on dowels alone or other load‑transfer devices because low temperatures impair concrete setting and bar performance. Finally, when joints exhibit severe spalling, faulting, or have progressed beyond early‑stage cracking, the guides recommend abandoning tie bars in favor of full‑depth patching, slab stabilization, jacking, dowel‑bar retrofit, or joint rehabilitation because tie bars cannot adequately address those advanced distress conditions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The design and installation of tie bars in concrete pavements are governed by the federal Publication 408 specifications together with the Roadway Construction Standards (RC‑26M) issued as Publication 72M, which define the overall requirements for load‑transfer reinforcement. When a full‑depth concrete patch extends longer than sixty‑five feet, the tie‑bar provisions of Publication 408 Sections 516 and 519 become mandatory, requiring longitudinal reinforcement to maintain load transfer across the repaired joint. The same length threshold also triggers the requirement that precast slabs placed in continuous sections greater than sixty‑five feet incorporate tie bars as shown on approved fabricator shop drawings, with placement limited so as not to restrict movement of adjacent joints. For cross‑stitching applications, Publication 408 Section 528 prescribes the use of epoxy‑coated deformed tie bars placed at an angle across a longitudinal crack or joint, while RC‑26M supplies detailed geometry, material, and design criteria for this technique. All reinforcement steel, including dowel bars and longitudinal joint ties, must be coated with an epoxy finish in accordance with ASTM A775 as referenced in the specifications, ensuring corrosion protection and consistent load transfer performance. The tie‑bar material is specified to be deformed billet steel that meets AASHTO M 31 (ASTM A615) Grade 60, although Grade 40 may be used as a bar‑to‑bar substitution for non‑bridge items; plain billets may be supplied per AASHTO M 227 (ASTM A663) or AASHTO M 255 (ASTM A675) in Grades 70, 75, or 80, and rail‑steel tie bars must satisfy ASTM A996 Grade 60. Tie‑bolts are fabricated from mild steel as either a 9/16‑inch rolled‑thread bar or a 5/8‑inch cut‑thread bar with a threaded sleeve nut, and the assembled unit is required to develop a minimum yielding load of fifteen thousand pounds. Protective finishes for tie‑bolts are limited to epoxy coating or galvanizing, and the key former used during concrete placement must be non‑deforming so that the reinforcement remains correctly positioned. Placement tolerances are controlled by contract and shop drawings, requiring slots for transverse dowels and longitudinal tie bars to be cast within plus‑or‑minus one‑eighth inch of the indicated locations, and holes drilled on each side of a longitudinal joint may not exceed three‑eighths of an inch larger than the bar diameter. Tie bars must be installed at least twenty‑four inches from any dowelled contraction joint in non‑standard slab lengths and no closer than thirty inches to a transverse joint, preventing interference with joint movement. The aggregate interlock adjacent to the tie bar is required to remain essentially intact so that the system can achieve near‑100 % load transfer across the repaired joint. Performance testing is mandated after the concrete reaches a compressive strength of three thousand five hundred psi (or when epoxy anchoring meets manufacturer requirements); fifteen randomly selected tie bars are pull‑out tested to a maximum load of twelve thousand pounds or one‑thirty‑second inch slip, and the average resistance divided by spacing must satisfy the prescribed table, with any failing bar replaced before subsequent lane construction. A quality‑control plan must be submitted at least fourteen days prior to work, and all drilling and epoxy anchoring may only occur when ambient or pavement surface temperature is forty degrees Fahrenheit or higher; epoxy must cure fully according to manufacturer recommendations before traffic is permitted. Slip‑form paving specifications require the paver to be equipped with a mechanical device that accurately spaces and positions tie‑bar reinforcement, allowing either manual or mechanical insertion, together with a non‑oscillating extrusion plate whose entry angle is adjustable; equipment wheels or tracks must remain at least four inches from the slab edge, and electronic monitoring shall record vibrator frequency, station location, and paver speed at intervals not exceeding twenty‑five feet of paving or five minutes. Project constraints also allow full‑depth saw cuts to relieve restraints imposed by a tie bar, and any exposed sections of tie bars must be cut and removed during joint preparation; tie bars are required in all Type C patches and for corner repairs. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–438), SECTION 700 MATERIAL (pp. 670–681)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>Tie bars are employed in concrete pavement repairs only when the longitudinal patch exceeds sixty‑five feet, because shorter patches risk bar movement in partially set concrete outweighing any benefit [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When a longitudinal crack or joint remains serviceable, the cross‑stitching repair technique is used to achieve near‑complete load transfer by cutting parallel slots across the defect and inserting epoxy‑coated deformed tie bars at an angle before backfilling with patch material [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Prior to any installation work a quality‑control plan requires that both ambient air temperature and pavement surface temperature be at least forty degrees Fahrenheit [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A full‑depth saw cut is made along the intended longitudinal joint, after which holes are drilled on each side of the joint; for standard installations the hole diameter may not exceed three‑eighths of an inch larger than the bar, while Type C patch applications call for five‑eighths‑inch holes as shown in the drawings [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The drilled openings are cleaned and filled with epoxy that complies with the manufacturer’s specifications and ASTM A775, then the tie bar is introduced while being rotated three to five full turns to expel trapped air, leaving approximately one inch of epoxy coating visible at the surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All reinforcement, including tie bars, must receive an epoxy coat meeting ASTM A775 and the provisions of Section 705.2 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After placement the joint is routed to a width of three‑quarters of an inch and a depth of one inch, flushed, cleaned and sealed so that the final surface lies roughly one‑eighth to one‑quarter inch below surrounding pavement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Traffic may not resume until the epoxy has fully cured according to the manufacturer’s cure schedule [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Tie bars must be located at least twenty‑four inches from any dowelled contraction joint and a minimum of thirty inches from transverse joints; when cracks wider than one‑eighth inch are present, a bar adjacent to that joint may be omitted [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For all Type C patch joints the presence of tie bars is mandatory, and full‑depth saw cuts can be employed to relieve restraint on a bar when required [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Pull‑out capacity is verified after the concrete reaches a compressive strength of three‑thousand five hundred psi (or once the epoxy anchoring material satisfies its own requirements) by testing fifteen representative bars with a calibrated center‑pull hydraulic jack equipped with a load gauge and bearing ring capable of measuring up to twelve thousand pounds or detecting slip as small as one‑thirty‑second inch [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The average load obtained from these tests is divided by the bar spacing to produce a pull‑out resistance expressed in pounds per cubic foot, which must satisfy the limits set forth in Table B; non‑conforming bars are replaced or additional bars installed and the test repeated [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The grout that fills the tie‑bar slots is mixed according to the manufacturer’s recommendations, must be pumpable into the slots, and is required to achieve a minimum compressive strength of two‑thousand five hundred psi before the slab is opened to traffic; a trial batch is prepared and tested at least twenty‑eight days prior to placement with cylinder specimens evaluated in accordance with PTM No. 521 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 84–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–428)</small></p>
+<p>Tie bars are required only on longitudinal joints of concrete pavement sections that exceed sixty‑five feet in length, whether the application is a full‑depth patch or a continuous precast slab [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The guidance assumes that in patches shorter than this threshold the movement of a bar or bolt within partially set concrete can be more detrimental to performance than any benefit derived from load transfer, which underlies the length requirement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. All tie bars must be fabricated and installed exactly as shown on approved shop drawings; each bar is cast square to the slab edge and parallel to the top surface with a placement tolerance of plus or minus one‑eighth inch, and the corresponding slots for longitudinal tie bars are cut within the same tolerance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Installation may not restrict the normal movement of adjacent existing joints, and no tie bar may be placed within twenty‑four inches of any dowelled contraction joint; additionally, new bars are prohibited within thirty inches of a transverse joint to preserve joint functionality [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Work shall not commence unless both ambient air temperature and pavement surface temperature are at least forty degrees Fahrenheit, providing the thermal conditions needed for proper epoxy curing and concrete handling [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Holes drilled for the bars may be no more than three‑eighths of an inch larger than the bar diameter (five‑eighths of an inch for Type C configurations or corner repairs), must intersect the joint near mid‑depth, be cleaned of debris, and subsequently filled with epoxy; after insertion at least one inch of epoxy must remain exposed at the pavement surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During insertion the bar is rotated three to five full turns to purge air, and all steel components except the threads are to be epoxy‑coated or galvanized in accordance with ASTM A775, ensuring corrosion protection throughout service life [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Tie bars are made of mild steel and supplied in one of two prescribed sizes—a nine‑sixteenth‑inch bar with rolled threads or a five‑eighths‑inch bar with cut threads—each used with an appropriate threaded sleeve nut; the assembled tiebolt must achieve a minimum yielding load of fifteen thousand pounds, providing a built‑in safety margin against overload [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Material specifications require deformed billet steel conforming to AASHTO M 31 (ASTM A615) Grade 60, with bent deformed bars limited to Grade 40 for non‑bridge items; plain billets may be AASHTO M 227, M 255, or M 31 in the indicated grades, and rail‑steel tie bars must meet ASTM A996 while prohibiting welding or bending [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After the concrete attains a compressive strength of three‑thousand five hundred psi, fifteen tie bars are selected for pull‑out testing using a calibrated center‑pull hydraulic jack capable of applying up to twelve thousand pounds or stopping at one‑thirty‑second inch slip; the average pull‑out load divided by bar spacing must satisfy the resistance values prescribed in the design tables, and any bar that fails this test is replaced or supplemented until compliance is achieved, reinforcing reliability through performance verification [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The grout placed in the tie‑bar slots must be pumpable and achieve a minimum compressive strength of two‑thousand five hundred psi before the pavement is opened to traffic; subsequently the longitudinal joint is routed to a width of three‑quarters of an inch and a depth of one inch, cleaned, and sealed to just below the surface (approximately one‑eighth to one‑quarter inch), with traffic prohibited until the epoxy has fully cured according to the manufacturer’s recommendations, thereby ensuring durable load transfer throughout service life [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Together these length thresholds, dimensional tolerances, material specifications, temperature assumptions, yield‑load requirements, pull‑out testing protocols, and post‑installation strength criteria constitute the design criteria, safety factors, and reliability requirements that tie bars must satisfy in pavement engineering practice.</p>
+<p><small>[1] — Ch. 4 (pp. 84–89); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435), SECTION 700 MATERIAL (pp. 670–681)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>Tie bars are required solely at corner‑repair joints where a half‑inch expansion joint is placed; they must be installed by drilling holes five‑eighths of an inch in diameter to receive the bars, and each bar must be located at least twenty‑four inches from any dowelled contraction joint and at least thirty inches from a transverse joint. No other dimensions for pavement, base, subbase, treated‑soil, slab, shoulder, edge‑support, or reinforcement are stipulated for tie‑bar placement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–402)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>Tie bars used in concrete pavements must be fabricated from steel that is free of rust, dirt, oil or any other contaminant that could impair bond with the surrounding concrete [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The steel shall conform to the reinforcement‑bar specifications of Section 709.1 and be supplied by an approved manufacturer [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Deformed tie bars are required to meet AASHTO M31 (ASTM A615) Grade 60, while Grade 40 may be used only for non‑bridge items or when substituted bar‑to‑bar; bent deformed tie bars employed in pavement structures are limited to Grade 40 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Plain billet steel may be provided as AASHTO M227 (ASTM A663) or M255 (ASTM A675) in Grades 70, 75, or 80, or alternatively as M31 Grades 40 or 60 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Rail‑steel bars must comply with ASTM A996, being deformed Grade 60 or plain Grades 50 or 60 and may not be welded or bent [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All reinforcement steel, including tie bars, dowel bars and longitudinal joint ties, shall receive an epoxy coating in accordance with ASTM A775 as referenced in Section 705.2 and Section 1002.1 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. This requirement aligns with the description of tie bars as epoxy‑coated deformed steel members [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Tie bolts that form part of the tie‑bar assembly are to be made from mild steel, supplied either as a 9/16‑inch bar with rolled threads or a 5/8‑inch bar with cut threads together with a threaded sleeve nut, and the assembled bolt must achieve a minimum yielding load of 15 000 pounds; all surfaces except the threads shall be epoxy‑coated or galvanized [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The key former component of the tie‑bar system shall be fabricated from a material that does not deform during concrete placement, ensuring dimensional stability while the concrete cures [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Installation specifications require drilling dry, clean holes and injecting an approved epoxy bonding compound with a caulking gun so that at least one inch of epoxy covers the bar at the pavement surface; no specific concrete mixture proportions are prescribed for the tie bar itself [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. After the concrete attains a compressive strength of 3 500 psi, pull‑out testing of fifteen randomly selected tie bars is mandated, with the average pull‑out resistance per foot of spacing required to meet the limits set in Table B; this performance test governs the adequacy of the material and bond rather than prescribing mix proportions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Consequently, the guides specify steel type, grade, epoxy coating, bolt strength, key former material, and bonding requirements, while they do not require any particular concrete mixture proportion for the tie bar [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–428), SECTION 700 MATERIAL (pp. 670–681)</small></p>
+<p>To meet the structural, durability, constructability, and performance requirements of tie‑bar reinforced concrete pavements, the selection and proportioning of materials follow a coordinated sequence. The concrete used for precast slabs that will contain tie bars is engineered to achieve at least a 4,925 psi compressive strength and a 650 psi flexural strength; these values are verified through trial‑batch testing submitted for acceptance before any production begins. All mix designs, together with the supporting test data, must be presented to the Representative for approval, ensuring that the prescribed strengths are reliably attained. Because the slabs are subject to site‑specific temperature regimes and exposure conditions, the mix design also incorporates those ambient factors so that panel dimensions and expansion‑joint locations can be correctly determined, thereby controlling thermal movement of both concrete and tie bars.</p>
+<p>Tie bars themselves must be sourced from a manufacturer listed in Bulletin 15 and must conform to the appropriate AASHTO/ASTM grade for the intended application. Deformed billet‑steel bars are limited to AASHTO M 31 (ASTM A615) Grade 60, while plain bars may be supplied as AASHTO M 227 (ASTM A663) or AASHTO M 255 (ASTM A675) in Grades 70, 75, or 80; rail‑steel options must follow ASTM A996. Regardless of type, the bars are prohibited from being welded or bent, preserving their designed mechanical properties and ensuring reliable load transfer across joints. To protect against corrosion and to extend service life, all tie bars receive an epoxy coating applied in accordance with ASTM A775.</p>
+<p>The grout placed in the longitudinal tie‑bar slots is selected from a manufacturer‑approved formulation that can be pumped into the slots and must develop at least a 2,500 psi compressive strength before traffic is permitted. A trial batch of this grout is mixed no later than 28 days prior to installation under the same temperature and time conditions expected on site, and its performance is confirmed by independent laboratory testing. By aligning concrete mix strengths, tie‑bar material grades and coating specifications, and grout properties with rigorous testing and approval procedures, the pavement system achieves the required structural capacity, durability against corrosion, ease of construction, and long‑term performance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 426–435), SECTION 700 MATERIAL (p. 681)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>Tie bars are installed in longitudinal joints or full‑depth sawed cracks and are not used on transverse joints. They serve as longitudinal reinforcement for precast concrete pavement slabs, required when continuous paving sections exceed 65 ft, with slots cast per approved shop drawings. Installation may employ a cross‑stitching repair technique that places epoxy‑coated deformed steel tie bars at an angle across the joint or crack to achieve near‑full load transfer and prevent slab migration. Prior to insertion, a full‑depth saw cut is made along the existing longitudinal joint, and holes are drilled on each side of the joint at the angle, offset and spacing shown on drawing RC‑26M; hole diameter may not exceed 3/8 in larger than the bar (5/8 in for corner‑repair bars) and must be dry, clean and free of spalling. An epoxy bonding compound is injected into each hole, the bar is rotated three to five times while being driven to purge air, and at least one inch of the bar remains exposed above the pavement surface before excess epoxy is troweled flush. After insertion the joint is routed to a width of three‑quarters of an inch and a depth of one inch, cleaned and sealed with sealant placed 1/8–1/4 in below the surface. All work must be performed when ambient and pavement temperatures are at least 40 °F, and traffic may not resume until the epoxy has fully cured in accordance with the manufacturer’s recommendations. The tie‑bar system uses deformed or deformed‑bent steel bars that are epoxy coated per ASTM A775; when a tiebolt is specified it shall be a mild‑steel bar of 9/16 in diameter with rolled threads or 5/8 in diameter with cut threads, capable of a minimum yielding load of 15,000 lb, and the bolt and nut are epoxy coated or galvanized except on the threads, while the key former is made from a non‑deforming material. Spacing requirements dictate that tie bars be located at least 24 in away from any dowelled contraction joint and no closer than 30 in to a transverse joint; bars adjacent to slabs where a crack wider than 1/8 in has opened, or next to dominant joints during the October‑to‑April paving season, are omitted. The first fifteen installed bars are pull‑out tested once the concrete reaches 3,500 psi using a center‑pull hydraulic jack rated at 12,000 lb (limited to 1/32 in slip), and any bar that fails is replaced or supplemented. Tie bars function together with load‑transfer units—dowel bars placed at transverse joints—and the slabs must incorporate reinforcing steel, dowel and tie‑bar slots, as well as any required blockouts, ports or embedments, which are patched after placement. In Type C patches the longitudinal joint receives no bond breaker; for corner repairs a ½‑in expansion joint material is set before drilling 5/8‑in holes for the bar, and in two‑lane patching performed one lane at a time a ¼‑in full‑depth polystyrene board bond breaker is provided in the longitudinal joint of Type A and B patches and corner repairs. The slots that receive the tie bars are filled with a grout mix capable of being pumped into the voids and must achieve a minimum compressive strength of 2,500 psi before the pavement is opened to traffic. Where slab edges require a transition, a temporary asphalt wedge can bridge the gap. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–438), SECTION 700 MATERIAL (p. 670)</small></p>
+<p>Tie bars are employed at longitudinal joints of concrete pavement when continuous sections exceed about 65 ft, providing load transfer across the interface between adjacent slabs and any adjoining structures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For patches shorter than this length the design omits tie bars because movement in partially set concrete under traffic can outweigh any benefit, leaving the interface to conventional dowelled joints and anchorage. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When a long patch or continuous paving segment is used, the preferred treatment of the joint interface is cross‑stitching, in which epoxy‑coated deformed tie bars are placed at an oblique angle across the longitudinal crack or joint to achieve near‑complete load transfer and prevent slab migration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The tie‑bar slots are cast within ±1/8 in of the locations shown on shop drawings, and the bars are positioned so that they do not restrict movement of existing adjacent joints. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Installation requires a full‑depth saw cut along the joint, drilling angled holes on each side no more than 3⁄8 in larger than the bar, cleaning and drying the holes, injecting epoxy bonding compound, inserting the bar while rotating to purge air, and leaving at least one inch of epoxy coverage at the surface before troweling flush. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After placement the joint is routed to a width of ¾ in and depth of 1 in, sealed only when ambient or pavement temperature is 40 °F or higher, and traffic may resume after the epoxy has fully cured according to manufacturer recommendations. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All reinforcement steel, including tie bars, dowel bars and longitudinal joint ties, are coated with epoxy in accordance with ASTM A775, and the slots are filled with a grout that must achieve a minimum compressive strength of 2,500 psi before opening to traffic; a trial batch is mixed at least 28 days prior and tested per PTM No. 521. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] To preserve the integrity of adjacent interfaces, tie bars are prohibited within 24 in of a dowelled contraction joint and within 30 in of a transverse joint, and an additional bar is omitted on each side of any crack that has opened to at least one‑eighth inch. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] During winter paving seasons an extra tie bar may also be omitted adjacent to dominant joints to reduce shear cracking risk. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Each installed tie bar is tested for pull‑out resistance to meet specified values before construction proceeds, ensuring the designed interface can sustain the intended load transfer. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 84–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–438)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>In tie‑bar installation moisture and temperature are tightly controlled to protect the joint. All drilled holes must be dry and free of debris, and any compressed‑air cleaning must use air that contains no oil or moisture before epoxy is injected; work may not be performed when ambient or pavement surface temperatures are below 40 °F, and sealing material cannot be placed until the routed joint faces have been flushed with water and are thoroughly clean and dry. These requirements ensure that moisture does not compromise bond strength and that climatic conditions do not impair curing. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 424–425)</small></p>
+<p>Tie bars are mandated only when a longitudinal joint belongs to a continuous precast pavement or a full‑depth concrete repair that extends beyond roughly sixty‑five feet in length, making the geometric extent of the slab the primary trigger for their inclusion. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When required, the bar must be an epoxy‑coated deformed steel member installed at an angle across the joint or crack so as to provide virtually complete load transfer, prevent slab migration and preserve aggregate interlock between adjacent slabs. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The guides specify that the bar shall be fabricated from mild‑steel in one of two approved sizes—a 9/16 in. diameter bar with rolled threads or a 5/8 in. diameter bar with cut threads—paired with matching threaded sleeve nuts, and the assembled tiebolt must develop at least a 15,000 lb yielding load; all exposed surfaces shall receive an epoxy coating or galvanizing except for the thread area. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Placement tolerances require the bars to be cast square to the slab edge and parallel to the top surface within ±0.125 in (±1/8 in) of the locations shown on the shop drawings, with slots cut to the same tolerance, and no bar may be installed closer than 24 in to any dowelled contraction joint. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] If a crack of one‑eighth inch or greater opens adjacent to a longitudinal joint, the corresponding tie bar shall be omitted, and during the October‑through‑April paving season an additional tie bar next to each dominant joint is also omitted. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Work may not commence unless both ambient air temperature and pavement surface temperature are at least 40 °F. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Holes are drilled on each side of the longitudinal joint with a hydraulic drill that maintains the prescribed angle; the bore diameter shall not exceed 3/8 in larger than the bar, and for Type C patches and corner repairs a 5/8‑in. hole is provided as shown on standard drawings, while full‑depth cuts may be made along existing joints to relieve any restraint imposed by a tie bar. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After drilling, holes must be dry and free of dust before epoxy injection; at least one inch of epoxy shall cover the bar at the pavement surface, and the bar is rotated three to five times while being set to purge air. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Traffic may not resume until the anchoring material has fully cured in accordance with the manufacturer’s recommendations. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Once the concrete attains a compressive strength of 3,500 psi, fifteen randomly selected tie bars are pull‑out tested with a center‑pull hydraulic jack and load gauge, and any bar that fails to meet the specified resistance values must be replaced before construction proceeds. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Placement shall be performed with a mechanical device capable of accurately spacing and positioning the reinforcement; the extrusion plate used shall be non‑oscillating and have an adjustable entry angle to achieve the required geometric alignment, thereby ensuring operator accessibility and safe, reliable load transfer across joints. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Because movement of a tie bar or bolt in partially set concrete caused by traffic in an adjacent lane can impair performance of short repairs more than it benefits them, designers must weigh the safety and functional advantage of tying against the risk of induced movement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=3ad4ca49 src=408_2020_11::tab:p360#1 -->
+<p>The table below specifies the minimum average pull-out resistance of tie bars based on pavement width.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-tie-bar-1-cap" tabindex="0"><table class="ct-table" id="ct-tie-bar-1" aria-describedby="ct-tie-bar-1-sum">
+<caption id="ct-tie-bar-1-cap">TABLE BPull-Out Resistance of Tie Bars</caption>
+<thead>
+<tr><th id="ct-tie-bar-1-h0-0" scope="col">Tied Width of Pavement (Distance from Joint Being Constructed to Nearest Free Edge)</th><th id="ct-tie-bar-1-h0-1" scope="col">Minimum Average Pull-OutResistance of Tie Bars</th></tr>
+<tr><td></td><th id="ct-tie-bar-1-h1-1" scope="col">lb/ft of Joint</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-tie-bar-1-h2-0" scope="row">12 feet or less</th><td headers="ct-tie-bar-1-h0-1 ct-tie-bar-1-h1-1 ct-tie-bar-1-h2-0">2,200</td></tr>
+<tr><th id="ct-tie-bar-1-h3-0" scope="row">Over 12 feet to 17 feet</th><td headers="ct-tie-bar-1-h0-1 ct-tie-bar-1-h1-1 ct-tie-bar-1-h3-0">3,200</td></tr>
+<tr><th id="ct-tie-bar-1-h4-0" scope="row">Over 17 feet</th><td headers="ct-tie-bar-1-h0-1 ct-tie-bar-1-h1-1 ct-tie-bar-1-h4-0">4,500</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-tie-bar-1-sum">Rows list pavement width categories based on distance from a joint. Columns specify the minimum average pull-out resistance of tie bars in lb/ft.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 360.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 84–90); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–438), SECTION 700 MATERIAL (p. 670)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed tie bar is verified first against the approved shop drawings; it must be cast square to the slab edge and parallel to the top surface within a tolerance of plus or minus one‑eighth inch, and its slot location must also fall within that same tolerance. The drilled hole for each bar is inspected to confirm it matches drawing RC‑26M in size, angle, offset and spacing, with a diameter no more than three‑eighths of an inch larger than the bar, and the hole is required to be dry and clean before epoxy injection. The tie bar itself must be the specified type—either a 9/16‑inch deformed bar with rolled threads or a 5/8‑inch deformed‑bent bar with cut threads, manufactured from mild steel and coated epoxy (or galvanized as per Section 709.1(c)). During insertion the bar is rotated three to five full turns, left with at least one inch of epoxy cover at the pavement surface, and the joint is sealed only after proper routing, cleaning and when ambient and surface temperatures exceed 40 °F; traffic is prohibited until the epoxy has fully cured according to the manufacturer’s recommendations. Constructability is further ensured by protecting any exposed tie bars during the setting period and, if a bar fails to meet specifications before the adjacent slab is placed, the entire slab must be removed and replaced. Performance testing follows the approved QC plan: the Representative selects fifteen tie bars from the first day’s placement, and each is subjected to a pull‑out test after the concrete reaches at least 3,500 psi compressive strength (or when the epoxy meets its specifications). Using a calibrated center‑pull hydraulic jack with load gauge, each bar is loaded up to 12,000 lb or until a slip of one‑thirty‑second inch occurs; the load at slippage is recorded, the average is divided by the bar spacing and compared with the values in Table B. In addition, the assembled tiebolt must sustain a minimum yielding load of 15,000 lb. The Representative signs off on the cross‑stitching demonstration once all these criteria are satisfied; any hole that penetrates the slab bottom is patched as defective work. Completion of these checks demonstrates compliance, constructability, performance and consistency with the project requirements. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435), SECTION 700 MATERIAL (p. 670)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serviceability</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html" class="active" aria-current="page">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Serviceability</span></nav>
+<article><h1>Serviceability</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Serviceability is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Serviceability is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=serviceability">serviceability</a><a class="tag" href="index.html?q=serviceabilities">serviceabilities</a><a class="tag" href="index.html?q=initial-serviceability">initial-serviceability</a><a class="tag" href="index.html?q=terminal-serviceability">terminal-serviceability</a><a class="tag" href="index.html?q=present-serviceability">present-serviceability</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Serviceability is the engineering concept that quantifies a pavement’s ability to provide acceptable ride quality and functional performance for its designated traffic class throughout its intended service life. It is expressed through a Present Serviceability Index (or Rating) derived from measured roughness, cracking, patching and rut depth, and compared against a terminal serviceability index selected according to the road’s Maintenance Functional Classification; when the present value falls below this threshold the pavement no longer meets user needs, triggering rehabilitation or reconstruction planning [1]. The methodology incorporates predicted losses from deterioration mechanisms such as frost‑heave, applies reliability targets, and verifies structural capacity, friction and drainage requirements so that the terminal serviceability is achieved at the end of a defined performance period, typically twenty years [1].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Serviceability is intended to address the fundamental engineering problem of guaranteeing that a pavement can continue to provide an acceptable level of ride quality and functional performance for its designated traffic class throughout its service life. By measuring the present ability of a pavement section to serve traffic and by defining a terminal serviceability index (TSI) that marks the condition at which the pavement no longer satisfies user needs, engineers obtain a clear criterion for when rehabilitation or reconstruction is required. This establishes a performance—or design—period, i.e., the interval from initial construction or rehabilitation until the pavement reaches the TSI, which forms the basis for systematic maintenance planning and prevents premature failure. The design methodology also incorporates anticipated losses of serviceability caused by specific deterioration mechanisms such as frost heave; the loss is computed from the frost‑heave rate, the maximum potential reduction associated with penetration depth, and a probability factor normally assumed between 25 % and 75 %. By adding this predicted loss to the terminal value, the pavement structure can be sized to meet the required service level. Moreover, techniques such as fiber‑reinforced concrete overlays are employed to mitigate functional losses due to cracking and poor load transfer, thereby limiting crack widths, preserving joint or crack load‑transfer efficiency, providing additional structural capacity, and extending the period over which the pavement remains usable. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=10a91d96 src=pub_242_change_10::tab:p155#1 -->
+<p>The table below lists average initial truck factors (ESALs/truck) by vehicle classification for rigid and flexible pavements.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-serviceability-1-cap" tabindex="0"><table class="ct-table" id="ct-serviceability-1" aria-describedby="ct-serviceability-1-sum">
+<caption id="ct-serviceability-1-cap">TABLE 7.1 AVERAGE INITIAL TRUCK FACTORS (ESALs/TRUCK) BY VEHICLE CLASS</caption>
+<thead>
+<tr><th id="ct-serviceability-1-h0-0" scope="col" colspan="3">VEHICLE CLASSIFICATION</th><th id="ct-serviceability-1-h0-3" scope="col" colspan="2">ESALs</th></tr>
+<tr><th id="ct-serviceability-1-h1-0" scope="col">LINE # INDARWIN® 3.01</th><th id="ct-serviceability-1-h1-1" scope="col">FHWACLASS</th><th id="ct-serviceability-1-h1-2" scope="col">CORRESPONDINGDEPARTMENTDESCRIPTION</th><th id="ct-serviceability-1-h1-3" scope="col">RIGID</th><th id="ct-serviceability-1-h1-4" scope="col">FLEXIBLE</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">1</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">1</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">Motorcycle</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">0*</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">0*</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">2</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">2</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">Passenger Cars</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">0*</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">0*</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">3</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">3</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">SUV/Pick-up</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">0*</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">0*</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">4</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">4</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">BUS Factor</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">0.24</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">0.24</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">5</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">5</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">2-axle, 6-tire</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">0.24</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">0.24</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">6</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">6</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">3-axle, single unit</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">1.15</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">0.82</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">7</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">7</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">4-axle, single unit</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">7.00</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">4.50</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">8</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">8</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">3-axle, single trailer</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">0.60</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">0.44</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">9</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">9</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">3-axle, multiple axle trailer</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">1.59</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">1.00</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">10</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">10</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">6-axle, single trailer</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">1.42</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">0.75</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">11</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">11</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">5-axle, multiple trailer</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">2.40</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">2.33</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">12</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">12</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">6-axle, multiple trailer</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">1.42</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">1.28</td></tr>
+<tr><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-0">13</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-1">13</td><td headers="ct-serviceability-1-h0-0 ct-serviceability-1-h1-2">7-axle, multiple trailer</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-3">1.42</td><td headers="ct-serviceability-1-h0-3 ct-serviceability-1-h1-4">1.28</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-serviceability-1-sum">Rows list LINE # INDARWIN® 3.01; columns give VEHICLE CLASSIFICATION (FHWACLASS, CORRESPONDINGDEPARTMENTDESCRIPTION), ESALs (RIGID, FLEXIBLE).</p>
+<p class="ct-notes">Notes: *Note: Because motorcycles, passenger cars, and SUV/Pick-up trucks do not significantly contribute to the 18-kip ESALs they are considered negligible and an ESAL/truck factor of 0 is assigned. However, the percent of the ADT in this class must be input into DARWin because the Total Percentage must equal 100.00%. If there are any vehicles that are not large enough to be classified in any of the above classes, they should be grouped with the motorcycle percentage.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 155.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 150–151), Ch. 7 (pp. 154–157), Ch. 9 (pp. 168–169), Ch. 10 (pp. 186–188)</small></p>
+<p>The design must achieve at least the terminal serviceability value prescribed for the road’s Maintenance Functional Classification, ensuring that the pavement’s ride quality meets the functional requirement for its class; it must also provide sufficient structural capacity as verified by non‑destructive testing, maintain surface durability so that treatments are only needed when durability is threatened, and guarantee adequate friction to satisfy safety needs, while targeting an initial present serviceability index after construction that aligns with these criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 150–151)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Serviceability indices are employed whenever a pavement’s present condition is evaluated, using either the Pavement Serviceability Index or the Pavement Surface Rating, and they provide the foundation for designing new pavements, reconstructions, or overlays. The required terminal serviceability value is selected according to the roadway’s Maintenance Functional Classification; higher‑traffic functional classes such as interstates are assigned a higher terminal serviceability index than lower‑class roads. In the 1993 AASHTO rigid‑pavement design procedures, which are executed through the DARWin software, both initial and terminal serviceability values must be supplied as inputs. This approach is intended for concrete pavement structures—specifically jointed plain concrete pavement or roller‑compacted concrete—constructed on a base layer of Asphalt Treated Permeable Base or Cement Treated Permeable Base within the standard subgrade‑subbase‑base‑surface system. For roller‑compacted concrete pavements placed on low‑volume local and collector roads with an average daily traffic of 2,000 vehicles or fewer, design practice uses a terminal serviceability of 2.5 for collector routes together with a 90 percent reliability target, and a terminal serviceability of 2.0 for local streets together with an 85 percent reliability target; slab thickness is determined from one‑way average daily truck traffic and the subgrade resilient modulus derived as MRSG = 1,500 × CBR. When designing full‑depth flexible pavements, the terminal serviceability index listed in the design tables is adjusted by adding the calculated loss of serviceability caused by frost heave. The frost‑heave rate is obtained from tables based on the subgrade soil type and the depth of frost penetration derived from the freezing index, while a recommended frost‑heave probability range of 25 percent to 75 percent is applied. This methodology is appropriate for flexible pavement projects such as Interstate highways in regions where frost heave may affect performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 150–151), Ch. 8 (pp. 160–167), Ch. 9 (pp. 168–169)</small></p>
+<p>When a pavement’s problems are dominated by factors other than its ride quality—such as low friction, geometric shortcomings, or insufficient structural capacity—a design approach that directly remedies those issues is preferred to one that relies only on serviceability indices. In these situations engineers may choose resurfacing, reconstruction, or surface treatments aimed at restoring friction, correcting geometry, or enhancing durability rather than simply improving the Present Serviceability Index. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 150–151)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>Serviceability in pavement design is governed primarily by the 1993 AASHTO Pavement Design Procedures, which are applied to both flexible and rigid structures through tools such as AASHTOWare DARWin and the American Concrete Pavement Association’s StreetPave12 software. The designer must first estimate an initial Present Serviceability Index (PSI) – or its PennDOT equivalent, the Present Serviceability Rating (PSR) – that reflects the condition immediately after construction. A terminal serviceability value is then required; this value is selected from Table 6.3 of the AASHTO guide according to the roadway’s Maintenance Functional Classification (MFC) and must be met or exceeded for all new, reconstructed, or overlay designs. For projects on collector routes the prescribed terminal serviceability is 2.5 with a reliability target of 90 %, while local routes require a terminal value of 2.0 at 85 % reliability; these thresholds are listed in Table 6.4 and Table 6.5 of the PennDOT specifications. Additional performance inputs include a chosen reliability level, an overall standard deviation, load‑transfer and drainage coefficients for rigid pavements, and the subgrade soil resilient modulus for flexible designs. Traffic loading is represented by an initial 18‑kip ESAL input over the early performance period, together with assumptions of a 20‑year design life, a 1 % annual traffic growth rate, and a maximum allowable slab cracking of 15 % at the end of service. For full‑depth flexible pavements the terminal serviceability value from Table 6.3 is further reduced by a frost‑heave loss term calculated using the frost‑heave rate selected from Tables 9.1 or 9.2, the maximum potential loss derived from Figure G.7 of the AASHTO guide, and a frost‑heave probability constrained to the 25 %–75 % range specified by the district geotechnical engineer. All of these standards, tables, reliability targets, and probabilistic constraints together define the performance requirements and project constraints that govern pavement serviceability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=4b8ab4f9 src=pub_242_change_10::tab:p151#1 -->
+<p>Table 6.4 specifies the terminal serviceability index values for each Maintenance Functional Classification.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-serviceability-2-cap" tabindex="0"><table class="ct-table" id="ct-serviceability-2" aria-describedby="ct-serviceability-2-sum">
+<caption id="ct-serviceability-2-cap">TABLE 6.4TSI VALUES FOR EACH MFC</caption>
+<thead>
+<tr><th id="ct-serviceability-2-h0-0" scope="col" rowspan="2">MAINTENANCEFUNCTIONALCODE</th><th id="ct-serviceability-2-h0-1" scope="col" rowspan="2">DESCRIPTION</th><th id="ct-serviceability-2-h0-2" scope="col" colspan="3">INITIAL SERVICEABILITY LEVEL</th><th id="ct-serviceability-2-h0-5" scope="col" rowspan="2">TERMINALSERVICEABILITYLEVEL</th></tr>
+<tr><th id="ct-serviceability-2-h1-2" scope="col">RIGID</th><th id="ct-serviceability-2-h1-3" scope="col">COMPOSITE</th><th id="ct-serviceability-2-h1-4" scope="col">FLEXIBLE</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-serviceability-2-h2-0" scope="row">A</th><th id="ct-serviceability-2-h2-1" scope="row">Interstate highways</th><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-2 ct-serviceability-2-h2-0 ct-serviceability-2-h2-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-3 ct-serviceability-2-h2-0 ct-serviceability-2-h2-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-4 ct-serviceability-2-h2-0 ct-serviceability-2-h2-1">4.2</td><td headers="ct-serviceability-2-h0-5 ct-serviceability-2-h2-0 ct-serviceability-2-h2-1">3.0</td></tr>
+<tr><th id="ct-serviceability-2-h3-0" scope="row">B</th><th id="ct-serviceability-2-h3-1" scope="row">Limited Access and Major Arterial highways</th><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-2 ct-serviceability-2-h3-0 ct-serviceability-2-h3-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-3 ct-serviceability-2-h3-0 ct-serviceability-2-h3-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-4 ct-serviceability-2-h3-0 ct-serviceability-2-h3-1">4.2</td><td headers="ct-serviceability-2-h0-5 ct-serviceability-2-h3-0 ct-serviceability-2-h3-1">3.0</td></tr>
+<tr><th id="ct-serviceability-2-h4-0" scope="row">C</th><th id="ct-serviceability-2-h4-1" scope="row">Minor Arterial highways</th><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-2 ct-serviceability-2-h4-0 ct-serviceability-2-h4-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-3 ct-serviceability-2-h4-0 ct-serviceability-2-h4-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-4 ct-serviceability-2-h4-0 ct-serviceability-2-h4-1">4.2</td><td headers="ct-serviceability-2-h0-5 ct-serviceability-2-h4-0 ct-serviceability-2-h4-1">2.5</td></tr>
+<tr><th id="ct-serviceability-2-h5-0" scope="row">D</th><th id="ct-serviceability-2-h5-1" scope="row">Collector highways</th><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-2 ct-serviceability-2-h5-0 ct-serviceability-2-h5-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-3 ct-serviceability-2-h5-0 ct-serviceability-2-h5-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-4 ct-serviceability-2-h5-0 ct-serviceability-2-h5-1">4.2</td><td headers="ct-serviceability-2-h0-5 ct-serviceability-2-h5-0 ct-serviceability-2-h5-1">2.5</td></tr>
+<tr><th id="ct-serviceability-2-h6-0" scope="row">E</th><th id="ct-serviceability-2-h6-1" scope="row">Local Access highways</th><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-2 ct-serviceability-2-h6-0 ct-serviceability-2-h6-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-3 ct-serviceability-2-h6-0 ct-serviceability-2-h6-1">4.5</td><td headers="ct-serviceability-2-h0-2 ct-serviceability-2-h1-4 ct-serviceability-2-h6-0 ct-serviceability-2-h6-1">4.2</td><td headers="ct-serviceability-2-h0-5 ct-serviceability-2-h6-0 ct-serviceability-2-h6-1">2.0</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-serviceability-2-sum">Rows list MAINTENANCEFUNCTIONALCODE; columns give DESCRIPTION, INITIAL SERVICEABILITY LEVEL (RIGID, COMPOSITE, FLEXIBLE), TERMINALSERVICEABILITYLEVEL.</p>
+<p class="ct-notes">Notes: *Note: The terminal serviceability level to be used in flexible pavement design is the value listed in Table 6.4 PLUS the estimated loss of serviceability due to frost heave. Frost Heave is to be considered in Asphalt Overlays of fractured PCC and full depth asphalt pavements; see Section 9.3 for further details.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 151.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 150–151), Ch. 8 (pp. 160–167), Ch. 9 (pp. 168–169)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The assessment of pavement serviceability begins with the Present Serviceability Index (PSI), an empirically derived equation that combines measured roughness, crack density, patching and rut depth into a rating that ranges from zero to five. In Pennsylvania the analogous Present Serviceability Rating (PSR) is calculated solely from the roughness index. Objective field data for these calculations are obtained with non‑destructive testing equipment currently employed by PennDOT: a single‑locked wheel skid tester for friction, high‑speed laser profilers for ride quality, and falling weight deflectometers for structural response. Design procedures follow the 1993 AASHTO Pavement Design Guidelines for both rigid and flexible pavements and are implemented through software such as AASHTOWare DARWin® (version 3.01) for conventional designs and ACPA StreetPave12 for reinforced concrete pavement. The models require an initial serviceability index, a terminal serviceability index selected from Table 6.3 according to the roadway’s functional classification, and a reliability level (for example 90 % for collector roads and 85 % for local roads). Additional inputs include traffic loading expressed as equivalent single‑axle loads or average daily truck traffic, material properties—modulus of rupture, slab elastic modulus, mean effective k‑value, load transfer coefficient and drainage coefficient for concrete; resilient modulus of the subgrade (MRSG = 1500 × CBR) for flexible layers—and overall standard deviation of the predictive model. The AASHTO empirical relationship processes these variables to predict performance over a 20‑year design life with an assumed 1 % annual traffic growth. For full‑depth flexible pavements the terminal serviceability value is reduced by the loss attributable to frost heave. The loss is estimated by selecting a frost‑heave rate from the published tables, determining the maximum potential loss using the design freezing index and the charts in Appendix G of the 1993 AASHTO Guide (Figures G.7 and G.8), applying an assumed probability between 25 % and 75 %, and reading the final loss from Figure G.8; a PennDOT‑hosted Frost Heave spreadsheet automates this calculation. In reinforced concrete pavement design, the terminal serviceability of 2.5 for collector roads or 2.0 for local roads is entered together with traffic volume, reliability, a 20‑year design horizon and subgrade resilient modulus to compute the minimum slab thickness that will achieve the target serviceability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 150–151), Ch. 8 (pp. 160–167), Ch. 9 (pp. 168–169)</small></p>
+<p>Serviceability design criteria require that each pavement achieve at least a terminal serviceability index appropriate to its maintenance functional classification, with the option to adopt the next higher TSI when traffic volumes are unusually high. The design begins with an estimated initial serviceability expressed on the 0‑to‑5 PSI scale as the condition immediately after construction. For rigid pavements the AASHTO 1993 Design Procedures, implemented through DARWin software, demand both an initial and a terminal serviceability value together with a specified reliability level and overall standard deviation that together provide the probabilistic safety margin. The prescribed initial serviceability for new rigid sections is 4.5, while the terminal value is selected from Table 6.3 according to roadway classification; no additional safety factor or reliability coefficient beyond this selection is required in the basic guideline. In reinforced concrete (RCC) designs for local and collector roads with average daily traffic not exceeding 2,000 vehicles, the terminal serviceability index is fixed at 2.5 for collectors and 2.0 for locals, coupled with reliability targets of 90 % and 85 % respectively. These designs assume a 20‑year design life, a 1.0 % annual traffic growth rate, a 6‑inch unbound granular subbase, and permit up to fifteen percent of the slabs to be cracked at the end of service. For full‑depth flexible pavements the terminal serviceability is obtained by adding to the base Table 6.3 value the loss attributable to frost heave; this loss is calculated from a frost‑heave rate chosen according to subgrade soil type, the maximum potential loss derived from the design freezing index and frost‑penetration depth, and a frost‑heave probability constrained to the recommended 25 %–75 % range. The flexible‑pavement procedure does not introduce an explicit factor of safety or separate reliability coefficient beyond these probabilistic assumptions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 150–151), Ch. 8 (pp. 160–167), Ch. 9 (pp. 168–169)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>To preserve pavement serviceability, the engineer does not prescribe a particular fiber geometry or volume; instead the required residual flexural strength (f150) is defined based on the overlay’s structural capacity, desired service life, crack‑width limits and joint load‑transfer efficiency. The chosen macrofiber type and dosage are then selected in trial mixes to achieve that residual strength, typically using 0.2 %–0.5 % fibers by volume, while adjusting water‑reducing and air‑entraining admixtures to offset the slump loss (up to about four inches) and meet fresh‑property specifications. This approach ensures the overlay meets structural demands, improves durability through tighter cracks and higher LTE, remains constructible with acceptable workability, and delivers the intended performance over its design life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>In full‑depth flexible pavement design the terminal serviceability index is increased by the loss of serviceability caused by frost heave, which captures climate effects such as freezing temperatures and associated moisture expansion. The loss is computed from three inputs: the frost‑heave rate (selected from tables based on subgrade soil type), the maximum potential loss derived from the depth of frost penetration calculated with the Design Freezing Index and a drainage‑quality factor (FAIR) read from the chart, and an estimated probability that frost heave will occur. By adding this climate‑ and drainage‑adjusted loss to the base terminal serviceability value, the design explicitly accounts for environmental conditions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p>The following figure provides the chart used to determine frost penetration depth based on the Design Freezing Index and drainage quality.</p>
+<!-- concept-compliance:begin fig=ac5992d4 n=1 -->
+<figure class="cmp-figure" id="cmp-serviceability-1">
+<img src="assets/serviceability/ac5992d4eca9ce9a5aaa720aa292e9b3eaec15c302b69ef0d0af2da9701583c4.jpg" alt="Nomograph plotting Frost Penetration in inches against Design Freezing Index in degree days." aria-describedby="cmp-serviceability-1-ld">
+<figcaption>Design chart for determination of frost penetration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</figcaption>
+</figure>
+<div id="cmp-serviceability-1-ld" hidden>
+<p>A nomograph chart with a logarithmic vertical axis for Frost Penetration (inches) ranging from 4 to 100, and a logarithmic horizontal axis for Design Freezing Index (degree days) ranging from 15 to 3000. A single diagonal line indicates that frost penetration increases as the freezing index increases.</p>
+</div>
+<details class="cmp-longdesc">
+<summary>Text description of this figure</summary>
+<p>A nomograph chart with a logarithmic vertical axis for Frost Penetration (inches) ranging from 4 to 100, and a logarithmic horizontal axis for Design Freezing Index (degree days) ranging from 15 to 3000. A single diagonal line indicates that frost penetration increases as the freezing index increases.</p>
+</details>
+<!-- concept-compliance:end -->
+
+<p>The figure displays a log-log plot relating the Design Freezing Index to Frost Penetration in inches, providing a graphical method to determine maximum potential loss from climate effects such as freezing temperatures.</p>
+<!-- concept-tabular:begin key=a4ae668d src=pub_242_change_10::tab:p170#1 -->
+<p>The table below lists the estimated average rate of heave for various subgrade soil classifications.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-serviceability-3-cap" tabindex="0"><table class="ct-table" id="ct-serviceability-3" aria-describedby="ct-serviceability-3-sum">
+<caption id="ct-serviceability-3-cap">TABLE 9.1 ESTIMATED AVERAGE RATE OF HEAVE (UNIFIED SOILS CLASSIFICATION SYSTEM)</caption>
+<thead>
+<tr><th scope="col">CLASSIFICATION OFSUBGRADE SOIL*</th><th scope="col">ESTIMATED AVERAGE RATEOF HEAVE(mm/day)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">GW</th><td>2</td></tr>
+<tr><th scope="row">GP</th><td>3</td></tr>
+<tr><th scope="row">GM</th><td>4</td></tr>
+<tr><th scope="row">GC</th><td>4</td></tr>
+<tr><th scope="row">GW -GM</th><td>4</td></tr>
+<tr><th scope="row">GW GC</th><td>3</td></tr>
+<tr><th scope="row">GP GM</th><td>4</td></tr>
+<tr><th scope="row">GP - GC</th><td>4</td></tr>
+<tr><th scope="row">GM - GC</th><td>5</td></tr>
+<tr><th scope="row">SW</th><td>3</td></tr>
+<tr><th scope="row">SP</th><td>1</td></tr>
+<tr><th scope="row">SM</th><td>7</td></tr>
+<tr><th scope="row">SC</th><td>5</td></tr>
+<tr><th scope="row">SW - SM</th><td>7</td></tr>
+<tr><th scope="row">SW - SC</th><td>4</td></tr>
+<tr><th scope="row">SP SM</th><td>7</td></tr>
+<tr><th scope="row">SP - SC</th><td>3</td></tr>
+<tr><th scope="row">SM SC</th><td>5</td></tr>
+<tr><th scope="row">ML</th><td>15 - 20</td></tr>
+<tr><th scope="row">CL</th><td>8</td></tr>
+<tr><th scope="row">OL</th><td>***</td></tr>
+<tr><th scope="row">MH</th><td>**</td></tr>
+<tr><th scope="row">CH</th><td>1</td></tr>
+<tr><th scope="row">OH</th><td>**</td></tr>
+<tr><th scope="row">ML-OL</th><td>** 15 -20</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-serviceability-3-sum">Rows list soil classifications, columns give estimated average rate of heave in mm/day.</p>
+<p class="ct-notes">Notes: *For MFC A and MFC B pavement designs, this chart is to be used with laboratory classification of subgrade soils. For MFC C, MFC D, and MFC E pavement designs, laboratory classifications are not required (i.e., field classifications are acceptable).</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 170.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 9 (pp. 168–169)</small></p>
+<p>Serviceability must encompass the safety‑related friction level, geometric adequacy, and capacity needed for the road’s functional class while delivering the ride quality that users expect; therefore terminal serviceability values are set according to each Maintenance Functional Classification, with higher standards applied to limited‑access freeways that carry higher speeds and volumes. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 150–151)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>Serviceability is expressed through the Present Serviceability Index, a composite rating that integrates objective measurements of pavement roughness, cracking, patching and rut depth into a single value ranging from zero to five. These distress components are captured with non‑destructive testing equipment: high‑speed laser profilers assess riding quality, skid testers provide friction values, and falling weight deflectometers evaluate structural capacity, yielding the Present Serviceability Rating for each section. The index is then benchmarked against a Terminal Serviceability Index that is defined for each Maintenance Functional Classification; when the rating falls below this terminal value the pavement no longer satisfies the minimum ride‑quality requirement for its functional class. Design specifications target a twenty‑year service life while accommodating an annual traffic growth of one percent, and they prescribe terminal serviceability values of 2.5 for collector roads and 2.0 for local roads so that the pavement remains acceptable at the end of its design period. Performance criteria also limit slab cracking to fifteen percent at the conclusion of the design life and require reliability levels of ninety percent for collectors and eighty‑five percent for locals, ensuring that the expected serviceability outcomes—adequate ride quality, controlled distress development, and sustained structural performance—are achieved throughout the intended lifespan. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 150–151), Ch. 8 (pp. 166–167)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

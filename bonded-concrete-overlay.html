@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bonded Concrete Overlay</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html" class="active" aria-current="page">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="rehabilitation.html">Rehabilitation</a><span class="crumb-sep">›</span><a href="overlay.html">Overlay</a><span class="crumb-sep">›</span><a href="concrete-overlay.html">Concrete Overlay</a><span class="crumb-sep">›</span><span class="crumb-current">Bonded Concrete Overlay</span></nav>
+<article><h1>Bonded Concrete Overlay</h1>
+<div class="meta"><div class="part-of">Part of: <a href="concrete-overlay.html">Concrete Overlay</a> <span class="edge edge-taxonomic" title="Bonded Concrete Overlay is a topic under Concrete Overlay.">is-subtopic-of</span></div><div class="edge-reading">Bonded Concrete Overlay is a topic under Concrete Overlay.</div><div><a class="tag" href="index.html?q=bonded-concrete-overlay">bonded-concrete-overlay</a><a class="tag" href="index.html?q=bonded-concrete-overlays">bonded-concrete-overlays</a><a class="tag" href="index.html?q=bonded-overlays">bonded-overlays</a><a class="tag" href="index.html?q=bonded-overlay">bonded-overlay</a><a class="tag" href="index.html?q=bonded-pcc-overlay">bonded-pcc-overlay</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Bonded concrete overlay is a rehabilitation technique in which a new Portland‑cement concrete layer is placed directly on an existing concrete (or suitable composite) slab so that the two act as a single monolithic unit[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. It is employed when the serviceable pavement lacks sufficient structural capacity or ride quality—such as failed transverse joints, localized cracking, low friction, rutting, or inadequate load‑carrying ability—and the overlay restores uniform support, adds flexural strength, narrows crack widths, and improves joint load‑transfer efficiency[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The mix is required to achieve a Low, Very Low, or Negligible chloride‑ion penetration classification within 56 days (AASHTO T277/T358) and may incorporate macrofibers to provide residual flexural strength, permitting thicknesses from ultra‑thin non‑structural wearing courses (~2 in.) up to structural sections of 4–8 in.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Bonded concrete overlay is applied when an existing concrete pavement, although still serviceable, does not provide sufficient structural capacity or ride performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Typical deficiencies that trigger the need include failed transverse joints, localized cracking or faulting, inadequate load‑carrying ability for anticipated traffic, low surface friction, excessive rutting, and uneven slab support due to variable subgrade conditions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The overlay also addresses situations where the pavement surface lacks a low‑permeability layer capable of limiting chloride ion ingress, which is essential for protecting durability against chloride‑induced deterioration. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] By bonding a new concrete layer directly to the existing slab so that they act as a monolithic unit, the overlay restores uniform support, adds flexural strength, narrows crack widths, and improves joint load‑transfer efficiency. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The technique can be reinforced with macrofibers or fiber‑reinforced concrete to further reduce slab movement, misalignment, and crack widening, thereby extending service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In addition, the mix design must achieve a chloride penetration classification of Low, Very Low, or Negligible after no more than 56 days of curing, as measured by AASHTO T 277 or T 358, ensuring the overlay provides the required low‑permeability performance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When only surface performance is deficient, an ultra‑thin (approximately 2 in.) non‑structural wearing course may be placed to raise skid resistance, smooth the riding surface, and fill ruts without substantially increasing thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The overall need addressed by bonded concrete overlay therefore combines the requirement for additional structural capacity and improved ride quality with the necessity of a durable, low‑permeability surface that resists chloride ingress. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 96–98), Ch. 10 (pp. 176–188), Ch. 12 (pp. 204–205); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<p>The overlay is required to restore a deteriorated surface by correcting failed transverse joints, eliminating surface distress, and improving ride quality, including low‑friction conditions that affect vehicle stability. It must also provide additional width where needed, either matching existing concrete shoulders or adding a 1‑to‑2 ft lane widening with asphalt shoulders to maintain proper lateral support. Structurally the overlay must increase the pavement’s load‑carrying capacity and act as a single structural unit with the existing slab through a durable bond, with slab stabilization around patches or where necessary to obtain uniform support. For thin sections less than three inches, the mix shall use No. 67 coarse aggregate rather than No. 57 to satisfy strength requirements. Macro‑fibers are incorporated at a dosage that achieves the specified residual flexural strength (f150) required for the design. The concrete mixture must meet low or very low chloride‑ion penetration limits, not exceeding 2 800 coulombs in AASHTO T 277 or the resistivity values of 15.6 kΩ·cm for 4×8 in cylinders and 12.3 kΩ·cm for 6×12 in cylinders as defined in AASHTO T 358, within a 56‑day curing period. Durability objectives include providing a continuous pavement base drain or composite base with drainage to protect against moisture intrusion and limiting joint and crack openings to approximately one millimeter or less—typically between 0.5 and 1.0 mm—to preserve high load‑transfer efficiency and reduce deterioration. The design must also limit slab movement, misalignment, plastic shrinkage cracking, and crack widening, thereby extending service life. Safety requirements call for inspection and adjustment or replacement of guide rails and drainage structures after overlay placement to maintain safe operating conditions. Serviceability goals are achieved by delivering a smooth ride, maintaining adequate friction, and ensuring the pavement remains serviceable for a design life not less than eight years and not more than twenty years based on projected traffic volumes, growth rates, and truck‑percentage data. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 96–98), Ch. 10 (pp. 176–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Bonded concrete overlay is indicated for existing Portland‑cement concrete slabs that are in good to fair structural condition, exhibit only limited cracking or faulting, and rest on a stable subgrade with functional drainage [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The technique may also be applied over asphalt‑surfaced decks or AC/PCC composite pavements that are in fair to good condition, free of extensive stripping, and have adequate support [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In both cases the new Portland‑cement concrete layer is bonded directly to the prepared existing surface so that the two act as a single monolithic slab [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Thin overlays ranging from about 2½ to 4 inches are suitable for correcting surface deficiencies such as spalling or rutting and for providing a non‑structural wearing course on flexible pavements, while an ultra‑thin layer limited to roughly 2 inches is reserved for preservation projects that do not require added structural capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When greater structural capacity or longer service life is required, thicker sections of 4 to 8 inches are permitted; these thicker slabs may be reduced to 3‑6 inches when fiber‑reinforced concrete is used and are appropriate for high traffic loads, variable support conditions, or projects that include lane widening or shoulder addition [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For overlays thinner than three inches the aggregate gradation must be changed from No. 57 to No. 67 coarse aggregate and synthetic or steel macrofibers are incorporated at rates sufficient to achieve the specified residual strength (f150) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All mix designs, whether thin or thick, must be limited to a chloride‑ion penetration classification of Low, Very Low, or Negligible within 56 days as verified by AASHTO T277 or T358 testing, and placement may proceed only after the concrete paving job‑mix formulas receive approval from the district materials engineer or manager [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The method is especially suited for rehabilitation projects that involve repairing failed transverse joints, patching based on field measurements, and slab stabilization to restore uniform support when a composite base is present [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Joint sawing, sealing, and transition construction are required as part of the rehabilitation package for overlays in the 4‑to‑8 inch thickness range [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The approach also permits adding concrete shoulders or widening a lane by one to two feet while retaining asphalt shoulders where needed, provided continuous pavement‑base drainage is maintained [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 96–98), Ch. 10 (pp. 176–188), Ch. 12 (pp. 204–205); [2] — SECTION 500—RIGID PAVEMENTS (pp. 446–451)</small></p>
+<p>A bonded concrete overlay should be limited to situations where the existing slab is essentially sound and the supporting layers are stable. The pavement must be in fair‑to‑excellent condition, with a subgrade that shows no signs of instability and drainage that functions properly. When the underlying concrete exhibits extensive cracking, faulting, or other distress, those defects will transmit through the bonded layer unless they are fully repaired; under such circumstances an unbonded overlay or another rehabilitation technique is preferred. The same restriction applies to composite pavements in which the lower asphalt course shows stripping or severe deterioration—these conditions preclude bonding and favor an unbonded design. Structural inadequacy of the substrate also governs thickness limits: if the required bonded overlay thickness exceeds 4½ inches with a 9.5‑mm Superpave wearing course, or more than 5 inches with a 12.5‑mm mix, the project no longer qualifies as a preservation overlay and must be designed using full reconstruction criteria. Likewise, when concrete patching is needed on more than about ten percent of the slab area, a simple bonded overlay is not appropriate unless a cost‑effectiveness justification can be demonstrated. Finally, thin bonded overlays are only justified when field‑load testing (e.g., FWD) confirms that the existing pavement is structurally sound. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 10 (pp. 183–188), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>Design of a bonded concrete overlay begins with structural testing—specifically an FWD test on the existing PCC pavement—to quantify its capacity, and it requires a detailed inventory of the current pavement condition, including any slab movement, faulting, spalling or joint integrity that may demand full‑depth patching, slab stabilization or jacking. The subgrade must be confirmed stable and drainage functional, with adequate subdrainage provided where subsurface moisture problems exist, while traffic considerations such as high average daily traffic guide the selection of overlay thickness. Material information on the existing concrete (type, joint condition) and any required repair materials (PCC or asphalt base course) is also collected to ensure compatibility. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98)</small></p>
+<p>Bonded concrete overlay designs are required to follow Chapter 10 of the PCCP Guidelines, which prescribe rehabilitation of failed transverse joints on composite bases, slab stabilization, and provision of continuous pavement‑base drainage where needed. The overlay thickness must comply with AASHTO Publication 408, where standard bonded overlays are limited to four to eight inches and thin‑bonded overlays to two‑point‑five to four inches, while ultra‑thin non‑structural wearing courses are capped at two inches of asphalt. Scratch overlays on existing concrete are restricted to a maximum of four‑and‑a‑half inches when a Superpave 9.5 mm wearing course is used or five inches with a Superpave 12.5 mm mix, and any excess thickness must satisfy the 3R criteria. Design life shall be limited to a minimum of eight years and not exceed twenty years, and the mechanistic‑empirical BCOA‑ME procedure developed under FHWA’s TPF 5‑165 study is mandated because conventional AASHTO methods do not account for bonding effects. Traffic inputs for the analysis must be derived from current average daily traffic, growth forecasts, and truck percentages, using the rigid‑pavement average initial truck factors in Table 7.1 for ESAL calculations, with future‑traffic thickness determined from DARWin Table 10.8 and existing pavement contribution evaluated via Table 10.9; the selected overlay depth is then rounded to the nearest half‑inch and checked against the minimum and maximum limits in Table 10.10. Prior to design a falling weight deflectometer test must be performed on the existing concrete, and any identified slab rocking, pumping, or faulting must be stabilized through jacking or comparable measures, while adequate subdrainage must be verified. The overlay is permissible only when the underlying pavement is in good‑to‑fair structural condition and the subgrade is stable; otherwise an unbonded solution is recommended. Material specifications require the use of synthetic or steel macrofibers, with the residual flexural strength (f150) determined according to ASTM C1609 and designed to meet the target values indicated in the design tables. For overlays thinner than three inches, No. 67 coarse aggregate shall replace No. 57 coarse aggregate, and sufficient macrofiber must be added to achieve the required f150 as verified by ASTM C1609‑12 testing at fourteen days. The concrete mix must satisfy a low or very low chloride ion penetration criterion after no more than fifty‑six days of curing, demonstrated by AASHTO T 277 (≤2,800 coulombs) or AASHTO T 358 (≤15.6 kΩ·cm for 4×8 in. cylinders and ≤12.3 kΩ·cm for 6×12 in. cylinders), with the district engineer allowed to accept moderate values within those limits. Strength development is related to maturity using the method described in PTM No. 640, which correlates degree‑hours of cure to concrete strength at specified ages. All designs must be submitted as approved Joint Maintenance Forms (JMFs) and documented on Form D‑4332 for PDAU concurrence and FHWA approval when required. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 96–98), Ch. 10 (pp. 176–188), Ch. 12 (pp. 204–205); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The design process for a bonded concrete overlay begins with confirming that the existing slab can accept a bond; this verification is achieved by coring transverse joints to assess condition and by performing a falling‑weight deflectometer test on the pavement to supply structural data for the overlay design [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Thicknesses are then selected in accordance with Publication 408, where thin bonded overlays range from 2.5 to 4 inches and thicker overlays are specified between 4 and 8 inches, depending on whether the existing base is asphalt or a composite pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All failed transverse joints must be rehabilitated before overlay placement, and any concrete patching is based on field measurements of the damaged areas [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When a composite base underlies the slab, additional stabilization such as jacking or supplemental support is provided to re‑establish uniform bearing conditions, and continuous base drainage may be incorporated as part of the rehabilitation strategy [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Where required, concrete shoulders or lane widenings of one to two feet—often paired with asphalt shoulders—are added to maintain geometric continuity and improve ride quality [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p>Design calculations employ mechanistic‑empirical procedures, most prominently the bonded‑concrete‑overlay‑of‑asphalt (BCOA‑ME) method developed under FHWA pooled‑fund study TPF 5‑165; this model is also available through software packages such as ACPA Pavement Designer and AASHTOWare Pavement ME [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The BCOA‑ME approach defines an effective flexural strength for the overlay as the sum of the plain‑concrete modulus of rupture (MOR) and the residual fiber strength f₁₅₀, the latter being obtained from ASTM C1609 testing on macrofiber‑reinforced specimens [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Engineers frequently use the CP‑Tech Center Residual Strength Estimator spreadsheet to relate a chosen fiber volume fraction to the expected f₁₅₀ value for a given fiber type and then compute feff = MOR + f₁₅₀ [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p>When the DARWin software is applied, the sequence starts by calculating the future‑traffic pavement thickness using Table 10.8, proceeds with determining an effective existing thickness through the Condition Survey evaluation method shown in Table 10.9, and applies rigid‑pavement average initial truck factors from Table 7.1 to estimate ESALs; after entering both thickness values, the program’s Calculate function yields a required overlay thickness that is rounded up to the nearest half‑inch and checked against the minimum‑maximum limits listed in Table 10.10 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p>The concrete mix for the overlay must satisfy structural and durability requirements. Strength development is predicted with the maturity method, correlating degree‑hours of cure to compressive strength according to PTM No. 640 at standard checkpoints of 8 hours, 1 day, 7 days, 28 days, and 56 days [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Macrofibers are incorporated at a dosage that achieves the target residual flexural strength f₁₅₀; this relationship is established by testing specimens in accordance with ASTM C1609‑12 after a 14‑day cure and relating measured residual strength to fiber volume fraction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Durability criteria mandate that the cured concrete attain low, very low, or negligible chloride ion penetration within a 56‑day period, verified either by the charge passed test of AASHTO T 277 (maximum 2,800 coulombs) or by the resistivity test of AASHTO T 358 (not exceeding 15.6 kΩ·cm for 4‑in × 8‑in cylinders and 12.3 kΩ·cm for 6‑in × 12‑in cylinders) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p>Construction proceeds with preparation of the existing asphalt surface, followed by placement of a Portland cement concrete overlay whose thickness falls between four and eight inches and is bonded directly to the underlying pavement; transition zones are then constructed to accommodate stiffness and geometric changes, after which joints are sawed and sealed to control cracking and provide load transfer [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 96–98), Ch. 10 (pp. 176–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 446–451)</small></p>
+<p>Before any design calculations are performed, the existing pavement must be evaluated with a falling‑weight deflectometer to confirm that the slab is in good to fair structural condition, that the subgrade is stable and that drainage functions properly; only pavements showing limited cracking or faulting and lacking stripping in asphalt bases are eligible for bonding so that the new concrete can act monolithically with the old [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. All failed transverse joints must be rehabilitated, concrete patches prepared on the basis of actual field measurements, and slab stabilization—by jacking or other means—applied wherever necessary to restore uniform support; a continuous base drain, properly sized concrete shoulders matching existing geometry, and any required adjustments to guide rails, drainage structures, or shoulder widening to preserve bridge clearances are also mandated [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The overlay thickness is limited by the ranges prescribed in PennDOT tables and must be rounded up to the nearest half‑inch while remaining within the minimum and maximum values of Table 10.10; thin‑bonded sections may be 2.5–4 inches, standard bonded sections 4–8 inches, fiber‑reinforced overlays 3–6 inches with residual flexural strengths between 100 and 225 psi and a fiber dosage of 0.2–0.5 % by volume, while ultra‑thin preservation overlays are limited to two inches over asphalt and treated as non‑structural wearing courses, and scratch‑type overlays may not exceed 4½ inches with a Superpave 9.5 mm mix or five inches with a Superpave 12.5 mm mix; when the specified depth is less than three inches the coarse aggregate shall be changed from No. 57 to No. 67 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The concrete mixture must incorporate macrofibers at a volume sufficient to achieve the required residual flexural strength designated f150, and this performance is verified by conducting ASTM C1609‑12 testing on 14‑day specimens and evaluating the residual strength relative to fiber content; additionally, the mix shall be designed so that after curing for no more than fifty‑six days it attains a chloride ion penetration rating of Low, Very Low, or Negligible in accordance with AASHTO Test T 277 or T 358 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Design life is required to be at least eight years and not exceed twenty years, and accurate traffic information—including current average daily traffic, projected growth, and truck percentages—must be used to compute design ESALs employing the rigid‑pavement average initial truck factors from Table 7.1; because conventional AASHTO 1993 procedures do not account for the bond, overlay thickness is determined with the bonded‑concrete‑overlay mechanistic‑empirical (BCOA‑ME) method developed at the University of Pittsburgh [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The design package must include the required forms for agency concurrence and, where applicable, FHWA approval, thereby ensuring that all structural condition thresholds, subgrade and drainage assumptions, joint rehabilitation actions, prescribed thickness ranges, service‑life limits, traffic‑based ESAL calculations, mix‑design specifications, and mechanistic‑empirical methodology are satisfied to achieve the necessary safety margin and reliability for long‑term pavement performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 96–98), Ch. 10 (pp. 176–188), Ch. 12 (pp. 204–205); [2] — SECTION 500—RIGID PAVEMENTS (pp. 446–451)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>The bonded concrete overlay is governed by the provisions of Chapter 10, which set out the overall design framework [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Within that framework the only dimensional requirements that are explicitly stated are a thin Portland‑cement concrete slab whose thickness shall lie between approximately 2.5 inches and 4 inches [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In addition, the guides call for concrete shoulders or a widened lane having a width of one to two feet, normally accompanied by asphalt shoulders [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. All other geometric parameters—including the existing pavement thickness, any required base or subbase layers, treated‑soil depths, slab depth beyond the overlay, edge support provisions, and reinforcement details—are not prescribed in the specifications and must be resolved through detailed engineering design [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=719c1ce1 src=408_2020_11::tab:p452#1 -->
+<p>The table below specifies payment adjustments for bonded concrete overlay depth deficiencies.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-bonded-concrete-overlay-1-cap" tabindex="0"><table class="ct-table" id="ct-bonded-concrete-overlay-1" aria-describedby="ct-bonded-concrete-overlay-1-sum">
+<caption id="ct-bonded-concrete-overlay-1-cap">TABLE AAdjustment for Depth</caption>
+<thead>
+<tr><th id="ct-bonded-concrete-overlay-1-h0-0" scope="col" rowspan="2">Deficient in Depth Determined by Cores (inches)</th><th id="ct-bonded-concrete-overlay-1-h0-1" scope="col">Payment Percent ofContract Unit Price, byLot, Based on NominalOverlay Depth (%)</th></tr>
+<tr><th id="ct-bonded-concrete-overlay-1-h1-1" scope="col">≤ 4.00 inches</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-bonded-concrete-overlay-1-h2-0" scope="row">-0.25 to 0.00</th><td headers="ct-bonded-concrete-overlay-1-h0-1 ct-bonded-concrete-overlay-1-h1-1 ct-bonded-concrete-overlay-1-h2-0">100</td></tr>
+<tr><th id="ct-bonded-concrete-overlay-1-h3-0" scope="row">&gt; -0.25</th><td headers="ct-bonded-concrete-overlay-1-h0-1 ct-bonded-concrete-overlay-1-h1-1 ct-bonded-concrete-overlay-1-h3-0">DefectiveWork</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-bonded-concrete-overlay-1-sum">Rows list depth deficiency ranges determined by cores. Columns provide payment percentages based on nominal overlay depth.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 452.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 3 (pp. 67–69); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<p>A bonded concrete overlay must respect the prescribed thickness limits: an ultra‑thin bonded concrete wearing course may be only two inches thick, and any scratch overlay on existing concrete cannot exceed four‑and‑a‑half inches when a Superpave 9.5 mm mix is used or five inches with a Superpave 12.5 mm mix; otherwise the project falls outside pavement‑preservation eligibility. Leveling courses that are added solely to achieve the required minimum cross slope are allowed and are not counted toward these depth limits. The guidelines do not provide specific values for joint spacing, transition design, or tie‑in details, so those items must be addressed by other design references. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 204–205)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>The specification must identify that the overlay is a Portland‑cement concrete mix incorporating either synthetic or steel macrofibers. The fiber type and dosage shall be selected so that the residual flexural strength measured at 150 psi (f150) after 14 days per ASTM C1609 falls within the range of 100 to 225 psi required for overlays, and the effective flexural strength used in structural calculations is reported as the sum of the concrete’s modulus of rupture and this residual value. Typical macro‑fiber volumes are limited to between 0.2 % and 0.5 % of the mix, with individual fibers ranging from one to two‑and‑a‑half inches in length and possessing an aspect ratio of 30 to 100; any adjustments to workability admixtures needed to meet fresh‑property limits must be noted. When the overlay thickness is less than three inches, the coarse aggregate shall be No. 67 rather than No. 57, while thicker sections may use the nominal maximum aggregate sizes of 9.5 mm, 12.5 mm, or 19.0 mm as prescribed for Superpave mixes. For a 9.5 mm aggregate mix the overlay thickness is limited to one‑and‑a‑half inches, for a 12.5 mm mix it may be two inches placed over a 2½‑inch base of 19.0 mm aggregate, and an optional scratch course not exceeding one‑half inch can be provided with the 9.5 mm size; the total bonded concrete system shall not exceed four‑and‑a‑half inches when a 9.5 mm wearing course is used or five inches when a 12.5 mm wearing course is employed. Ultra‑thin bonded overlays intended only as non‑structural wearing courses may be limited to a two‑inch asphalt layer over the concrete. The overall overlay thickness required by the guides ranges from four inches up to eight inches for structural applications, with the lower limits of one‑and‑a‑half to two inches applying to thin Superpave designs. The mixture must be designed to achieve a low, very low, or negligible chloride‑ion penetration after no more than fifty‑six days of curing, corresponding to a maximum charge passed of 2 800 coulombs per AASHTO T 277 or resistivity values not exceeding 15.6 kΩ·cm on 4 × 8‑in specimens and 12.3 kΩ·cm on 6 × 12‑in specimens for the AASHTO T 358 test. When the maturity method is employed, compressive‑strength development shall be correlated to degree‑hours of cure at eight hours, one day, seven days, twenty‑eight days and fifty‑six days in accordance with PTM No. 640, and all curing materials must conform to the applicable sections on curing agents. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=9277433c src=408_2020_11::tab:p451#1 -->
+<p>The table below specifies residual strength requirements based on remaining asphalt concrete thickness.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-bonded-concrete-overlay-2-cap" tabindex="0"><table class="ct-table" id="ct-bonded-concrete-overlay-2">
+<caption id="ct-bonded-concrete-overlay-2-cap">TABLE A</caption>
+<tbody>
+<tr><th scope="row">Remaining inches of Asphalt Concrete</th><td>3-4.5</td><td>4.5-6</td></tr>
+<tr><th scope="row">Residual Strength in psi</th><td>200-275</td><td>175-250</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 451.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 10 (pp. 186–188), Ch. 12 (pp. 204–205); [2] — SECTION 500—RIGID PAVEMENTS (pp. 446–451)</small></p>
+<p>The design of a bonded concrete overlay begins with establishing the residual flexural strength (f150) that must be provided to satisfy target structural capacity, allowable crack widths, and joint load‑transfer efficiency [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. This f150 is added to the plain‑concrete modulus of rupture to obtain an effective flexural strength (feff), which governs the required overlay thickness [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Achieving the specified f150 requires selecting a macrofiber type and dosing it within a typical range of 0.2 % to 0.5 % by volume, recognizing that different fibers may reach the same residual strength at varying contents [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Because macrofibers tend to reduce slump, water‑reducing admixtures and adjustments to air‑entraining agents are incorporated into trial mixes so that fresh‑property specifications for workability, finishability, air content, and durability are met without compromising performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Trial batches are prepared and tested to confirm that the mix attains the target feff, the prescribed air content, and the required durability criteria before full‑scale production commences [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The aggregate gradation is chosen in accordance with overlay thickness: when the overlay depth is less than three inches, No. 67 coarse aggregate is specified instead of the coarser No. 57 to maintain proper particle packing and surface finish [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]; for thicker sections, Superpave gradations such as 9.5 mm or 12.5 mm are employed in accordance with preservation design limits [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Preservation guidelines impose strict thickness limits: an ultra‑thin bonded concrete wearing course may be placed over a maximum of two inches of asphalt and functions only as a non‑structural layer, while scratch overlays must not exceed four‑and‑a‑half inches when a Superpave 9.5 mm mix is used or five inches with a Superpave 12.5 mm mix, otherwise the treatment is ineligible for pavement‑preservation programs [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When greater structural capacity is required, prescribed layer stacks are adopted, such as a 1½‑inch layer of a 9.5 mm design over a 2½‑inch base of a 19.0 mm mix or a 2‑inch layer of a 12.5 mm design over the same base, thereby satisfying structural demands while respecting constructability constraints [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Durability requirements are addressed by proportioning the mixture to meet stringent permeability criteria; the overlay is designed to achieve low, very low, or negligible chloride ion penetration after no more than 56 days of curing as measured by AASHTO T277 or T358, with allowable limits of 2,800 coulombs or the corresponding resistivity values for the specified cylinder sizes [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Compliance with these durability targets is documented in a concrete paving job‑mix formula (JMF) that must be submitted to and approved by the district materials engineer at least two weeks before placement, ensuring that all material proportions have been reviewed for structural and performance adequacy [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If the maturity method is employed, degree‑hours of cure are correlated to compressive strength according to PTM No. 640 at defined intervals, providing a constructability tool that links curing time to achieved strength and supports consistent performance in the field [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By integrating macrofiber dosage, aggregate selection, gradation choice, thickness limits, admixture adjustments, permeability targets, and pre‑placement approval procedures, the bonded concrete overlay mix is proportioned to meet the combined structural, durability, constructability, and overall performance objectives set forth by the guides [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 10 (pp. 186–188), Ch. 12 (pp. 204–205); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>Before placing the overlay, any failed transverse joints in the existing concrete slab must be repaired, and if a composite base or uneven support is present, slab stabilization is required to achieve uniform backing. A continuous drainage system within the pavement‑base should be installed when conditions warrant to prevent water entrapment beneath the overlay. Where the original pavement includes concrete shoulders, the overlay must extend with matching concrete shoulders; if the existing shoulders are asphalt, an adjacent asphalt shoulder may be used and a lane widening of one to two feet is permissible. Guide‑rail and drainage structures intersecting the overlay area need adjustment or replacement as necessary, and a leveling course is added only when surface irregularities demand it. The overlay thickness is typically four to eight inches and must be chemically or mechanically bonded to the prepared existing pavement surface. Structural joint provision consists of saw‑cut transverse (contraction) joints placed through the new concrete at a depth and spacing that promote early development of load‑transfer efficiency, with those joints subsequently sealed to control cracking. Some guides specify that macrofibers—synthetic or steel—be incorporated into the overlay mix at 0.2 % to 0.5 % by volume to provide residual strength and enhance flexural capacity, noting that these fibers do not replace conventional dowel‑bar systems where fault control is required. Other guides state that no reinforcing steel, dowels, tie bars, or additional load‑transfer devices are prescribed beyond the saw‑cut joints and their sealing. Where faulting control is deemed necessary, dowel bars are called for in the joints to maintain load transfer efficiency. Transition zones are provided at the interface between the overlay and the existing pavement to accommodate differences in thickness or stiffness, serving as the connection detail between the two structures. No other special connection details beyond the bond, joint sealing, and any required transition treatment are mandated. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 446–454)</small></p>
+<p>The bonded concrete overlay is designed following Chapter 10 procedures, beginning with a thorough condition assessment of the existing pavement. Cores are taken from the old slab or from any underlying asphalt to confirm that the bottom layers are free of stripping and that the concrete does not exhibit extensive cracking or faulting; when distress is found it must be repaired before placement. All failed transverse joints on a composite base are rehabilitated, and slab stabilization is provided where needed to restore uniform support across the bond line. A continuous pavement‑base drain is installed to control water at the interface. The new concrete is placed in direct contact with the existing slab so that the two act as a single monolithic unit; no separation layer such as asphalt or geotextile is used, and the original pavement remains an integral part of the structural design, continuing to share load. Concrete shoulders are provided when the existing shoulders are concrete; otherwise the shoulder type may match the existing configuration, typically extending 1–2 ft beyond the lane and, where required, fill widening is employed to retain proper widths and verify bridge clearances. Guide‑rail and drainage structures at the overlay edges are adjusted or replaced as necessary to preserve functional continuity. The overlay thickness is determined by calculating the effective existing thickness together with future traffic requirements in DARWin, then rounding the result up to the nearest half‑inch while ensuring it falls within the prescribed minimum–maximum limits. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=5b7a1526 src=pub_242_change_10::tab:p185#1 -->
+<p>The table below specifies the minimum and maximum thickness limits for various bonded concrete overlay types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-bonded-concrete-overlay-3-cap" tabindex="0"><table class="ct-table" id="ct-bonded-concrete-overlay-3" aria-describedby="ct-bonded-concrete-overlay-3-sum">
+<caption id="ct-bonded-concrete-overlay-3-cap">TABLE 10.10MINIMUM AND MAXIMUM THICKNESS FOR CONCRETE OVERLAYS</caption>
+<thead>
+<tr><th scope="col">OVERLAY TYPE</th><th scope="col">MINIMUM THICKNESS</th><th scope="col">MAXIMUMTHICKNESS</th><th scope="col">TYPICAL JOINTSPACING*</th><th scope="col">APPLICABLESTANDARDSPECIFICATION</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Bonded Concrete Over Concrete</th><td>2.0 in</td><td>5.0 in**</td><td>Match existingpavement</td><td>545</td></tr>
+<tr><th scope="row">Thin Bonded Concrete Over Asphalt or AC/PCC (composite)</th><td>2.5 in</td><td>4.0 in</td><td>3 ft × 3 ft</td><td>541</td></tr>
+<tr><th scope="row">Bonded Concrete Over Asphalt or AC/PCC (composite)</th><td>4.0 in</td><td>8.0 in**</td><td>6 ft × 6 ft for pavementsthinner than 8 in, 12 ft ×12 ft for all others</td><td>540</td></tr>
+<tr><th scope="row">Unbonded Concrete Over Concrete, Asphalt, or AC/PCC (composite)</th><td>5.0 in</td><td>13.0 in</td><td>6 ft × 6 ft for pavementsthinner than 8 in, 12 ft ×12 ft *** for 8 to 10 in,and 12 ft × 15 ft forgreater than 10 in</td><td>501/506/548</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-bonded-concrete-overlay-3-sum">Rows list different types of concrete overlays, columns provide specifications for thickness, joint spacing, and applicable standards.</p>
+<p class="ct-notes">Notes: Notes: *Joint spacing of 2 feet by 2 feet and 4 feet by 4 feet will result in longitudinal joints in the wheel path and is not **The maximum thickness may be exceeded; however, a different pavement design method may be required. Contact recommended. Joint spacing based on standard 12 ft lane width. For other configurations, consult with PDAU. PDAU for assistance. *** This joint spacing is not included in the current standards. Use of this will require a special provision for the project.</p>
+
+<p><em>Source: pub_242_change_10, untitled table, p. 185.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 96–98), Ch. 10 (pp. 183–188)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>When a bonded concrete overlay is specified, the design process begins with verification that the existing pavement’s drainage system is functioning properly and that the subgrade is stable. If subsurface water infiltration is likely or has been observed, a continuous pavement‑base drain is incorporated to convey moisture away from the new concrete layer, thereby protecting it from excess moisture under varying environmental conditions. All guide‑rail and other drainage structures intersecting the overlay are examined and, where necessary, adjusted or replaced so that runoff paths remain uninterrupted. In cases where the existing system exhibits deficiencies, adequate subdrainage must be installed before the overlay is placed to correct those problems. Consequently, bonded concrete overlays are limited to sections where the underlying pavement is in relatively good condition, the subgrade is stable, and the drainage is functional; they should not be used on alignments with unresolved drainage issues. The source provides no additional guidance regarding climate or other environmental factors beyond these water‑management requirements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 96–98)</small></p>
+<p>The bonded concrete overlay shall be designed in accordance with Chapter 10 and must incorporate a comprehensive set of accessibility, safety, geometric, and user‑related provisions. All failed transverse joints in the existing pavement are to be rehabilitated, and any slab stabilization required to restore uniform support shall be provided. A continuous base drainage system shall be installed wherever water accumulation could occur. The overlay shall include concrete shoulders that match the existing shoulder type; where additional width is needed, a lane widening of one to two feet may be added together with asphalt shoulders, and any fill widening must preserve the required shoulder widths while being verified against bridge clearances. All guide‑rail and drainage structures intersecting the overlay are to be adjusted or replaced as necessary to maintain safe and accessible travel for all users. The geometric design shall satisfy minimum cross‑slope criteria so that drainage and vehicle stability are assured, and any leveling course needed to achieve this slope may be placed without being counted toward the total overlay thickness. To meet user expectations for skid resistance and ride quality, the surface may be treated with diamond grinding, micro‑surfacing, or an ultra‑thin bonded wearing course, and when an asphalt layer is placed over concrete, the transverse joints should be sawed and sealed to preserve joint integrity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The bonded concrete overlay is intended to increase the pavement’s load‑bearing capacity while eliminating existing surface distress such as cracks and spalling, which together improve ride quality and extend the interval between maintenance actions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Prior to design, a Falling Weight Deflectometer test is performed on the existing concrete slab to establish its structural adequacy, providing the baseline that governs the required overlay thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The mix design may incorporate macro‑fibers, whose contribution is quantified as residual flexural strength (f150) obtained from an ASTM C1609 test; this value is combined with the plain concrete modulus of rupture to produce an effective flexural strength used in mechanistic‑empirical design tools for service‑life prediction and thickness selection. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Compressive‑strength development of the overlay is verified with the maturity method, correlating degree‑hours of cure to standard ages in accordance with PTM No. 640, ensuring that the concrete reaches its target strength before traffic loading. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The macro‑fiber contribution is further confirmed by a 14‑day ASTM C1609‑12 residual‑strength test that relates the measured strength to the fiber volume fraction used in the mixture. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Durability is addressed by requiring low, very low, or negligible chloride ion penetration after no more than 56 days of curing, with the permeability assessed using AASHTO T 277 or T 358. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Laboratory slab tests on bonded overlays typically demonstrate a load‑transfer efficiency increase of roughly thirty percent over plain concrete and show reduced crack widths, especially when pre‑existing cracks exceed one millimetre, as well as fewer cracks after restrained shrinkage or freeze–thaw cycling. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Field performance is monitored through periodic distress surveys and maintenance records, which provide evidence of reduced cracking, maintained joint or crack load‑transfer efficiency, and sustained rideability over the service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 96–98), Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

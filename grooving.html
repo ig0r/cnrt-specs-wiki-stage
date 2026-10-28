@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grooving</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.8Uu2oUwuKg -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">77 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a></li></ul></details></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a></li><li><a href="skid-resistance.html">Skid Resistance</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="frost-heave.html">Frost Heave</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a></li><li><a href="gradation.html">Gradation</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li></ul></details></li><li><a href="subbase.html">Subbase</a></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a></li></ul></details></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li></ul></details></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html" class="active" aria-current="page">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-preservation.html">Pavement Preservation</a><span class="crumb-sep">›</span><a href="diamond-grinding.html">Diamond Grinding</a><span class="crumb-sep">›</span><span class="crumb-current">Grooving</span></nav>
+<article><h1>Grooving</h1>
+<div class="meta"><div class="part-of">Part of: <a href="diamond-grinding.html">Diamond Grinding</a> <span class="edge edge-taxonomic" title="Grooving is a topic under Diamond Grinding.">is-subtopic-of</span></div><div class="edge-reading">Grooving is a topic under Diamond Grinding.</div><div><a class="tag" href="index.html?q=grooving">grooving</a><a class="tag" href="index.html?q=diamond-grooving">diamond-grooving</a><a class="tag" href="index.html?q=longitudinal-grooving">longitudinal-grooving</a></div><div>Created 2026-10-27 · Updated 2026-10-27</div></div>
+<p>Grooving is a surface‑treatment applied to structurally sound Portland‑cement concrete (or similar) pavements that have lost wet‑weather friction because of inadequate macrotexture and poor drainage, targeting the distress of reduced skid resistance rather than structural repair [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The method cuts longitudinal or deeper diamond channels into the slab using a self‑propelled, power‑driven diamond‑blade machine weighing at least 40 000 lb with a grinding head no narrower than four feet, producing grooves roughly three‑quarters of an inch apart, about 3/32 in wide and 1⁄8 to 3⁄16 in deep, thereby creating a drainage network that restores cross‑slope and allows water to escape from beneath tires [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By reestablishing macrotexture and effective runoff on pavements with shallow wheel ruts (≤ ½ in) and proper cross‑slope—often extending a feather‑pass onto shoulders—the treatment improves wet‑weather skid resistance and reduces hydroplaning risk, enhancing overall safety [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Grooving is employed on Portland‑cement concrete (or other concrete) pavements that exhibit inadequate surface friction in wet weather, a condition that reduces traction and raises the likelihood of hydroplaning and related crashes. The underlying problem is an insufficient macrotexture that fails to provide enough tread‑to‑pavement interaction, resulting in loss of skid resistance and the potential for water to become trapped beneath tires. By cutting longitudinal grooves—or deeper diamond grooves—into the slab, a channel network is created that restores drainage, allows water to escape from under the tire contact patch, and re‑establishes the designed cross‑slope. The treatment also addresses poor runoff on adjacent shoulders and ramps by extending a feather‑pass at least two feet onto these areas, thereby maintaining consistent grade and preventing water accumulation that could otherwise lead to hydroplaning. Overall, grooving targets the distress of reduced wet‑weather skid resistance caused by inadequate surface texture and insufficient drainage on concrete pavements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 93–94); [2] — SECTION 500—RIGID PAVEMENTS (pp. 389–390)</small></p>
+<p>Grooving is applied primarily to bring back the pavement’s ability to provide adequate skid resistance and reduce hydroplaning, rather than to fix structural damage or halt deterioration. By cutting longitudinal channels that increase wet‑weather friction, the treatment restores the functional performance of the surface for safe vehicle operation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress that grooving addresses appears on concrete pavement surfaces where water pools beneath tires, eliminating macro‑texture and lowering friction across the roadway or runway. This condition can affect any in‑service or newly constructed slab and is severe enough to raise the risk of skidding, hydroplaning and wet‑weather crashes, though the source does not specify how quickly it progresses. By cutting deeper longitudinal (or transverse) channels into the concrete, grooving restores drainage and improves skid resistance, thereby mitigating those safety consequences. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 93–94)</small></p>
+<p>The distress that prompts the use of grooving originates primarily from water that remains on or beneath the pavement because existing drainage capacity is insufficient. This retained moisture infiltrates under tires, eroding friction and creating a hydroplaning hazard, especially in wet conditions. A secondary contributor is the loss of macro‑texture on surfaces—particularly those composed of aggregates prone to polishing—which further diminishes skid resistance. By cutting longitudinal, deeper channels into the concrete surface, grooving restores macro‑texture and furnishes direct pathways for water to escape from beneath tires. When these channels are combined with an appropriate cross‑slope, they enhance runoff, lower water film thickness, and thereby recover wet‑weather traction without requiring additional structural repairs. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 93–94)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Grooving is suitable for Portland‑cement concrete pavements that remain structurally sound, whether newly placed or already in service, provided the existing wheel ruts are less than about half an inch deep. The technique is employed when wet‑weather friction and drainage are primary concerns—specifically where water must be expelled from the tire‑pavement interface to lessen hydroplaning risk and improve skid resistance. It is especially advantageous on concrete made with polish‑susceptible aggregate, because the deeper longitudinal channels create a durable macrotexture that retains friction over time. For most traffic conditions longitudinal grooves are preferred because they are less costly and can be installed more quickly; transverse grooves are reserved for locations where additional braking traction is required, such as heavy‑truck routes or steep grades. The treatment is typically applied after any necessary diamond grinding that first restores ride quality, and it should not be used on pavements whose condition exceeds the mild‑to‑moderate range, in which case alternatives like transverse grooving or an overlay may be more appropriate. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 93–94)</small></p>
+<p>Longitudinal grooving is appropriate only when the concrete slab is structurally sound and wheel ruts are shallow; if the pavement shows deeper rutting, loss of structural integrity, or generally severe distress, grooving becomes ineffective and other treatments such as transverse grooving, an overlay, or more extensive rehabilitation should be selected instead. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>Grooving is applied when a concrete pavement remains structurally sound yet requires improved surface friction, particularly to enhance wet‑weather skid resistance and reduce hydroplaning risk. The treatment creates longitudinal channels that increase friction, and it is generally chosen when wheel ruts are shallow (less than 0.5 inches deep), a condition indicating the pavement has not deteriorated to a level requiring more extensive rehabilitation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Grooving is carried out on concrete pavement surfaces, whether newly placed or already in service, using diamond‑cutting equipment that creates deeper longitudinal or transverse channels to provide macrotexture for water drainage and skid resistance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The required machine is a self‑propelled, power‑driven unit equipped with a diamond‑blade grinding head of minimum width four feet and a total weight of at least 40 000 pounds [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Grinding blades are 1/8‑inch thick and are spaced by 1/32‑inch spacers, while the grooving blades are selected to be ¼‑ to ⅜‑inch larger in diameter than the grinding blades, providing the capacity to cut the grooves [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Longitudinal grooves are typically spaced three‑quarters of an inch center‑to‑center, while the cutting blades themselves may be positioned approximately one‑half inch apart to achieve that channel spacing, a configuration preferred for its speed and economy [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The depth of longitudinal channels is required to lie between 1⁄8 and 3⁄16 inch, meeting macrotexture criteria [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Transverse drainage channels, used only where additional braking traction is needed, are cut with non‑flailing equipment; each transverse channel is 3⁄32 inch wide (allowing a plus‑1/16‑inch tolerance), spaced three‑quarters of an inch on centre, and must reach at least 3⁄16 inch in depth [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All cuts must remain at least six inches from the pavement edge or any centreline joint, and grooves may not overlap one another [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If ride quality requires it, diamond grinding should be completed before grooving, ensuring that the surface conforms to conventional diamond‑ground (408/514) or longitudinally diamond‑grooved (408/510) specifications [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The cutting operation removes concrete, producing a slurry that must be continuously removed during the pass so that it does not flow across traffic lanes or into drainage structures; after each pass the surface is thoroughly cleaned before traffic is permitted to return [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. No additional repair products or materials are prescribed beyond proper management and disposal of the concrete slurry in accordance with Publication 408 requirements to protect drainage structures and waterways [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 93–95); [2] — SECTION 500—RIGID PAVEMENTS (pp. 389–404)</small></p>
+<p>The performance of grooving on rigid concrete pavements is controlled primarily by the condition of the existing slab and by the intrinsic properties of the concrete mix. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A structurally sound slab with wheel ruts no deeper than one‑half inch is required, because deeper rutting impairs the ability of longitudinal grooves to form effective drainage channels and maintain wet‑weather friction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Surface irregularities greater than a quarter inch also mandate prior diamond grinding to restore ride quality before grooving can be applied. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The pavement must retain its original cross‑slope, and any depressions or slope misalignments exceeding one‑eighth inch over a twelve‑foot length are prohibited. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Joint and crack height differences are acceptable only when they do not exceed one‑sixteenth inch between adjacent sides. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The aggregate composition influences groove effectiveness; pavements containing polishing‑susceptible coarse aggregates benefit most because the cuts interrupt surface sheen, whereas harder aggregates increase the volume of material that must be removed, affecting both cost and execution. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The hardness of the coarse aggregate directly determines how much material must be extracted to achieve the specified groove geometry. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Compatibility with the cement paste is also a factor; mixes that incorporate limestone additives such as Vanport limestone may require subsequent micro‑surfacing or an overlay to address durability concerns after grooving. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Equipment must be compatible with these constraints, requiring non‑flailing machines equipped with straight diamond blades that cut longitudinal grooves 3/32 in wide (tolerance ±1⁄16 in), spaced three‑quarters inch center‑to‑center and at least three‑sixteenths inch deep, without spalling joint or crack edges or fracturing surface aggregates. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Grooves must be located a minimum of six inches from the pavement edge or any centerline joint to avoid compromising structural integrity. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After cutting, continuous removal of slurry and thorough cleaning of the surface before traffic returns are essential to preserve the intended skid‑resistance and drainage functions. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When existing distress exceeds these thresholds—such as deeper rutting, severe aggregate issues, or inadequate slope—alternative treatments like transverse grooving, micro‑surfacing, or a full overlay should be considered to achieve the desired safety improvements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 93–94); [2] — SECTION 500—RIGID PAVEMENTS (pp. 389–404)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>The contractor must first mobilize a power‑driven, self‑propelled diamond‑grinding machine that weighs at least 40 000 lb and carries a grinding head no narrower than four feet. Before any production work begins an approved 300‑ft test section is laid out in a single lane to verify that the equipment and procedures will achieve an acceptable surface. The pavement area to be grooved is surveyed, limiting stations are identified, and it is confirmed that the work is not being performed on a bridge deck or with flailing equipment. Grooves are positioned at least six inches from any outer edge or centreline joint and are laid out longitudinally parallel to the centreline.</p>
+<p>Depending on the capability of the machine, the contractor may employ either a single‑pass method in which a stacked blade arrangement creates a flush ground surface and simultaneously cuts longitudinal grooves, or a two‑pass method where the first pass produces a flat texture and the second adds the grooves. In both cases the grooves are cut to a nominal width of three‑thirty‑seconds of an inch (± 1⁄16 in), spaced ¾ inch on centre, with a minimum depth of three‑sixteenths of an inch; when the stacked‑blade single‑pass is used the grooving blades are ¼‑ to ⅜‑inch taller than the grinding blades and produce grooves 1⁄8‑to 3⁄16 in deep. Overlap between adjacent passes is limited to one inch, and no unground gaps are permitted.</p>
+<p>A feather pass of at least two feet onto each shoulder—extending a minimum of 100 ft—is required to preserve the existing cross‑slope and to provide proper drainage. Throughout the grinding and grooving operation slurry and other residue are removed continuously so that material does not spill onto active traffic lanes or into drainage structures.</p>
+<p>When all passes are complete the pavement surface is thoroughly cleaned, removing any remaining debris, before traffic is reopened. The finished texture must satisfy the National Geotechnical Control Standards (NGCS) for true grade, exhibit smoothness with ridges no greater than 1⁄8 in, and achieve at least 98 % coverage. No curing period is required after grooving. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 389–404)</small></p>
+<p>The grooving operation is performed with a power‑driven, self‑propelled machine equipped with diamond blades, the grinding head being at least four feet wide and the unit weighing no less than 40 000 lb, while flailing‑type equipment is expressly prohibited. Either a single‑pass or a two‑pass cutting sequence may be employed, but the work must incorporate a feather pass that extends a minimum of two feet onto each shoulder to preserve the existing cross‑slope and drainage, with any deviation limited to one‑eighth inch over a twelve‑foot interval. When diamond grinding is required for ride quality, grooving is sequenced after that grinding so that surface smoothness can be addressed first. Prior to full production, a test section of at least three hundred feet in a single lane must be cut and approved before the remainder of the work proceeds. Throughout cutting, slurry or residue generated by the diamond blades is removed continuously, and the pavement surface is thoroughly cleaned before traffic is allowed to resume; slurry may not flow onto lanes occupied by vehicles nor into gutters or other drainage structures, and the affected lane(s) remain closed until cleaning is completed. Grooving is generally laid out as longitudinal grooves because they require less time and are more economical, whereas transverse grooves are limited to locations where additional braking traction is needed; the groove layout, including any transition or stop lines at bridge decks, must be shown on the plans. Work on bridge decks is prohibited, so grooving cannot be performed there. When grooving occurs in a travel lane, temporary traffic control is required and any necessary stop or transition lines are enforced as part of that control. Whenever feasible a detour should be provided because it offers the best construction environment; the detour route must be maintained before traffic is shifted onto it and its use coordinated with the appropriate traffic unit. No specific environmental constraints such as temperature or moisture limits are identified beyond the requirement to manage slurry and protect drainage structures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 4 (pp. 93–94); [2] — SECTION 500—RIGID PAVEMENTS (pp. 389–404)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>The inspector must first verify that the grinding machine satisfies the minimum mass of 40,000 lb and is fitted with a grinding head at least four feet wide. Using a twelve‑foot straightedge placed perpendicular to the centreline, any depression or slope misalignment greater than one‑eighth inch over the twelve‑foot span is unacceptable. The longitudinal grooves produced by the equipment must be spaced about half an inch centre‑to‑centre and their depth shall fall between one‑eighth and three‑sixteenths of an inch. Before full production begins, a 300‑foot test section has to be cut and receive approval; work may not continue until that approval is obtained. For each transverse groove the dimensions are strictly controlled: the width must be three‑thirty‑seconds of an inch with an allowable excess of one‑sixteenth inch, the centre‑to‑centre spacing shall be three‑quarters of an inch, and the depth must reach at least three‑sixteenths of an inch. Grooves may not be placed closer than six inches to any outer edge or to a pavement joint along the centreline. After cutting, the contractor is required to remove all slurry or other residue in a continuous operation and to clean the surface thoroughly before it is opened to traffic. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 389–404)</small></p>
+<p>A satisfactory grooving treatment is confirmed when the finished texture conforms to the prescribed geometric parameters for groove spacing, width, depth and placement as defined by the applicable guidelines [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The nominal centre‑to‑centre spacing shall be three‑quarters inch, with an allowable range down to one‑half inch where permitted, and no groove may be cut closer than six inches to the outer pavement edge or to any centreline joint [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Groove width is specified as three‑thirty‑seconds of an inch with a tolerance of plus one‑sixteenth inch, permitting a final width approaching roughly one‑eighth inch [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The depth must reach at least three‑sixteenths inch, although a range from one‑eighth to three‑sixteenths inch is acceptable where equipment or surface conditions dictate [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The edges of joints or cracks intersected by a groove may not differ by more than one‑sixteenth inch, and any depression or slope misalignment measured with a twelve‑foot straightedge perpendicular to the centreline must be no greater than one‑eighth inch over that length [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When successive grinding passes abut each other, their overlap is limited to one inch and ridges remaining on the finished surface may not exceed one‑eighth inch in height [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Overlap of individual grooves is prohibited, ensuring a continuous groove‑controlled texture across at least ninety‑eight percent of the paved area [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All concrete slurry, dust or other residue generated during cutting must be removed continuously so that the surface is clean before traffic is restored, and any slurry produced must be completely removed in accordance with Publication 408 specifications to prevent contamination of drainage structures or waterways [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Functional performance is verified by ride quality; the International Roughness Index measured after grooving must not exceed seventy inches per mile for operating speeds above forty‑five miles per hour, and may rise to ninety inches per mile where lower speeds predominate [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (p. 95); [2] — SECTION 500—RIGID PAVEMENTS (pp. 389–404)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Diamond grooving cuts deeper channels into the concrete surface, creating macro‑texture that lets water escape from beneath tires and thereby reduces skidding, hydroplaning, and wet‑weather crashes; this improves the pavement&rsquo;s functional safety and restores skid resistance. Because the grooves can be cut in new or existing pavements and are typically applied after diamond grinding for ride quality, they enhance the overall condition of the pavement without compromising its smoothness. The source does not provide specific information on how grooving influences long‑term durability or expected service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 93–94)</small></p>
+<p>Grooving can fail when the grinding equipment induces spalling at joints or cracks or fractures surface aggregates, when the resulting texture leaves faults that exceed the allowed 1/16‑inch differential across joints, when depressions or slope misalignments greater than 1/8 inch over a 12‑foot span develop, or when ridges taller than 1/8 inch remain on the surface; such distresses are typically driven by inappropriate equipment (insufficient weight or improper blade stack), poor blade alignment or excessive overlap of passes (more than one inch), and inadequate feather‑pass work that does not preserve the required cross‑slope. Maintaining the specified equipment weight, using correctly sized diamond blades with proper spacing, limiting pass overlap, and ensuring a minimum 2‑foot feather pass into shoulders are the key factors that prevent these recurring failures. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 389–390)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After grooving is completed, the pavement must be inspected to confirm that at least ninety‑eight percent of the surface has been textured, that the ground surface is smooth with ridges not exceeding one‑eighth inch, and that cross‑slope deviations are within the allowable one‑eighth‑inch-in‑twelve‑feet tolerance. Ride quality should then be measured; the International Roughness Index must not exceed seventy inches per mile on roads posted above forty‑five miles per hour or ninety inches per mile on lower‑speed routes. Any non‑conforming areas—excessive ridges, slope misalignments, insufficient texture coverage, or IRI violations—must be reground before the pavement is opened to traffic. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 389–390)</small></p>
+<p>If post‑grooving inspections reveal a joint or crack differential larger than the allowed one‑sixteenth inch, a slope misalignment exceeding one‑eighth inch over a twelve‑foot straightedge, ridges deeper than one‑eighth inch, or an International Roughness Index that surpasses the 70 in/mile (or 90 in/mile for lower speed roads) limits, the treated area is considered non‑compliant and must be reground or otherwise rehabilitated; similarly, failure to achieve at least 98% textured surface coverage also triggers corrective work. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 389–390)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>
