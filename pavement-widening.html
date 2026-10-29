@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pavement Widening</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html" class="active" aria-current="page">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Pavement Widening</span></nav>
+<article><h1>Pavement Widening</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Pavement Widening is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Pavement Widening is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=fill-widening">fill-widening</a><a class="tag" href="index.html?q=partial-lane-widening">partial-lane-widening</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>Pavement widening, also called fill widening, is a rehabilitation technique that adds concrete or asphalt fill to an existing pavement section to preserve the designed shoulder width and verify that bridge under‑clearances are not violated[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It is employed when shoulders are inadequate or a narrow (1–2 ft) lane extension is required, and the added material must match the existing pavement type and depth for partial widenings (&lt;10 ft) or retain the original thickness for full lane additions of ten feet or more unless traffic loads dictate otherwise[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The method aligns transverse joints with the original pavement, uses appropriate concrete classifications (e.g., Class AA cement concrete for rigid pavements) or matching asphalt layers, and incorporates continuous base drainage and shoulder types such as Type 6 or Type 7 to maintain safety and performance[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Pavement widening, referred to as fill widening, is employed when concrete shoulders or a widened lane of 1 to 2 feet are provided with asphalt shoulders and the specification requires it so that the rebuilt section retains the designed shoulder width and permits checking that bridge under‑clearances are not violated; this treatment addresses inadequate shoulder dimensions and potential clearance conflicts, ensuring that the shoulder maintains its intended width for adequate support and safety. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70)</small></p>
+<p>In accordance with the guidelines for concrete rehabilitation (section 3.3), a fill‑widening design shall retain proper shoulder widths and shall be checked to ensure adequate bridge under clearances, thereby satisfying functional requirements for lane and shoulder geometry and safety considerations related to vertical clearance. Section 4.8 specifies that full lane additions that are at least ten feet wide shall be designed to the same thickness as the original pavement unless heavier traffic loads require a design for actual traffic; in such cases the design shall reflect the actual loading. Partial lane widenings that are less than ten feet shall match the existing pavement type and depth, and the transverse joints on the widening or lane addition shall be aligned to match those on the original pavement. Widening of jointed plain concrete pavement (JPCP) shall be constructed with plain cement concrete. Section 5.11 requires that partial lane widenings of less than ten feet for asphalt pavements must match the existing pavement structure, and full‑width lane additions of at least ten feet should also match the existing pavement structure unless substantially different traffic loads dictate otherwise; when layer thicknesses are altered, it is important to check that drainage is adequately provided throughout the pavement cross section. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 95–96), Ch. 5 (p. 115)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Pavement widening, expressed as fill widening, is appropriate for concrete pavements that receive a bonded overlay and include a widened lane of about 1 to 2 feet when the design calls for asphalt shoulders or when type 6 or type 7 paved shoulders are used to preserve the required shoulder width; in these situations the added fill ensures the shoulder retains its proper dimensions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The approach may also be applied in concrete rehabilitation projects that involve bonded or unbonded concrete overlays, unbonded crack‑and‑seat overlays, or reconstruction on rubblization, where the purpose is to retain the required shoulder width and verify bridge underclearances. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For rigid pavements, widening is appropriate for any uniform‑depth Portland cement concrete pavement built since 1945, whether or not it has been overlaid. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Full lane additions of ten feet or more shall be designed to the same thickness as the original pavement unless heavier traffic loadings require design for actual traffic, while partial lane widening of less than ten feet shall match the existing pavement type and depth. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Jointed Plain Concrete Pavement shall be widened with plain cement concrete, whereas Jointed Reinforced Concrete Pavement may be widened with either reinforced or plain cement concrete, and designs shall use Class AA cement concrete unless an exemption is granted. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For asphalt pavements, partial lane widening of less than ten feet must match the existing pavement structure, with asphalt layers matched by an equal depth of asphalt material and concrete layers matched by an equal thickness of concrete, and drainage layers should be kept consistent with those of the existing pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Full‑width lane additions of ten feet or more should also match the existing pavement structure unless circumstances dictate heavier or lighter traffic loadings for the additional lane; in those cases design follows the actual traffic and drainage must be adequately provided throughout the pavement cross section. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In flexible‑pavement projects that employ standard or RPS construction of 4.75 mm NMAS asphalt mixtures, widening may be applied when the material is placed in small quantities not exceeding 500 tons in a continuous placement, when the course being widened is less than 1‑inch deep or equal to or less than 110 lb/yd², and when the widened area is narrow enough—such as less than 4 ft wide—that approved compaction equipment can bridge it. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Under those conditions the Inspector‑in‑Charge may accept mat density by non‑movement if the mixture does not move under the rollers or by an optimum‑rolling pattern when density is not critical, while a shoulder where density is critical must be verified with pavement cores. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For plain cement concrete base courses, widening is appropriate when the added width does not exceed six feet, allowing forms to be omitted and requiring only acceptable methods to contain the base course; longitudinal joints may be formed as tied joints without sawing in full‑width construction, and a black liquid membrane forming curing compound may be used provided the cement concrete base course will not be accessible to traffic before the surface course is placed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 95–96), Ch. 5 (p. 115); [2] — SECTION 300 BASE COURSES (pp. 200–201), SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273)</small></p>
+<p>When the project involves a uniform‑depth rigid pavement built since 1945 but any of the specific criteria in Section 4.8 are not satisfied—such as a full lane addition that is at least ten feet wide requiring a thickness different from the original because of heavier traffic, a partial widening under ten feet that cannot match the existing pavement type or depth, a need to use reinforced concrete for a JPCP widening, or joint spacing that falls outside the prescribed limits—a designer may deem another design approach preferable and must seek an exemption with supporting documentation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 95–96)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>Pavement widening is governed by the design standards set out in Chapter 10 for asphalt overlays and Chapter 9 for full‑depth reconstruction, while concrete rehabilitation follows Chapter 10 for bonded or unbonded concrete overlays and Chapter 8 for remove‑and‑replace reconstruction[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Fill widening shall be provided as required to retain proper shoulder widths and shall verify that bridge clearances are not compromised[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Where widening is provided, concrete shoulders shall be used when the existing shoulders are concrete; otherwise the widened portion may match the existing shoulder type, and a widened lane of 1 to 2 feet may be combined with asphalt shoulders, with Type 6 or Type 7 paved shoulders applied where appropriate[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For rigid pavements, widening and lane additions are governed by the PCCP Guidelines which require use of Class AA cement concrete unless an exemption is granted, and apply only to uniform‑depth rigid pavements built since 1945[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Full lane additions that are ≥ 10 feet shall be designed to the same thickness as the original pavement unless heavier traffic loads dictate design for actual traffic; partial lane widening that is &lt; 10 feet must match the existing pavement type and depth[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For asphalt pavements, partial lane widening (&lt; 10 feet) must match the existing pavement structure with an equal depth of asphalt material, and for concrete pavements the same matching requirement applies to thickness of concrete[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Drainage layers should be kept consistent wherever possible, and when layer thicknesses are changed drainage shall be adequately provided throughout the pavement cross‑section[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Transverse joints on the widening or lane addition shall align with those on the original pavement; when the original joint spacing is 20 feet or less the same slab length shall be used, and if it exceeds 20 feet the joint spacing shall be adjusted to a minimum of 10 feet and a maximum of 17 feet with intermediate joints as needed[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. All lane additions and widenings shall be tied to the existing pavement and any deviation from these criteria requires an exemption request supported by documentation[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Pavement widening is also governed by the mat‑density acceptance provisions of Section 413.3(j) of the Department’s specifications[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For road‑widening mixes the Inspector‑in‑Charge may approve density by non‑movement when the material does not move under compaction equipment and this method applies to small placements that do not exceed 500 tons in a continuous placement; alternatively, an optimum‑rolling pattern may be used, requiring a certified field technician, an approved nuclear or electrical impedance gauge per PTM No. 402/403, documentation on Forms TR‑4276B/C and calibration according to ASTM D2950[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If density is critical for the widened shoulder, pavement cores must be taken as required in Section 413.3(j)4.a with core locations selected per PTM Nos. 1, 729, and 746 and tested for bulk specific gravity and density[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For cement‑concrete base course widening, forms are not required when the widening is six feet or less in width, but acceptable methods must be used to contain the base course[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Where longitudinal joints are indicated or formed for convenience of construction, a tied joint shall be formed as shown on the Standard Drawings for cement concrete pavement joints; full‑width construction does not require sawing[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The surface shall receive a rake or broom finish[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Liquid membrane forming curing compound may be used only in black colour and only provided that the cement concrete base course is not accessible to traffic before the surface course is placed, and it must be discontinued if it becomes unsatisfactory as a curing agent, with curing resumed by other methods[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 95–96), Ch. 5 (p. 115); [2] — SECTION 300 BASE COURSES (pp. 200–201), SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>Pavement widening projects employ specific procedures for density acceptance of added asphalt material. Density may be accepted by a non‑movement method when the added material is less than one inch deep or ≤110 pounds per square yard, placed in widths under four feet, or applied in quantities not exceeding 500 tons, and it may also be accepted by an optimum‑rolling pattern that is established with the Representative and verified using an approved nuclear gauge (PTM No. 402) or an approved electrical impedance gauge (PTM No. 403). When density is deemed critical for the widened shoulder, pavement cores are taken and tested for bulk specific gravity (Gmb) and bulk density in accordance with PTM No. 1, PTM No. 715/716 and AASHTO T 209, the percent of theoretical maximum density is calculated per ASTM E‑29, and statistical checks follow PTM No. 4 at a 5 % significance level. For cement concrete base course widening up to six feet in width, forms are not required and acceptable methods must be used to contain the base course; where longitudinal joints are indicated or formed for convenience of construction, a tied joint shall be formed as shown on the Standard Drawings for cement concrete pavement joints, and full‑width construction does not require sawing. The surface is given a rake or broom finish. Liquid Membrane Forming Curing Compound, Black, may be used only if the cement concrete base course will not be accessible to traffic before the surface course is placed, and the compound must be discontinued if it becomes unsatisfactory as a curing agent with curing resumed by other methods. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 200–201), SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273)</small></p>
+<p>For any widening or lane addition on a rigid pavement, the design shall use Class AA cement concrete unless an exemption is granted, and this applies to all uniform‑depth rigid pavements built since 1945. When the added width is ten feet or more (full lane addition), the thickness of the new section shall be the same as that of the original pavement unless heavier traffic loads require design for the actual traffic; in such cases the design shall reflect the actual traffic conditions. For partial widenings that are less than ten feet, the new portion shall match the existing pavement type and depth. In jointed plain cement concrete (JPCP) pavements, transverse joints on the widening shall be aligned with those of the original pavement: if the original transverse joint spacing is twenty feet or less, slabs in the widened area shall have the same length as on the original pavement; if the original spacing exceeds twenty feet, the widening shall be constructed with JPCP and the joint spacing shall be adjusted to a minimum length of ten feet and a maximum length of seventeen feet, incorporating intermediate joints so that slab lengths are approximately equal. For asphalt pavements, partial lane widenings less than ten feet must duplicate the existing pavement structure by providing an equal depth of asphalt material and, where concrete layers exist, an equal thickness of concrete, while keeping drainage layers as consistent as possible with those of the existing pavement; full‑width additions of ten feet or more should also match the existing pavement structure unless traffic conditions dictate heavier or lighter loadings, in which case the design shall be for the actual traffic. Whenever layer thicknesses are altered, drainage must be checked to ensure adequate provision throughout the cross section. For asphalt‑mix (Superpave) widening, the mat density may be accepted by non‑movement when the added material is a scratch or leveling course less than 1 inch in depth or equal to or less than 110 lb/yd², and when the widened area is less than 4 ft wide or so narrow that compaction equipment bridges it. The Inspector‑in‑Charge may also treat mixtures used for road widening as non‑critical if they are placed in small quantities not exceeding 500 tons in a continuous placement, if they are on unstable or non‑uniform bases, or if density is otherwise deemed non‑critical; however, any portion where density is critical must be verified with pavement cores taken at the minimum compacted depths on stable uniform bases. An optimum‑rolling pattern may likewise be used for road widening where density is not critical, provided the same quantity and base conditions apply and the pattern is established and documented according to PTM No. 402/403; when density is critical, core sampling as required in Section 413.3(j)4 must be performed. When widening a cement‑concrete base course, forms are not required if the added width does not exceed six feet; for any wider expansion acceptable methods must be used to contain the new material. A black liquid‑membrane forming compound may be applied only if the widened base will not be exposed to traffic before the surface course is placed, and it must be discontinued if it becomes unsatisfactory as a curing agent. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=075b461f src=408_2020_11::tab:p270#1 -->
+<p>The table below specifies the minimum compacted depths for various asphalt mixture types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-pavement-widening-1-cap" tabindex="0"><table class="ct-table" id="ct-pavement-widening-1" aria-describedby="ct-pavement-widening-1-sum">
+<caption id="ct-pavement-widening-1-cap">TABLE GMixture Minimum Compacted Depths</caption>
+<thead>
+<tr><th scope="col">Mixture</th><th scope="col">Minimum Depth</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">9.5 mm Wearing Course</th><td>1 1/2 in.</td></tr>
+<tr><th scope="row">12.5 mm Wearing Course</th><td>2 in.</td></tr>
+<tr><th scope="row">19 mm Binder Course</th><td>2 1/2 in.</td></tr>
+<tr><th scope="row">25 mm Binder Course</th><td>3 in.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-pavement-widening-1-sum">Rows list different asphalt mixture types, columns give the minimum compacted depth for each.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 270.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 95–96), Ch. 5 (p. 115); [2] — SECTION 300 BASE COURSES (pp. 200–201), SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>Fill widening may be provided as a concrete shoulder or as a widened lane with asphalt shoulders, and the widened lane width is limited to between 1 ft and 2 ft; where applicable Type 6 or Type 7 paved shoulders should be used to retain proper shoulder widths [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For rigid‑pavement widening, a full lane addition that is at least 10 ft wide shall be designed to the same thickness as the original pavement unless heavier traffic conditions dictate a different design, while any partial widening of less than 10 ft shall match the existing pavement type and depth [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the original transverse joint spacing does not exceed 20 ft, the widened section shall use slab lengths identical to those on the original pavement; if the original spacing exceeds 20 ft, the joint spacing in the widened portion shall be adjusted to a minimum of 10 ft and a maximum of 17 ft [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For base‑course widening, forms are not required when the added width is six feet or less, but any widening greater than six feet must be formed, although the specification does not prescribe an upper limit for that requirement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Reinforcement is not required for the widened base course because all references to reinforcement have been deleted in the applicable section [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–69), Ch. 4 (pp. 95–96); [2] — SECTION 300 BASE COURSES (pp. 200–201)</small></p>
+<p>For widening or lane additions on rigid pavements the design shall use Class AA cement concrete unless an exemption is granted, and thicknesses shall follow the original pavement for full lane additions of ten feet or more unless heavier traffic requires a redesign; partial widenings of less than ten feet shall match the existing pavement type and depth. The transverse joint pattern must be aligned with the existing pavement; if the original joint spacing is twenty feet or less the new slabs shall have the same length, while for spacings greater than twenty feet the widening shall use plain cement concrete with joint spacing limited to a minimum of ten feet and a maximum of seventeen feet, adding intermediate joints as needed to keep slab lengths roughly equal. All lane additions and widenings shall be tied into the existing pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 95–96)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>For widening or lane addition on a rigid pavement, the design shall employ Class AA cement concrete unless an exemption is granted. When the widening is a partial extension less than 10 feet, the new section must use the same pavement type and depth as the existing surface; consequently a jointed plain cement pavement (JPCP) shall be widened with plain cement concrete, while a jointed reinforced cement pavement (JRCP) may be widened with either reinforced or plain cement concrete. Full‑width lane additions on rigid pavements retain the original thickness of the existing pavement unless heavier traffic conditions require a different thickness. For asphalt pavements, a partial widening under 10 feet must use the same material type as the existing structure, matching each asphalt layer with an equal depth of asphalt material and each concrete layer with an equal thickness of concrete, and the drainage layers shall be kept consistent with those already in place. Full‑width lane additions that are ten feet or wider should also match the existing pavement structure unless traffic conditions dictate a heavier or lighter design, in which case the design must reflect the actual traffic loads while still ensuring adequate drainage throughout the cross section. In a plain cement concrete base‑course widening, the specification must identify the curing agent; a white liquid‑membrane forming curing compound is prohibited, whereas a black liquid‑membrane forming curing compound may be used only if the newly placed base course will not be open to traffic before the surface course is installed. If the black curing compound proves unsatisfactory it must be discontinued and alternative curing methods applied. The finished concrete surface shall be given a rake or broom texture. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 95–96), Ch. 5 (p. 115); [2] — SECTION 300 BASE COURSES (pp. 200–201)</small></p>
+<p>For widening or lane additions on rigid pavements, the material shall be Class AA cement concrete unless an exemption is granted, and the mixture must correspond to the existing pavement type: full lane additions that are at least ten feet wide shall be designed to the same thickness as the original pavement unless heavier traffic requires a different design, while partial lane widenings that are less than ten feet wide shall match the existing pavement’s type and depth. Jointed plain cement concrete (JPCP) must be used for widening of JPCP sections, whereas jointed reinforced cement concrete (JRCP) may be widened with either reinforced or plain cement concrete. Transverse joints in the new section shall align with those on the original pavement; if the original joint spacing is twenty feet or less, slab lengths should be the same as the original, and when it exceeds twenty feet the widening shall use JPCP with joint spacing adjusted to a minimum of ten feet and a maximum of seventeen feet. All lane additions and widenings must be tied to the existing pavement, and any deviation from these criteria requires an exemption supported by documentation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 95–96)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>According to the Pavement Policy Manual (Publication 242, Change No. 10), when widening an asphalt pavement for rehabilitation the work is accomplished by adding fill to retain the required shoulder width and it requires that both longitudinal and transverse concrete joints be cleaned and sealed before the new overlay is placed; existing transverse or patch joints must be saw‑cut and sealed prior to the overlay, and the widened portion should receive paved shoulders constructed as Type 6 or Type 7 shoulder pavement where applicable while a continuous pavement base drain is maintained and guide‑rail and drainage structures are adjusted or replaced as needed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual states that for concrete rehabilitation fill widening is used to retain proper shoulder widths and to verify bridge underclearances, but it does not prescribe any particular joint configuration, reinforcement, load‑transfer device, transition detail, or connection for the widened portion [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For rigid‑pavement widening or lane additions the manual requires that transverse joints on the widening be aligned with those on the existing pavement; when the original transverse joint spacing is 20 feet or less the new slabs are constructed to the same length as the originals, whereas if the original spacing exceeds 20 feet the widened section shall use plain cement concrete with joint spacing limited to a minimum of 10 feet and a maximum of 17 feet, adding intermediate joints as necessary [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The manual further specifies that jointed plain cement‑concrete pavements (JPCP) shall be widened with plain cement concrete, while jointed reinforced cement‑concrete pavements (JRCP) may be widened with either reinforced or plain cement concrete; full lane additions that are at least 10 feet wide shall be designed to the same thickness as the original pavement unless heavier traffic loads require a different design, and all widening should be tied to the existing pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania Department of Transportation specifications (Publication 408/2020) require that for surface‑course widening each longitudinal joint be offset from the joint in the layer immediately below by approximately 6 inches and positioned so that on two‑lane roads the top‑layer joint lies at the approximate pavement centreline, while on wider roadways it must lie within 12 inches of the lane lines, avoiding placement directly beneath planned markings [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Before placing abutting lanes the joint face must be painted with a uniform coating of asphalt material using the PG‑Binder specified for the course or PG 64S‑22, after which the joint is compacted in accordance with the paving operation quality‑control plan and required roller passes; all surface‑course longitudinal joints are then sealed with hot PG 64S‑22 binder applied at 265 °F–320 °F in a straight band 4 inches ± 1 inch wide and 1/16 inch ± 1/32 inch thick, centred within 1 inch of the joint, and sealant may not be placed when air temperature is below 40 °F unless the Representative permits it [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For cement‑concrete base‑course widening up to six feet in width the specifications state that forms are not required provided acceptable methods are used to contain the base course, and reinforcement requirements are removed because related references have been deleted; transverse joint provisions follow Section 501.3(i)1, and any longitudinal joints provided for construction convenience shall be formed as tied joints per the standard drawings, with sawing not required when the widening is full‑width [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The specifications also allow the use of a black liquid‑membrane forming compound for curing only if the cement‑concrete base course will not be accessible to traffic before the surface course is placed, and they omit sealing of joints and cracks in this situation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 95–96); [2] — SECTION 300 BASE COURSES (pp. 200–201), SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273)</small></p>
+<p>When a pavement is widened the interfaces are treated according to the rehabilitation procedures specified for the material category, requiring cleaning and sealing of all existing longitudinal and transverse joints as well as pavement‑shoulder joints [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For asphalt‑based widening projects the preparation includes applying an asphalt tack coat if necessary, installing heavy‑duty membranes where required, and sawing and sealing over existing transverse and patch joints to secure proper bonding; a continuous pavement base drain is provided and full‑depth shoulders are constructed to the appropriate type, with guide rail or drainage structures adjusted or replaced as needed and fill widening used to retain proper shoulder widths [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For concrete‑based widening projects the same cleaning and sealing of longitudinal and pavement/shoulder joints is required, along with provision of a continuous pavement base drain, adjustment or replacement of guide rail and drainage structures, and use of fill widening to maintain shoulder widths and check bridge clearances; new portions shall be constructed with Class AA cement concrete unless an exemption is granted, matching the existing pavement type and depth [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Partial lane widenings less than ten feet must replicate the existing pavement type and thickness, using an equal depth of asphalt where the original surface is asphalt or an equal thickness of concrete where it is concrete, and the drainage layers should be kept consistent with those already in place [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Full‑width lane additions of ten feet or more shall generally follow the existing pavement structure unless traffic conditions dictate a different design; in such cases layer thicknesses are sized for the actual traffic while still verifying that adequate drainage is provided throughout the cross section [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Transverse joints in the widened portion shall be aligned with those on the original pavement; if the original joint spacing is twenty feet or less, slabs of the same length are used, and when the original spacing exceeds twenty feet the widening shall use JPCP with joint lengths adjusted to a minimum of ten feet and a maximum of seventeen feet, adding intermediate joints as needed so slab lengths remain approximately equal [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In asphalt surface‑course widening the longitudinal joint for the new lane shall be offset about six inches from the joint in the layer immediately below, placed at the approximate centerline on two‑lane roads or within twelve inches of lane lines on wider roadways [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Prior to placing the adjoining lane the joint face shall be painted with a uniform coating of the same asphalt binder (PG‑Binder or PG 64S‑22) and the paver shall overlap the edge of the previously compacted lane by 1 to 1½ inches, keeping the uncompacted mix at least one‑quarter inch higher per inch of material to ensure full compaction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Roller passes shall follow the specified distances from the joint and provide as many passes as the rest of the mat; after placement the joint shall be sealed with hot PG 64S‑22 binder kept between 265 °F and 320 °F (not when air temperature is below 40 °F unless authorized), applying a straight band four inches ±1 inch wide and 1/16 inch ±1/32 inch thick centered within one inch of the joint [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For concrete base‑course widening up to six feet wide, forms shall not be required but acceptable methods must be employed to contain the new material; any longitudinal joints provided for construction convenience shall be tied joints as shown on the standard drawings, and sawing is not required when the widening is full‑width [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Transverse joints shall follow only Section 501.3(i)1, and the surface finish of the widened concrete base course shall be a rake or broom finish; curing may use black liquid‑membrane forming compound only if the concrete will not be exposed to traffic before the surface course is placed, and its use shall be discontinued if it becomes unsatisfactory [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 95–96), Ch. 5 (p. 115); [2] — SECTION 300 BASE COURSES (pp. 200–201), SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>In the concrete rehabilitation and overlay specifications that include fill widening, the design calls for a continuous pavement base drain and requires any guide‑rail or drainage structures to be adjusted or replaced as necessary so that the widened shoulder maintains proper width and bridge clearances. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70)</small></p>
+<p>Fill widening shall retain proper shoulder widths and, where applicable, shall use Type 6 or Type 7 paved‑shoulder classifications [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A leveling course of at least one inch, including cross‑slope correction, shall be provided during fill widening, and guide rail and drainage structures shall be adjusted or replaced as necessary to maintain safety [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For concrete rehabilitation, fill widening shall also retain proper shoulder widths and shall verify that bridge under‑clearances are adequate, with guide rail and drainage structures adjusted or replaced as necessary for safety [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When a full lane addition is ten feet or greater, the design shall use the same thickness as the original pavement unless heavier traffic loads require design for actual traffic; partial lane widening of less than ten feet shall match the existing pavement type and depth [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The widened portion of concrete pavements shall be constructed with Class AA cement concrete unless an exemption applies; JPCP widenings shall be constructed with plain cement concrete, and JRCP may be widened with either reinforced or plain cement concrete [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Transverse joints on the widening or lane addition shall be aligned to those on the original pavement; if the original joint spacing is twenty feet or less, slab lengths shall equal the original, whereas if it exceeds twenty feet the joint spacing shall be adjusted to a minimum of ten feet and a maximum of seventeen feet with intermediate joints added so that slab lengths are approximately equal [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For asphalt pavements, partial lane widening of less than ten feet must match the existing pavement structure and, as much as possible, keep drainage layers consistent with those of the original pavement; when a full‑width lane addition of ten feet or more is provided it also should match the existing pavement structure unless circumstances dictate heavier or lighter traffic loadings for the additional lane, in which case the design must reflect those actual traffic loads [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When changing pavement layer thicknesses, drainage shall be adequately provided throughout the pavement cross section [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When widening a cement concrete base course, forms are not required if the widening does not exceed six feet in width, although acceptable methods must still be used to contain the material [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If a black liquid membrane forming curing compound is selected for the widened base course, it may only be applied when the concrete will not be accessible to traffic before the surface course is placed, thereby preventing premature traffic exposure [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 67–70), Ch. 4 (pp. 95–96), Ch. 5 (p. 115); [2] — SECTION 300 BASE COURSES (pp. 200–201)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed widening is verified by the Department’s mat‑density acceptance procedures in Section 413.3(j); for road‑widening courses that are less than 1 inch deep or equal to or less than 110 lb/yd², or where the paved width is under 4 ft, the Inspector‑in‑Charge may accept density by non‑movement provided the mixture does not move under the compaction equipment, and mixtures placed in quantities not exceeding 500 tons continuous, on unstable bases, or for patching and shoulder work may also be accepted by non‑movement when deemed non‑critical; when the course is one inch or deeper or ≥110 lb/yd², the Representative together with the contractor’s certified asphalt field technician must establish an optimum‑rolling pattern, determine density with an approved nuclear gauge (e.g., Troxler Model 3411B) or electrical impedance gauge in accordance with PTM 402/403, document the pattern on Form TR‑4276B/C and compact accordingly, with the Representative suspending paving if the pattern is not followed; for RPS construction and for standard extended‑season paving (unless waived), 6‑inch diameter pavement cores must be drilled within one day, labeled with project data, and sent to the Laboratory Testing Services where bulk specific gravity and density are measured, and the core results together with verified Gmm values that may not differ by more than ±0.030 from the contractor’s daily Gmm are used to calculate percent theoretical maximum density and determine acceptance as specified in Section 413.4(a)4 or (b). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

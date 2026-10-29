@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Freeze-Thaw Cycle</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html" class="active" aria-current="page">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="frost-heave.html">Frost Heave</a><span class="crumb-sep">›</span><span class="crumb-current">Freeze-Thaw Cycle</span></nav>
+<article><h1>Freeze-Thaw Cycle</h1>
+<div class="meta"><div class="part-of">Part of: <a href="frost-heave.html">Frost Heave</a> <span class="edge edge-taxonomic" title="Freeze-Thaw Cycle is a topic under Frost Heave.">is-subtopic-of</span></div><div class="edge-reading">Freeze-Thaw Cycle is a topic under Frost Heave.</div><div><a class="tag" href="index.html?q=freeze-thaw-cycle">freeze-thaw-cycle</a><a class="tag" href="index.html?q=freeze-thaw-cycles">freeze-thaw-cycles</a><a class="tag" href="index.html?q=freeze-thaw-cycles">freeze-thaw-cycles</a><a class="tag" href="index.html?q=freeze-thaw">freeze-thaw</a></div><div>Created 2026-10-28 · Updated 2026-10-28</div></div>
+<p>The Freeze‑Thaw Cycle is the repeated freezing and thawing of water that has entered a pavement’s structural section, causing the water to expand when it freezes and contract when it thaws, which generates expansion‑contraction stresses within the material. These cyclic stresses constitute a primary mechanism that propagates cracks, creates potholes, induces stripping and other forms of distress, and accelerates overall pavement deterioration, especially where moisture intrusion is present. Because water intrusion drives this damage, design practices often employ thicker overlays combined with moisture‑blocking interlayers or chemical additives that lower the freezing point to delay cracking in harsh environments.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#influence-of-production-and-placement">Influence of production and placement</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>The Freeze‑Thaw Cycle is the repeated freezing and thawing of water that has entered a pavement’s structural section, causing the water to expand when it freezes and contract when it thaws; this expansion‑contraction action creates stress that can propagate cracks, produce potholes and other forms of distress, and accelerate overall pavement deterioration. Because water intrusion is identified as a major cause of such damage, a thicker overlay with an interlayer system may be used to delay cracking longer in harsh environments. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–120)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>The freeze‑thaw cycle in pavement is defined by water that has entered the structural section of the pavement; when temperatures drop this water freezes and expands, and when it thaws it contracts, producing expansion‑contraction stresses within the material. This repeated expansion and contraction is identified as a primary mechanism that contributes to crack propagation, potholes, stripping, and other forms of distress. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–120)</small></p>
+<p>In the context of full‑depth reclamation, adding chloride salts such as calcium chloride or magnesium chloride alters the mix composition and lowers the freezing temperature of the reclaimed material, thereby enhancing resistance to freeze‑thaw damage while also providing a modest strength gain from particle cementing. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The degree of that resistance is directly linked to proportioning; calcium chloride must be applied as at least a 35 % solution at a rate of 0.1 to 0.15 gallons per square yard for each inch of reclaimed depth. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Incorporating emulsified asphalt changes the binder composition and improves water‑related damage resistance and fatigue performance, which helps mitigate deterioration caused by repeated freezing and thawing cycles. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Under SECTION 704—CEMENT CONCRETE &gt; 704.1 GENERAL, if the aggregate source yields water absorption exceeding 3.0 % for gravels or 2.0 % for all other aggregates, the mix must be proportioned so that test specimens survive at least 300 freeze‑thaw cycles with less than 0.04 % dilation or achieve a durability factor above 80; otherwise such high‑absorption material is not permitted. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] In SECTION 703—AGGREGATE &gt; 703.2 COARSE AGGREGATE, the specification requires that lightweight coarse aggregates produced by expanding, pelletizing, or sintering blast‑furnace slag, diatomite, fly ash, clay, shale, or slate have an absorption factor not to exceed 2.5 % and that after 300 cycles the dynamic modulus reduction be limited to a maximum of 60 %; other aggregate types are governed only by general durability limits, so their composition affects compliance primarily through meeting those broader quality criteria. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 126–128); [2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>The freeze‑thaw performance of pavement systems is governed by a combination of physical, mechanical, chemical and thermal properties. In overlay applications (section 5.12) any material that limits water intrusion acts as a moisture barrier, and the interlayer must be thermally stable and physically durable so that it does not lose strength or deform during repeated temperature fluctuations. For reclaimed pavement material (section 5.15) the addition of calcium chloride or magnesium chloride chemically lowers the freezing temperature of the mix, directly enhancing resistance to freeze‑thaw damage, while the same chlorides also provide a modest gain in strength through particle cementation; asphalt‑based stabilization further improves moisture durability and fatigue resistance under traffic loading. In fiber‑reinforced concrete overlays (section 10.10) the mechanical attribute most cited is the residual flexural strength after 150 cycles (f150), which typically ranges between 100 psi and 225 psi for concrete overlay applications, and this residual strength together with flexural fatigue capacity, post‑cracking strength, toughness and controlled air content governs how well the overlay tolerates repeated freezing and thawing; the fibers increase flexural fatigue performance, post‑crack strength and overall toughness, while appropriate air‑entraining admixture maintains suitable air content to accommodate freeze‑thaw stresses. Within the cement‑concrete provisions of SECTION 704—CEMENT CONCRETE (704.1 GENERAL) freeze‑thaw resistance is controlled chiefly by aggregate water absorption and the consequent dimensional stability during repeated freezing, the specification limiting absorption to not exceed 3.0 % for gravels and 2.0 % for all other aggregates, and permitting higher‑absorption material only when mix‑design specimens survive at least 300 freeze‑thaw cycles in accordance with ASTM C666 while exhibiting less than 0.04 % dilation or a durability factor greater than 80. In SECTION 703—AGGREGATE (703.2 COARSE AGGREGATE) the governing properties are low water absorption, limited expansion and resistance to loss of stiffness; lightweight aggregate must have an Aggregate Absorption Factor not exceeding 2.5 %, gravel used in Type A or B applications may not exceed a maximum allowable absorption of 3.0 % or 3.5 % respectively, steel‑slag stockpiles are required to show total expansion less than 0.50 %, and concrete made with the aggregate should limit the decrease in dynamic modulus after 300 freeze‑thaw cycles to no more than 60 %. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–128), Ch. 10 (pp. 186–188); [2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<p>Within SECTION 704—CEMENT CONCRETE, freeze‑thaw resistance of coarse aggregates is characterized by testing mix‑design specimens for a minimum of 300 freeze‑thaw cycles in accordance with ASTM C666; the specimens must exhibit less than 0.04 % dilation or achieve a durability factor greater than 80 to be acceptable. Within SECTION 703—AGGREGATE, the freeze‑thaw property of lightweight aggregate concrete is evaluated by the laboratory resistance test defined in AASHTO T 161 Procedure B, which requires 14 days of moist cure followed by drying of the beams at 72°F ± 3°F and approximately 50 % relative humidity for 14 days, then soaking in water for 3 days before initiating the freezing‑and‑thawing cycles; the performance criterion is that the decrease in dynamic modulus after 300 cycles shall not exceed 60 %. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>In overlay applications (section 5.12 OVERLAYS), freeze‑thaw cycles cause the expansion and contraction of water that is trapped in the pavement, which can initiate cracking [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A thicker overlay combined with an interlayer system may delay cracking longer in harsh environments [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In full‑depth reclamation treatments (section 5.15 FULL DEPTH RECLAMATION TECHNIQUES), the use of chloride additives such as calcium or magnesium chloride results in some gain in strength because the chemicals cement particles, and these chemicals also lower the freezing temperature of the reclaimed material, thereby improving resistance to the effects of the freeze‑thaw cycle [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Emulsified asphalt stabilization offers several advantages including improving resistance to water‑related damage and improved fatigue resistance to loading [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For lightweight aggregate used in concrete (section 703.2 COARSE AGGREGATE), freeze‑thaw cycling—i.e., repeated moisture saturation and temperature fluctuations—must not cause the dynamic modulus to drop more than sixty percent after three hundred cycles, indicating that the material retains sufficient stiffness under those service conditions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The specification therefore limits the loss of stiffness as a measure of acceptable freeze‑thaw performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–128); [2] — SECTION 700 MATERIAL (pp. 636–639)</small></p>
+<p>In overlay applications (section 5.12), the freeze‑thaw cycle influences pavement primarily through the physical expansion of water when it freezes and its contraction upon thawing within the pavement matrix; this volumetric change generates stresses that can open or propagate cracks, and the effect is amplified whenever moisture has already intruded into the structural section because water intrusion is identified as a major cause of distress. In full‑depth reclamation techniques (section 5.15), chemical mechanisms are introduced by adding calcium chloride or magnesium chloride, which cement particles to increase reclaimed material strength and, more importantly, depress the freezing point so that the mix resists the damaging expansion‑contraction associated with freeze‑thaw cycles; generally, calcium chloride is applied using a minimum 35 % solution at a rate of 0.1 to 0.15 gallons per square yard for each inch of depth reclaimed. A complementary mechanical mechanism is provided by emulsified asphalt, which reduces water‑related damage and enhances fatigue resistance to loading, thereby helping to limit cracking and potholing under repeated temperature swings. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–128)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>In section 5.12 Overlays, water that infiltrates the structural portion of a pavement is identified as a major cause of several freeze‑thaw related durability concerns, including loss of subgrade support, stripping, potholes, localized failures, crack propagation, and overall pavement deterioration; because freeze‑thaw cycles cause expansion and contraction of water within the pavement, providing a moisture barrier and using a thicker overlay with an interlayer may delay cracking longer in harsh environments. In section 5.15 Full Depth Reclamation Techniques, freeze‑thaw cycling is reported to degrade reclaimed pavement by promoting moisture infiltration and repeated expansion–contraction, which leads to loss of strength and cracking; incorporating calcium chloride or magnesium chloride into the mix lowers the material’s freezing point and therefore improves resistance to freeze‑thaw damage while also providing a modest strength gain from particle cementing, and generally calcium chloride is applied using a minimum 35 % solution at a rate of 0.1 to 0.15 gallons per square yard for each inch of reclaimed depth; emulsified asphalt stabilization further enhances durability by increasing resistance to water‑related damage and raising fatigue resistance under traffic loading. In section 10.10 Fiber‑Reinforced Concrete for Pavement Overlays, the principal durability concern during repeated freezing and thawing is potential loss of residual strength that can lead to crack propagation and reduced load‑transfer efficiency, yet fiber‑reinforced concrete retains significant residual strength even after a large number of freeze/thaw cycles, with macrofibers improving flexural fatigue performance, post‑cracking strength and toughness of the hardened matrix; the load‑transfer efficiency of FRC can be increased by up to 30 % compared with plain concrete when crack widths exceed about 1.0 mm, and tighter joint openings of less than 0.5–1.0 mm further enhance durability under freeze‑thaw action. In Section 704—Cement Concrete, coarse aggregates must not exceed 3.0 % absorption for gravels or 2.0 % absorption for all other types, and any higher‑absorption material may be permitted only if mix‑design specimens satisfy 300 freeze‑thaw cycles in accordance with ASTM C666 while exhibiting less than 0.04 % dilation and/or a durability factor greater than 80. In Section 703—Aggregate, the freeze‑thaw durability of lightweight aggregate used in concrete is controlled by limiting loss of stiffness after repeated cycles; the decrease in dynamic modulus shall not exceed 60 % after 300 freeze‑thaw cycles as measured by AASHTO T 161 Procedure B, and the aggregate absorption factor shall not exceed 2.5 % according to PTM No. 526. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–128), Ch. 10 (pp. 186–188); [2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<p>In Section 5.12 Overlays, material characteristics that limit water entry—such as incorporating a moisture‑barrier interlayer (geotextile paving fabric or composite reinforcing grids) and providing a thicker overlay—can reduce the susceptibility of pavement to freeze‑thaw deterioration because they keep water out of the structural section and may delay cracking longer in harsh environments [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Exposure conditions that allow water intrusion, including poor surface or subsurface drainage, springs, or standing water, increase the risk since freeze‑thaw cycles cause expansion and contraction of water in pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Section 5.15 Full Depth Reclamation Techniques, applying calcium chloride or magnesium chloride as a stabilizer in reclaimed material lowers its freezing temperature, which improves the pavement’s resistance to freeze‑thaw deterioration; the recommended practice uses a minimum 35 % solution applied at 0.1 to 0.15 gal per square yard for each 1 inch of depth reclaimed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Emulsified asphalt stabilization also reduces susceptibility by enhancing resistance to water‑related damage and increasing fatigue resistance, especially when used with other additives such as granular material, cement, or lime [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Section 10.10 Fiber‑Reinforced Concrete for Pavement Overlays, including macrofibers—synthetic or steel—in the concrete mix at 0.2 % to 0.5 % by volume provides residual strength that allows fiber‑reinforced concrete to retain significant residual strength even after a large number of freeze/thaw cycles and to limit crack growth [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Tighter joint and crack openings less than 0.5 to 1.0 mm further improve durability, whereas wider cracks or the absence of fibers make pavements more vulnerable to freeze‑thaw deterioration [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Section 704—Cement Concrete, aggregate absorption is identified as a primary material characteristic governing susceptibility to freeze‑thaw damage; coarse‑aggregate absorption shall not exceed 3.0 % for gravels and 2.0 % for all other aggregates because higher absorption tends to increase deterioration unless proven otherwise [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When an aggregate exceeds those limits it may still be used only if mix‑design specimens survive at least 300 freeze‑thaw cycles per ASTM C666 with less than 0.04 % dilation or achieve a durability factor greater than 80, which demonstrates reduced susceptibility [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 703—Aggregate adds that aggregates that are hard, tough, durable and reasonably free from clay, silt, vegetation and deleterious minerals such as reactive chert, gypsum, iron sulfide, amorphous silica or hydrated iron oxide tend to be less susceptible to freeze‑thaw damage, whereas the presence of those substances increases vulnerability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For lightweight aggregate the specification limits the Aggregate Absorption Factor to a maximum of 2.5 % and requires that the dynamic modulus after 300 freeze‑thaw cycles not decrease more than 60 %, so meeting these thresholds reduces susceptibility [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–128), Ch. 10 (pp. 186–188); [2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>In full‑depth reclamation, applying calcium chloride lowers the freezing temperature of the reclaimed mix and improves its resistance to freeze‑thaw damage while also providing some strength gain through particle cementing; the chemical is typically applied as a minimum 35 % solution at a rate of 0.1 to 0.15 gallons per square yard for each inch of depth reclaimed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Emulsified asphalt stabilization used in the same reclamation process further mitigates water‑related deterioration and fatigue cracking and is compatible with other additives such as granular material, cement and lime, allowing the combined system to better withstand freeze‑thaw cycling [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In fiber‑reinforced concrete overlays, the freeze–thaw cycle does not eliminate the benefit of macrofibers; even after many cycles the material retains significant residual strength, enabling the fibers to continue providing flexural fatigue resistance, post‑cracking strength and toughness while offering no gain in compressive or plain flexural strength [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Section 704 of the Pennsylvania specifications limits aggregate water demand for freeze‑thaw durability by requiring that gravels not exceed 3.0 % absorption and all other aggregates not exceed 2.0 % absorption; coarse aggregates with higher absorption may be used only when the mix design demonstrates at least 300 freeze‑thaw cycles per ASTM C666 with less than 0.04 % dilation or a durability factor greater than 80 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When lightweight coarse aggregate is employed, its durability must be demonstrated by a freeze‑thaw resistance test that limits the loss of dynamic modulus after 300 cycles to no more than 60 % and the aggregate’s low absorption (maximum 2.5 %) helps ensure that the cement‑paste‑aggregate bond is not compromised during repeated freezing and thawing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 126–128), Ch. 10 (pp. 186–188); [2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<h2 id="influence-of-production-and-placement">Influence of production and placement</h2>
+<p>For lightweight aggregate concrete the specification requires that specimens be kept in a moist cure for at least fourteen days before they are dried and placed in the freeze‑thaw test; this conditioning is part of achieving the permitted maximum 60 % decrease in dynamic modulus after three hundred cycles. The freeze‑thaw resistance is evaluated using AASHTO T 161, Procedure B. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 636–639)</small></p>
+<p>In overlay construction, any practice that permits water to reach the structural layer markedly worsens freeze‑thaw damage over time; this includes omitting a moisture‑blocking interlayer, leaving less than the preferred minimum of 1 ½ inches of existing asphalt when milling, and creating debonded zones that require full removal of the overlay [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Poor surface preparation and insufficient drainage also promote water intrusion, which is identified as a primary driver of pavement deterioration under freeze‑thaw cycles [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In fiber‑reinforced concrete overlays, construction‑related defects that generate or enlarge cracks—such as slab movement, slab misalignment, plastic shrinkage cracking with subsequent crack widening, and improperly timed or insufficiently deep saw‑cut contraction joints—are cited as the principal factors that can compromise long‑term performance when subjected to repeated freeze‑thaw cycles [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The inclusion of macrofibers, which reduce crack widths and the number of cracks, is noted to mitigate these construction‑induced vulnerabilities [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p>The cement concrete specifications state that if coarse‑aggregate absorption exceeds more than 3.0 % for gravels or more than 2.0 % for other aggregates, the concrete’s resistance to repeated freezing and thawing can be compromised unless the mix design is proven to survive at least 300 freeze‑thaw cycles per ASTM C666 with less than 0.04 % dilation and a durability factor greater than 80; thus exceeding those absorption limits or failing to meet those durability test criteria are the construction variations that most strongly affect long‑term freeze‑thaw performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The same specifications identify the presence of clay, silt, vegetation, or deleterious minerals such as reactive chert, gypsum, iron sulfide, amorphous silica and hydrated iron oxide in coarse aggregate, together with excessive moisture absorption, as construction‑related defects that most strongly affect long‑term freeze‑thaw behavior [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For lightweight aggregate the specification limits the Aggregate Absorption Factor to a maximum of 2.5 % and requires that after 300 freeze‑thaw cycles the dynamic modulus not decrease more than 60 %; any deviation from these thresholds during construction will accelerate cracking and other distress [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–120), Ch. 10 (pp. 186–188); [2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>In selecting coarse aggregates for the cement‑concrete classes covered by Section 704, the absorption shall not exceed 3.0 % for gravels and 2.0 % for all other aggregates; if a higher‑absorption aggregate is proposed, the mix design must demonstrate resistance to at least 300 freeze‑thaw cycles as defined in ASTM C666 with less than 0.04 % dilation or a durability factor greater than 80. For lightweight aggregates specified in Section 703, freeze‑thaw resistance shall be demonstrated by testing in accordance with AASHTO T 161 Procedure B, and the dynamic modulus after 300 cycles may not decrease more than 60 % of the original value; additionally the aggregate absorption factor must not exceed 2.5 %. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<p>For asphalt overlay projects, the specification recommends installing an interlayer such as a geotextile paving fabric, fiberglass mesh grid, or composite reinforcing grid between the existing surface and the new overlay; these materials act as a moisture barrier that limits water intrusion, must be compatible with the asphalt binder, and require proper binder application rate to achieve a strong internal bond, while the overlay itself should have a minimum thickness of 1 ½ inches to help delay cracking in harsh environments [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In full‑depth reclamation, applying a calcium chloride or magnesium chloride solution at a concentration of at least 35 % and dosing between 0.1 and 0.15 gallons per square yard for each inch of reclaimed depth is prescribed to cement particles, provide modest strength gain, and depress the material’s freezing point, thereby enhancing resistance to freeze‑thaw damage [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The reclaimed layer may also be stabilized with emulsified asphalt, which improves water‑related durability and fatigue performance and can be combined with granular material, cement or lime as part of the mix design required by PennDOT specifications [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For concrete overlays, incorporating macrofibers—synthetic or steel—at a dosage of 0.2 % to 0.5 % by volume is advised to achieve residual compressive strengths typically ranging from 100 to 225 psi after many freeze‑thaw cycles; adjustments to water‑reducing admixtures may be made to compensate for slump loss, and the air‑entraining admixture should be modified during trial batches to maintain proper air content, with FRC trial batches required to verify fresh‑property specifications and the specified residual strength as a quality‑control measure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Cement‑concrete pavements are required to include an air‑entraining admixture and may incorporate supplementary cementitious material; aggregate absorption limits are set at 3.0 % for gravels and 2.0 % for other aggregates, and when higher‑absorption coarse aggregates are used the mix must be proven by testing to survive at least 300 freeze‑thaw cycles per ASTM C666 with less than 0.04 % dilation or a durability factor greater than 80 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Proper batching by weight, adjustment of aggregate water content based on stockpile tests, and strict control of the water‑to‑cement (plus SCM) ratio are specified to further support durable performance under freeze‑thaw conditions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When lightweight coarse aggregate is specified, it must meet Type A soundness and abrasion limits, have an Aggregate Absorption Factor not exceeding 2.5 %, and satisfy a freeze‑thaw resistance criterion that the decrease in dynamic modulus does not exceed 60 % after 300 cycles according to AASHTO T 161; coarse aggregates also must be screened through petrographic analysis (PTM No. 518) to confirm freedom from deleterious substances [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Steel‑slag stockpiles are only accepted when total expansion determined by PTM No. 130 is less than 0.50 % before use, providing an additional quality control for materials that could affect freeze‑thaw durability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–128), Ch. 10 (pp. 186–188); [2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>The Pavement Policy Manual, section 10.10 Fiber‑Reinforced Concrete for Pavement Overlays reports that laboratory slab tests exposing macro‑fiber reinforced concrete to repeated freeze‑thaw cycling demonstrate that the material retains significant residual strength, providing direct evidence of its durability under such conditions. The same source notes that field observations compiled in the National Concrete Overlay Explorer and documented studies of FRC overlays further confirm superior long‑term performance compared with plain‑concrete overlays when subjected to freeze‑thaw environments. The Commonwealth of Pennsylvania Department of Transportation Publication 408/2020, section 703.2 Coarse Aggregate requires laboratory verification of freeze‑thaw resistance for coarse aggregates that exceed the standard absorption limits; mix‑design specimens are subjected to 300 freeze‑thaw cycles in accordance with ASTM C666 and must exhibit less than 0.04 % dilation or achieve a durability factor greater than 80. For lightweight aggregate, the same specification evaluates freeze‑thaw durability in the laboratory by testing concrete beams according to AASHTO T 161 Procedure B, and after 300 cycles the decrease in dynamic modulus must not exceed 60 %. No field or long‑term performance criteria are provided in this section of the Pennsylvania specifications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<p>The expansion and contraction of water within the pavement structure during each freeze‑thaw cycle accelerates cracking and other distress, and water intrusion into the structural section is identified as a major cause of loss of subgrade support, stripping, potholes, localized failures, crack propagation, and overall deterioration. To counter these moisture‑driven mechanisms, design often calls for thicker overlays combined with an interlayer system, which may delay cracking longer in harsh environments and thereby reduce maintenance needs. In full‑depth reclamation, the use of calcium chloride or magnesium chloride lowers the freezing temperature of the reclaimed material, improving its resistance to the repeated expansion‑contraction stresses of freeze‑thaw cycles; specifications therefore call for a minimum 35 % calcium chloride solution applied at 0.1 to 0.15 gallons per square yard for each inch of depth reclaimed. Emulsified asphalt stabilization adds resistance to water‑related damage and fatigue, influencing construction choices and future maintenance requirements. Fiber‑reinforced concrete overlays retain significant residual strength even after a large number of freeze‑thaw cycles, allowing the overlay to continue carrying load despite repeated freezing and thawing, which helps limit crack growth and prolong serviceability. Fibers improve the flexural fatigue performance, the post‑cracking strength and the toughness of the hardened concrete, but they do not improve the compressive and flexural strengths; this enables designers to consider thinner slabs or longer design lives in freeze‑thaw environments while providing additional structural capacity, reducing crack widths, maintaining joint or crack load transfer efficiency, and extending the pavement’s serviceability through reduced crack deterioration. The specification limits coarse‑aggregate water absorption to 3.0 % for gravels and 2.0 % for all other aggregates; higher‑absorption material may be allowed only when the mix design can survive 300 freeze‑thaw cycles per ASTM C666 with less than 0.04 % dilation or a durability factor greater than 80. Meeting this durability test ensures that the concrete will resist cracking and loss of strength caused by repeated freezing and thawing, thereby influencing aggregate selection, mix‑design approval, and ultimately long‑term performance and maintenance needs of the pavement (section 704). For lightweight aggregate, concrete made with this material may not lose more than 60 % of its dynamic modulus after 300 freeze–thaw cycles, a limit intended to preserve pavement durability under repeated temperature fluctuations; because the specification also calls for compliance with AASHTO M 195 and other soundness and abrasion limits, designers must select lightweight aggregate that meets these durability criteria, and construction quality‑control must verify the freeze‑thaw performance before use, helping prevent premature cracking or loss of stiffness in pavements exposed to seasonal freezing (section 703). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–128), Ch. 10 (pp. 186–188); [2] — SECTION 700 MATERIAL (pp. 636–650)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

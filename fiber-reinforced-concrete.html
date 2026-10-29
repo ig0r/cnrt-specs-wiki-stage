@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiber-Reinforced Concrete</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html" class="active" aria-current="page">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="rigid-pavement.html">Rigid Pavement</a><span class="crumb-sep">›</span><a href="portland-cement-concrete.html">Portland Cement Concrete</a><span class="crumb-sep">›</span><span class="crumb-current">Fiber-Reinforced Concrete</span></nav>
+<article><h1>Fiber-Reinforced Concrete</h1>
+<div class="meta"><div class="part-of">Part of: <a href="portland-cement-concrete.html">Portland Cement Concrete</a> <span class="edge edge-taxonomic" title="Fiber-Reinforced Concrete is a topic under Portland Cement Concrete.">is-subtopic-of</span></div><div class="edge-reading">Fiber-Reinforced Concrete is a topic under Portland Cement Concrete.</div><div><a class="tag" href="index.html?q=synthetic-macrofibers">synthetic-macrofibers</a><a class="tag" href="index.html?q=residual-strength">residual-strength</a><a class="tag" href="index.html?q=fiber-content">fiber-content</a><a class="tag" href="index.html?q=fiber-contents">fiber-contents</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>Fiber‑Reinforced Concrete (FRC) is a conventional concrete matrix that incorporates synthetic or steel macrofibers as reinforcement, typically virgin polypropylene monofilament or bundled fibers ranging from 1 in to 2½ in in length with an aspect ratio not exceeding 150[1][2]. These fibers develop a measurable residual flexural strength (f150) after cracking—generally between 100 and 225 psi—which is added to the plain‑concrete modulus of rupture to raise effective flexural capacity and load‑transfer efficiency without increasing uncracked compressive or basic flexural strength[1][2]. By bridging cracks and limiting crack openings to roughly 0.5–1 mm, FRC reduces plastic‑shrinkage cracking, improves durability under freeze‑thaw cycling, and enables thinner slabs or higher traffic loads in both bonded and unbonded pavement overlay applications[1][2]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#influence-of-production-and-placement">Influence of production and placement</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>Fiber‑Reinforced Concrete (FRC) is a concrete mix that incorporates synthetic or steel macrofibers as reinforcement. The inclusion of these macrofibers raises the flexural and ultimate load capacity of the slab, giving the overlay additional structural capacity. By limiting crack widths and preserving joint or crack load‑transfer efficiency, FRC reduces slab movement, misalignment, plastic shrinkage cracking, and overall crack deterioration, which extends the pavement’s serviceability. For these reasons it is employed in overlays where thinner slabs, higher traffic loads, variable support conditions, or longer design lives are desired. In the Pennsylvania Department of Transportation specifications, Fiber‑Reinforced Concrete defined for unbonded concrete overlays on concrete‑surfaced pavements (Section 548.2) incorporates 100 % virgin polypropylene monofilament or bundled monofilament fibers each between 1.0 in and 2½ in long with an aspect ratio not exceeding 150. The fibers are added in a quantity sufficient to achieve a residual strength ratio of 20 percent while not exceeding a dosage of 5.0 lb per cubic yard unless field‑demonstrated workability is shown. This fiber‑reinforced concrete is specified for unbonded concrete overlays where the overlay thickness is less than 7 in, providing the required reinforcement to meet the performance criteria of the pavement system. For thin bonded concrete overlays on asphalt‑surfaced pavements (Section 541.2), Fiber‑Reinforced Concrete is Portland cement concrete that incorporates synthetic or steel macrofibers as specified in Section 708.1(a). The fibers are added at a rate sufficient to achieve the prescribed design residual strength value (f150), which is verified by testing per ASTM C1609‑12 at 14 days, thereby providing the tensile and post‑cracking performance needed for thin bonded concrete overlays on asphalt‑surfaced pavements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<p>Fiber‑Reinforced Concrete is appropriate for thin bonded concrete overlays (typically 3 to 6 in. thick) placed over asphalt or composite pavements when a thinner slab, higher traffic with heavy repeated loads, variable support conditions, or an extended design/service life are desired, and it also performs well in freeze‑thaw climates; however, if the existing pavement is poor or deteriorated such that an unbonded overlay is required, or where joints need dowel bars for faulting control, another material should be selected instead of relying on fibers. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>Fiber‑Reinforced Concrete is a conventional concrete matrix that incorporates either synthetic or steel macrofibers as reinforcement. In the unbonded overlay specification, the concrete is Class AA cement concrete that uses synthetic fibers made of 100 % virgin polypropylene (PE). For pavement overlay applications the fibers are typically 1 to 2.5 in long with an aspect ratio of 30 to 100 and may be round, rectangular or otherwise textured. In the unbonded overlay, fibers are supplied as a monofilament or bundled monofilaments whose lengths range from 1.0 in to 2½ in and whose aspect ratio shall not exceed 150. The dosage for pavement overlays is typically 0.2 % to 0.5 % of the mix volume. For the unbonded overlay the fiber dosage shall not exceed 5.0 lb per cubic yard unless a field demonstration shows acceptable workability and no clumping. The mix must contain enough fiber to produce a residual strength ratio R150,3 of 20.0 percent as determined by the Illinois Modified ASTM C1609. For pavement overlays the resulting residual flexural strength (f150) usually falls between 100 and 225 psi and is added to the plain‑concrete modulus of rupture to obtain an effective flexural strength. The presence of fibers reduces fresh‑mix workability, lowering slump by up to 4 in, and can alter air content requiring admixture adjustments. In hardened form the fibers retain residual strength after many freeze/thaw cycles, improve crack‑width control, increase load‑transfer efficiency by about 30 % and enhance flexural fatigue performance without increasing compressive or basic flexural strength. For thin bonded overlays with a depth less than 3 in, No. 67 coarse aggregate is used in place of No. 57. The concrete is required to achieve low, very low, or negligible chloride ion penetration after a curing period of 56 days or less as measured by AASHTO T277 or T358. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<p>In the Pavement Policy Manual, variations in macrofiber type, geometry, stiffness and surface characteristics are reported to change the residual strength (f150), so that different fibers require different dosage levels within a typical range of 0.2 % to 0.5 % by volume [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Increasing the fiber amount or selecting stiffer fibers can raise the effective flexural strength and load‑transfer efficiency, although the addition of macrofibers will decrease workability, with slump potentially reduced by up to 4 in (100 mm) unless water‑reducing admixtures are used and may require adjustment of air‑entraining admixture [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. These compositional adjustments improve post‑cracking toughness, flexural fatigue performance and can increase the load‑transfer efficiency of fiber‑reinforced concrete by about 30 % when crack widths exceed 1.0 mm, while they do not improve compressive or basic flexural strengths [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania specification mandates that polypropylene‑fiber reinforced concrete use 100 % virgin polyethylene‑based polypropylene fibers manufactured to an optimum gradation, with monofilament or bundled lengths between 1.0 in and 2½ in and an aspect ratio not greater than 150; these dimensions control the residual strength ratio that must reach 20.0 percent (R150,3) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The dosage of such fibers is limited to a maximum of 5.0 lb per cubic yard, and exceeding this limit is permitted only when a field demonstration shows that the mix remains workable and fiber clumping does not occur, reflecting that higher proportions can impair workability while insufficient quantities would fail to achieve the required residual strength [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For thin bonded concrete overlays on asphalt‑surfaced pavements where the overlay depth is less than 3 inches, the specification requires the use of No. 67 coarse aggregate instead of No. 57, a change that can influence strength and durability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In unbonded concrete overlays, macrofibers must be added at a rate that meets the design residual strength value (f150), and the fiber volume fraction is directly linked to the residual strength measured by ASTM C1609‑12 at 14 days; thus altering fiber proportioning adjusts tensile performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The concrete mixture also has to satisfy a target chloride ion penetration classified as Low, Very low, or Negligible after curing for 56 days or less, with permissible limits not to exceed 2,800 coulombs (AASHTO T 277) or resistivity values of 15.6 kΩ‑cm for 4‑by‑8 in cylinders and 12.3 kΩ‑cm for 6‑by‑12 in cylinders [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>The performance of fiber‑reinforced concrete overlays is governed by a combination of mechanical, physical, chemical and thermal attributes. Mechanically, the residual strength f150—typically between 100 psi and 225 psi—and the resulting effective flexural strength (feff) control flexural capacity and load‑transfer efficiency, which can be increased by 30 % compared with plain concrete when crack widths exceed 1.0 mm. For thin bonded overlays, the design residual strength value (f150) is evaluated in accordance with ASTM C1609‑12 after 14 days of curing. In unbonded overlays a residual strength ratio (R150,3) of 20.0 percent must be achieved to provide the required post‑crack tensile capacity. Physical performance depends on fiber geometry; fibers are specified with lengths ranging from 1 in. to 2½ in. and aspect ratios between 30 and 100, while shape and surface texture govern how well the macrofiber interacts with the cement matrix to develop residual strength. The same overlays require virgin polyethylene monofilament or bundled monofilament fibers whose length is limited to between 1.0 in. and 2½ in. and whose aspect ratio shall not exceed 150, a parameter that governs crack‑bridging ability. Fiber dosage may not exceed 5.0 lb per cubic yard unless a field demonstration confirms acceptable workability and absence of clumping. Chemically, the inclusion of synthetic macrofibers can reduce slump by up to 4 in. and alter air content, so water‑reducing or air‑entraining admixtures must be adjusted to meet mix specifications. The concrete mixture also must achieve a target chloride ion penetration classified as Low, Very low, or Negligible within 56 days, with measured penetration not exceeding 2 800 coulombs and electrical resistivity not greater than 15.6 kΩ‑cm for 4‑by‑8 in. cylinders or 12.3 kΩ‑cm for 6‑by‑12 in. cylinders. Thermally, macrofibers help retain significant residual strength after many freeze/thaw cycles, thereby enhancing fatigue performance, post‑cracking strength and toughness. The specifications do not prescribe additional thermal property requirements for the overlays. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<p>The performance of fiber‑reinforced concrete used in pavement overlays is primarily quantified by measuring its residual flexural strength at a crack mouth opening displacement of 150 µm (f150) in a flexural test prescribed by ASTM C1609, and this value is added to the plain‑concrete modulus of rupture to obtain an effective flexural strength (feff) for structural design; for overlay applications the residual strength typically ranges between 100 and 225 psi [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Because the residual strength reflects the interaction of fiber material, geometry, surface treatment and concrete matrix, fibers are classified by the residual strength they can deliver rather than by a fixed volume or weight fraction, with typical fiber dosages for overlays ranging from 0.2% to 0.5% by volume depending on design objectives [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the Class AA cement‑concrete overlay specified in Section 548 of the Pennsylvania specifications, the performance of polypropylene synthetic fibers is characterized by a residual strength ratio (R150,3) measured at 20.0 percent using the Illinois Modified ASTM C1609 test method [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The fibers for that class must be monofilament or bundled monofilament with a minimum length of 1.0 inches and a maximum length of 2½ inches, and may not exceed an aspect ratio of 150; the dosage rate is limited to 5.0 lb per cubic yard unless a field demonstration shows the mixture remains workable and free of fiber clumping [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For thin bonded concrete overlays covered by Section 541, the mix is characterized by its residual tensile strength (f150) obtained by running ASTM C1609‑12 on 14‑day specimens and relating the result to the fiber volume fraction for the selected synthetic macrofiber [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Permeability of those mixes is classified by a target chloride ion penetration level—Low, Very low, or Negligible after a curing period of 56 days or less—as measured with AASHTO T 277 not to exceed 2,800 coulombs, or with AASHTO T 358 not to exceed 15.6 kΩ‑cm for 4‑inch by 8‑inch cylinders and 12.3 kΩ‑cm for 6‑inch by 12‑inch cylinders; an optional Moderate classification is permitted by the DME/DMM [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the maturity method is employed, degree‑hours of cure are correlated to compressive strengths at intervals of 8 hours, 1 day, 7 days, 28 days and 56 days according to PTM No. 640 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>Under repeated vehicular loading, macro‑fiber reinforced concrete slabs exhibit higher flexural and ultimate load capacities than plain concrete, which results in an effective flexural strength that includes the residual strength (f150) measured by ASTM C1609; this also raises the load transfer efficiency at joints by as much as 30 % when crack widths exceed 1.0 mm. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The fibers do not raise the basic compressive or uncracked flexural strength, but they enhance post‑cracking toughness and fatigue performance, allowing the overlay to retain significant residual strength after many freeze/thaw cycles. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] By limiting crack opening to less than about 0.5–1.0 mm, the macrofibers improve durability and maintain joint load transfer efficiency under repeated loading. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For thin bonded overlays, fiber‑reinforced concrete is required to develop a design residual flexural strength (f150) that is verified by ASTM C1609‑12 testing at 14 days, ensuring that the fibers contribute load‑carrying capacity. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The mix must be designed so that chloride ion penetration after up to 56 days of curing meets a target of Low, Very low, or Negligible as defined by AASHTO T 277 or T 358, with measured values not exceeding 2,800 coulombs. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For resistance‑based tests, the chloride ion penetration shall not exceed 15.6 kΩ·cm on 4‑in × 8‑in cylinders and 12.3 kΩ·cm on 6‑in × 12‑in cylinders. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<p>In the context of pavement overlays as described in the Pavement Policy Manual (section 10.10), the behavior of fiber‑reinforced concrete is controlled mainly by the mechanical bridging action of macrofibers that provide a quantifiable residual strength (f150) after cracking, thereby raising the effective flexural capacity and load transfer efficiency between slabs. Physically, the fibers’ material properties, geometry, stiffness and surface texture govern their bond with the cement matrix and their ability to bridge cracks, which reduces crack number and width and maintains joint LTE similar to tie bars. Chemically, the presence of fibers may require adjustments to water‑reducing or air‑entraining admixtures to preserve workability and air content, but these changes do not alter the fundamental mechanical mechanisms. The mechanical response of a thin bonded concrete overlay on asphalt‑surfaced pavement is likewise governed by the residual tensile strength (f150) supplied by the synthetic macrofibers, which must be achieved by adding fibers at a rate that meets the design value and is quantified through ASTM C1609‑12 testing at 14 days to relate residual strength to fiber volume fraction. Chemically, durability of the overlay is controlled by the concrete’s permeability to chloride ions, requiring the mix to attain a target penetration level of Low, Very low, or Negligible within a curing period of 56 day or less as specified by AASHTO T 277 or T 358. As a result, fiber‑reinforced concrete exhibits improved flexural fatigue performance, post‑cracking strength and toughness while compressive and flexural strengths remain unchanged. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>Fiber‑Reinforced Concrete (FRC) overlays remain susceptible to freeze–thaw cycling, shrinkage‑induced cracking and uncontrolled crack growth; although the material can retain significant residual strength after many freeze/thaw cycles, fibers do not increase compressive or flexural strength and therefore cannot fully prevent damage. The macrofibers help by reducing the number of cracks and limiting average crack widths—often to less than 0.5–1.0 mm—and they maintain load‑transfer efficiency at contraction joints under repeated loading, but proper timing and depth of saw‑cut joints are required to activate the joint early enough to avoid premature cracking and dominant joints. Because fibers do not substitute for dowel bars, joints that require fault‑control still need conventional reinforcement. In thin bonded concrete overlays that incorporate synthetic or steel macrofibers, durability is chiefly governed by the concrete’s resistance to chloride ion penetration; the mix must be designed to achieve a target classification of Low, Very low, or Negligible permeability within a 56‑day or less curing period. For designs using AASHTO T 277, the measured charge passed may not exceed 2,800 coulombs, and for AASHTO T 358 the electrical resistance must stay at or below 15.6 kΩ‑cm for 4‑inch by 8‑inch cylinders and 12.3 kΩ‑cm for 6‑inch by 12‑inch cylinders; these thresholds are specified to limit chloride ingress, which is a primary durability concern for fiber‑reinforced concrete pavements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<p>Material characteristics that lower the susceptibility of fiber‑reinforced concrete (FRC) to deterioration include a higher residual strength—typically between 100 and 225 psi for overlay applications—and an appropriate macrofiber content of 0.2% to 0.5% by volume, with synthetic fibers possessing suitable geometry, stiffness and surface texture helping to maintain performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same source notes that tighter joint and crack openings—less than 0.5 to 1.0 mm—result in improved durability, whereas larger crack openings increase vulnerability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Exposure conditions that are less damaging include many freeze‑thaw cycles, because FRC has been shown to retain significant residual strength even after a large number of such cycles [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania specification states that a low‑permeability mix targeting chloride ion penetration classified as Low, Very low, or Negligible after a 56 day or less curing period reduces susceptibility by limiting corrosion of embedded fibers and reinforcement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If only a moderate level of chloride ion penetration is permitted, the measured charge must not exceed 2,800 coulombs (AASHTO T 277) and resistivity must be at least 15.6 kΩ‑cm for 4‑inch × 8‑inch cylinders or 12.3 kΩ‑cm for 6‑inch × 12‑inch cylinders (AASHTO T 358); otherwise susceptibility to deterioration increases [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Additionally, achieving the design residual strength value f150 by adding macrofibers at the prescribed volume fraction further improves durability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>In fiber‑reinforced concrete overlays the synthetic macrofibers form a bond with the cement matrix that supplies residual flexural strength (f150), with typical residual strength values for overlay applications ranging between 100 and 225 psi[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same bond is required to achieve a residual strength ratio of 20.0 percent as measured by the Illinois Modified ASTM C1609 test, which reflects the fiber‑matrix interaction performance specified for unbonded concrete overlays[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Adding the macrofibers directly into the cement‑aggregate blend reduces workability and can lower slump by up to 4 inches, so water‑reducing admixtures or other mix modifications are normally employed to restore slump and finishability[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. To prevent clumping and ensure proper dispersion of the fibers, mixing must follow the manufacturer’s recommendation during trial batches[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Because fibers may alter entrapped air, the dosage of air‑entraining admixture is typically adjusted in trial mixes to meet the specified air content[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The prescribed fiber geometry—a minimum length of 1.0 inches, a maximum length of 2½ inches, and a maximum aspect ratio of 150—provides sufficient pull‑out resistance while avoiding excessive paste demand or adverse effects on aggregate absorption[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Fibers improve flexural fatigue performance, post‑cracking strength and toughness of the hardened concrete, although they do not increase compressive or flexural strengths[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The amount of synthetic polypropylene monofilament or bundled fibers may not exceed 5.0 pounds per cubic yard in the mix design[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 459)</small></p>
+<h2 id="influence-of-production-and-placement">Influence of production and placement</h2>
+<p>Adding synthetic macrofibers to the concrete mix reduces its workability, with slump potentially dropping up to 4 in (100 mm) depending on fiber type and dosage; this loss can generally be offset by water‑reducing admixtures or other mixture tweaks, which also help maintain finishability. Because fibers may alter air content, the air‑entraining admixture should be adjusted during trial batches so that fresh‑property specifications are met, ensuring consistent placement and compaction performance. The mix design must incorporate synthetic macrofibers at a volume that yields the required residual flexural strength (f150) as determined by ASTM C1609‑12 testing at 14 days, directly controlling post‑crack load capacity of the overlay. When the overlay depth is less than 3 inches, No. 67 coarse aggregate is specified instead of No. 57, influencing workability and strength development. The concrete mixture must meet a target chloride ion penetration classified as Low, Very low, or Negligible after a curing period of 56 days or less; if a Moderate classification is accepted the penetration may not exceed 2,800 coulombs (AASHTO T 277) or the resistivity limits of 15.6 kΩ‑cm for 4‑inch by 8‑inch cylinders and 12.3 kΩ‑cm for 6‑inch by 12‑inch cylinders (AASHTO T 358), and these permeability limits affect long‑term durability. Curing practices are tied to the maturity method, which correlates degree‑hours of cure to compressive strength at intervals of 8 hours, 1 day, 7 days, 28 days and 56 days. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<p>The timing and depth of sawcut contraction joints in fiber‑reinforced concrete overlays are critical because improper placement allows premature cracking to develop and become a dominant joint, reducing durability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Adding macrofibers may reduce slump by up to 4 in (100 mm), so if water‑reducing admixtures or other mix modifications are not used the loss of workability can impair placement and finishability, leading to defects such as slab movement or plastic shrinkage cracking [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Because macrofibers also influence air content, failure to adjust the air‑entraining admixture during trial batches may cause fresh‑property specifications to be unmet and compromise later performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For thin bonded fiber‑reinforced overlays, concrete permeability expressed as chloride ion penetration must achieve a target of Low, Very low, or Negligible after a curing period of 56 days or less; exceeding the limits defined by AASHTO T 277 (2,800 coulombs) is not acceptable [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Likewise, measurements according to AASHTO T 358 must not exceed 15.6 kΩ·cm for 4‑inch by 8‑inch cylinders or 12.3 kΩ·cm for 6‑inch by 12‑inch cylinders, otherwise long‑term durability is jeopardized [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>The selection of fiber‑reinforced concrete for an overlay is driven primarily by the required residual strength (f150) that must be achieved to meet design objectives such as slab flexural capacity, service life, crack‑width criteria and joint load‑transfer efficiency; the pavement engineer specifies this residual strength while the contractor selects the fiber type and dosage that will provide it [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The macrofiber may be synthetic or steel but is chosen on the basis of its ability to deliver the specified residual strength rather than geometry, shape, or surface texture [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Typical fiber content for concrete overlays can range from 0.2% to 0.5% by volume, with the exact amount depending on those technical factors and cost [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Because the addition of macrofibers will result in a decrease in workability, the mix must accommodate the associated loss of workability; the slump can be reduced by up to 4 in. (100 mm) and may require air‑entraining admixture adjustments verified through trial batches [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].
+Within the scope of unbonded concrete overlays whose thickness is less than 7 inches, the specification requires the concrete to be reinforced with polypropylene fibers that comply with ASTM C1116, Type III 4.13 and Performance Level 1 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The synthetic fiber must be a monofilament or bundled monofilament having a minimum length of 1.0 inch, a maximum length of 2 ½ inches, and a maximum aspect ratio of 150, and it shall be 100 % virgin polypropylene manufactured to an optimum gradation for reinforcement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A sufficient quantity of fiber must be added so that the mixture attains a residual strength ratio (R150,3) of 20.0 percent according to the Illinois Modified ASTM C1609, and the dosage shall not exceed 5.0 pounds per cubic yard unless the manufacturer can demonstrate through a field demonstration that the concrete will remain workable and fiber clumping is not a problem [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].
+For thin bonded concrete overlays on asphalt‑surfaced pavements, selection of fiber‑reinforced concrete must follow the approved Joint Materials Forms and use synthetic or steel macrofibers as prescribed in Section 708.1(a); the macrofiber dosage shall be set to meet the required design residual strength (f150) from Table A, with verification by ASTM C1609‑12 at 14 days to relate residual strength to fiber volume fraction for the chosen fiber type [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the overlay thickness is less than 3 inches, No. 67 coarse aggregate replaces No. 57, and the mix shall be designed to achieve a chloride ion penetration rating of Low, Very low, or Negligible after a curing period of 56 days or less; a Moderate rating may be accepted provided it does not exceed 2,800 coulombs per AASHTO T 277 or 15.6 kΩ‑cm for 4‑inch by 8‑inch cylinders and 12.3 kΩ‑cm for 6‑inch by 12‑inch cylinders as specified in AASHTO T 358 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<p>For fiber‑reinforced concrete overlays, engineers should specify the required residual strength rather than a fixed fiber volume and confirm compliance through trial batches that are always recommended to verify that the mixture meets all fresh property specifications. Because macrofibers can reduce slump by up to 4 in. (100 mm), the addition of water‑reducing admixtures or other mixture modifications may be used to compensate for the slump loss so that workability remains acceptable, and air‑entraining admixture can be adjusted as needed. Typical fiber contents for concrete overlays range from 0.2 % to 0.5 % by volume, with residual strength values generally falling between 100 and 225 psi; these values may be estimated with the Residual Strength Estimator spreadsheet or measured in accordance with ASTM C1609. Selecting synthetic macrofibers, which are easier to handle and less prone to balling, or alternatively steel macrofibers provides reinforcement options that should be chosen based on residual‑strength performance in the particular concrete matrix. For unbonded concrete overlays thinner than seven inches, the specification requires Class AA cement concrete reinforced with 100 % virgin polypropylene synthetic fibers sized to an optimum gradation and supplied as monofilament or bundled monofilament having a length between one inch and two‑and‑a‑half inches and an aspect ratio not exceeding 150. The fiber dosage must be sufficient to achieve a residual strength ratio of 20 percent according to the Illinois Modified ASTM C1609, and it may not exceed five pounds per cubic yard unless a field demonstration shows that the mixture remains workable and free of fiber clumping; mixing shall follow the manufacturer’s recommendations. For thin bonded concrete overlays on asphalt‑surfaced pavements whose depth is less than three inches, No. 67 coarse aggregate shall be used instead of No. 57, and macrofiber shall be added at a rate that meets the design residual strength f150 as determined from ASTM C1609‑12 testing at 14 days for the selected fiber type. The concrete mixture must also be designed to attain a target chloride ion penetration classified as Low, Very low, or Negligible after no more than 56 days of curing in accordance with AASHTO T 277 or T 358; if a Moderate classification is accepted, the chloride charge may not exceed 2,800 coulombs and the electrical resistivity may not exceed 15.6 kΩ‑cm for 4‑by‑8‑in cylinders or 12.3 kΩ‑cm for 6‑by‑12‑in cylinders. When the maturity method is employed, degree‑hours of cure must be correlated to compressive strength at the prescribed intervals of eight hours, one day, seven days, twenty‑eight days and fifty‑six days as required by PTM No. 640. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>In the Pavement Policy Manual (Publication 242, Change No. 10) Section 10.10, laboratory evaluation of fiber‑reinforced concrete for pavement overlays relies on slab tests that quantify flexural and ultimate load capacity as well as the resulting load transfer efficiency (LTE) relative to plain concrete, with the residual‑strength parameter f150 determined in accordance with ASTM C1609 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual reports field investigations of both bonded and unbonded fiber‑reinforced concrete overlays that have consistently shown better performance than comparable plain‑concrete slabs [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Long‑term durability evidence in that source is provided by freeze/thaw testing that demonstrates FRC retains significant residual strength after a large number of cycles, indicating an ability to limit crack growth and maintain joint LTE over the service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania Department of Transportation Specification (Publication 408/2020) Section 548 specifies for thin unbonded overlays that the laboratory requirement is a residual‑strength test in which the mixture must achieve a residual strength ratio R150,3 of 20 percent as measured by the Illinois Modified ASTM C1609 procedure [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For those same unbonded overlays the specification adds a field condition that the fiber dosage may not exceed 5.0 lb/yd³ unless the manufacturer can demonstrate through a field demonstration that the concrete remains workable and free of fiber clumping [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In Section 541 for thin bonded overlays over asphalt‑surfaced pavements, laboratory evaluation includes testing at 14 days with ASTM C1609‑12 so that residual flexural strength can be related to the fiber volume fraction for the selected fiber type [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Durability of the bonded overlay is assessed by measuring chloride‑ion penetration after a curing period of 56 days or less, with permeability required to meet a target classified as Low, Very low, or Negligible according to AASHTO T 277 or T 358 and not to exceed 2,800 coulombs for the former test [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The same durability assessment also requires that chloride‑ion resistance not exceed 15.6 kΩ·cm for 4‑by‑8‑in cylinders and 12.3 kΩ·cm for 6‑by‑12‑in cylinders when using AASHTO T 358 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the maturity method is employed, degree‑hours of cure are correlated to compressive strengths at intervals of 8 hours, 1 day, 7 days, 28 days and 56 days as part of the laboratory evaluation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (pp. 451–459)</small></p>
+<p>The Pavement Policy Manual (section 10.10 Fiber‑Reinforced Concrete for pavement overlays) states that fiber‑reinforced concrete increases flexural and ultimate load capacity and raises the load transfer efficiency between slabs, allowing designers to reduce overlay thickness or slab size when the residual strength (f150)—typically 100 to 225 psi for overlay applications—is added to the plain concrete modulus of rupture to obtain an effective flexural strength used in mechanistic‑empirical design programs. The Pennsylvania Specification (section 541.2 MATERIAL) requires that synthetic or steel macrofibers be incorporated in thin bonded concrete overlays over asphalt‑surfaced pavements to meet a specified residual strength value (f150), with the required fiber dosage determined from 14‑day ASTM C1609‑12 results and must satisfy Table A, which directly governs the overlay’s post‑crack tensile capacity. The Pavement Policy Manual notes that macrofibers limit crack development, keeping joint and crack openings generally less than 0.5 to 1.0 mm, which improves durability by reducing crack widening and maintaining load transfer efficiency that can be up to 30% higher than plain concrete; this resistance to crack growth persists after many freeze‑thaw cycles. The Pennsylvania Specification ties permeability performance to durability concerns by requiring the concrete mixture to achieve a target chloride ion penetration of Low, Very low, or Negligible after a 56 day or less curing period. In construction, the Pavement Policy Manual indicates that adding synthetic macrofibers at 0.2%–0.5% volume may lower workability, with slump reductions of up to 4 in., but water‑reducing or air‑entraining admixtures can be adjusted in trial mixes to meet fresh‑property specifications. The Pennsylvania Specification notes that when the overlay thickness is less than 3 inches, No. 67 coarse aggregate replaces No. 57, reflecting the interaction between fiber reinforcement and aggregate gradation in thin sections. Both documents imply that the combined structural and durability benefits translate into longer service life and less frequent maintenance such as crack sealing or joint repair. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=9277433c src=408_2020_11::tab:p451#1 -->
+<p>Table A specifies the required residual strength values for fiber-reinforced concrete overlays based on remaining asphalt thickness.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-fiber-reinforced-concrete-1-cap" tabindex="0"><table class="ct-table" id="ct-fiber-reinforced-concrete-1">
+<caption id="ct-fiber-reinforced-concrete-1-cap">TABLE A</caption>
+<tbody>
+<tr><th scope="row">Remaining inches of Asphalt Concrete</th><td>3-4.5</td><td>4.5-6</td></tr>
+<tr><th scope="row">Residual Strength in psi</th><td>200-275</td><td>175-250</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 451.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 10 (pp. 186–188); [2] — SECTION 500—RIGID PAVEMENTS (p. 451)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

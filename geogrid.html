@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geogrid</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html" class="active" aria-current="page">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><span class="crumb-current">Geogrid</span></nav>
+<article><h1>Geogrid</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-structure.html">Pavement Structure</a> <span class="edge edge-taxonomic" title="Geogrid is a topic under Pavement Structure.">is-subtopic-of</span></div><div class="edge-reading">Geogrid is a topic under Pavement Structure.</div><div><a class="tag" href="index.html?q=geogrid">geogrid</a><a class="tag" href="index.html?q=geogrids">geogrids</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>Geogrid is a polymeric, net‑like geosynthetic consisting of a regular network of longitudinal and transverse tensile ribs that create apertures large enough to mechanically interlock with surrounding soil, rock or aggregate particles[1][2]. Placed at the subgrade‑aggregate interface it reinforces weak pavement subgrades and stabilizes fill by distributing loads, confining material and providing stabilization for both subgrade and minor slopes[1][2]. The product is manufactured from coated polyester (PET), high‑density polyethylene (HDPE) or polypropylene (PP) without post‑consumer recycled resin, and is classified as uniaxial or biaxial with stiff ribs that are integrally formed or welded; it must be laid flat, protected from sunlight and UV, and overlapped according to specified spacing to maintain its long‑term tensile performance[2].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#influence-of-production-and-placement">Influence of production and placement</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>A geogrid is a type of geosynthetic material—specifically a polymeric net‑like product composed of a regular network of integrally connected longitudinal and transverse tensile elements that form apertures large enough to allow interlocking with surrounding soil, rock or aggregate particles. In section 2.9 Experimental Pavement Construction the geogrid is applied to reinforce soft subgrade soil and aggregate layers, thereby adding structure to the pavement; when employed for soil reinforcement it is treated as an experimental construction item unless it falls within PennDOT’s standard uses. In section 6.2 Subgrade Soils the geogrid may be used at the interface between the subgrade and overlying aggregate layers to stabilize weak pavement subgrades, functioning primarily as reinforcement. In pavement systems it may be placed in the subgrade or subbase to provide stabilization, confinement, and load distribution, and can also be used on minor slopes for reinforcement (Section 738). Within a geosynthetic‑stabilized bridge‑approach pavement system, a Class 2 Type A biaxial geogrid is installed as the stabilization layer; it serves to stabilize the constructed layer and contributes to overall structural support. The geogrid is laid full‑width between compacted layers of PennDOT No. 2A coarse aggregate to reinforce the fill, with adjacent strips overlapped a minimum of 12 inches to maintain continuity; a Class 4 Type A geotextile face‑wrap backs the geogrid extending at least 4 feet at the top and 2 feet at the bottom for additional slope support, and the top layer of stabilization geosynthetic is backfilled with two 6‑inch compacted layers of PennDOT No. 2A coarse aggregate. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 198–199), SECTION 700 MATERIAL (pp. 709–710)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>A geogrid is a net‑like geosynthetic with intersecting ribs forming apertures large enough to interlock with surrounding unbound materials such as soil, rock, and aggregate, and it is placed at the subgrade‑aggregate interface to reinforce and stabilize weak pavement subgrades. Geogrids are manufactured from polymeric coated polyester (PET), high density polyethylene (HDPE) or polypropylene (PP) and no post‑consumer recycled material is permitted in the resin. A Class 1 uniaxial geogrid forms a regular network of integrally connected longitudinal and transverse polymer tensile elements with apertures sized to permit mechanical interlock. A Class 2 biaxial geogrid is a polymer‑based grid in which the tensile elements are polypropylene when used for confinement or polyester when used for reinforcement, arranged in a regular network of longitudinal and transverse stiff ribs that create apertures large enough to interlock mechanically with surrounding soil; the rib connections must be integrally formed or welded. For Class 1 uniaxial reinforcement the maximum allowable vertical spacing of geogrid is 2 feet, the grid must be laid flat, free of wrinkles, and overlaps shall be no less than 3 inches. For Classes 2 and 3 biaxial grids the maximum vertical spacing is 12 inches and overlaps must be at least 1 foot in each direction. The physical performance of a Class 1 uniaxial geogrid is governed by an ultimate tensile strength expressed as a minimum average roll value derived from twelve months of quality‑control testing, a creep reduction factor based on the ratio of ultimate to creep‑limiting strength, an installation damage reduction factor that must never be less than 1.3, and a durability reduction factor that together limit the allowable long‑term tensile strength while restricting strain to five percent for a 100‑year design life. A Class 2 biaxial geogrid must meet a tensile strength not less than 2,000 lb/ft in either the machine‑direction or cross‑direction as required. Ultimate tensile strength testing is required in the machine direction for uniaxial grids and in both machine and cross directions for biaxial grids after exposure to 500 hours of UV radiation according to ASTM D4355, with post‑UV tensile strength expressed as a percentage of the virgin material value that must meet the minimum required percentage in each tested direction. Visual inspection in accordance with ASTM D610 is used to assess the proportion of uncoated or unbound surface area. Handling requirements call for clear identification per ASTM D4873 and protection of all geogrid from direct sunlight, ultraviolet rays, temperatures greater than 140°F, mud, dirt, dust, and debris. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 185–186), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<p>Variation in polymer composition determines the intended application; polypropylene (PP) biaxial grids are required for stabilization (confinement) applications, whereas polyester (PET) geogrids are required for reinforcement applications such as load distribution pads or slope reinforcement. The processing of the ribs is specified: Class 2 Type A and B biaxial geogrids are fabricated of stiff ribs with connections that are either integrally formed or welded, providing a regular network whose aperture geometry allows mechanical interlock with surrounding material. Performance is bounded by a tensile‑strength requirement that TU not less than 2,000 lb/ft in either the MD or XD direction is required. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 709–710)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>Geogrids are net‑like geosynthetics whose apertures must be large enough to interlock with surrounding unbound materials such as soil, rock and aggregate, making aperture geometry a primary physical property governing reinforcement at the subgrade‑aggregate interface. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The product’s overall quality, as defined by the applicable specifications, also influences performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Dimensional stability is required so that the geogrid can be placed flat and free of wrinkles, with stretching and anchoring applied as necessary during installation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For mechanically stabilized earth (MSE) wall applications the maximum allowable vertical spacing of the geogrid is limited to 2 feet and the backfill drop height may not exceed 3 feet. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The material must be protected from direct sunlight, ultraviolet radiation, and temperatures greater than 140 °F. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Geogrids shall consist of a regular network of integrally connected longitudinal and transverse polymer tensile elements whose aperture geometry is sufficient to permit mechanical interlock with the surrounding material. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] In biaxial grids stiffness is provided by stiff ribs whose connections are either integrally formed or welded, and a minimum tensile strength (T_U) as specified in Table C must be met without applying reduction factors. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The ultimate tensile strength (TU) is used as the minimum average roll value, and the installation damage reduction factor (RF_ID) shall never be less than 1.3; together with creep reduction and durability reduction factors they define the allowable long‑term tensile strength after applying the combined reduction factor. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The design limits the maximum allowable strain of the geogrid to five percent for a 100‑year service life when the combined reduction factor is applied. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Geogrids used in pavement base reinforcement shall be manufactured from polymeric coated polyester (PET), high‑density polyethylene (HDPE) or polypropylene (PP) and shall contain no post‑consumer recycled resin. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A sample must be exposed to 500 hours of UV radiation in accordance with ASTM D4355, and the performance ratio is calculated by dividing the TU of the UV‑exposed material by the TU of the virgin material and multiplying by 100. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Physical integrity of the surface coating is verified by visual inspection using ASTM D610 to determine the percentage of uncoated or unbound surface area. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 185–186), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<p>According to the Pavement Policy Manual (Publication 242, Change No. 10), the properties of a geogrid—including aperture size, strength, and its reinforcement function—are defined by the technical specifications contained in Publication 408 (Sections 221 and 738), Publication 35 (Bulletin 15) and the manufacturer’s published product data, which together supply the required property values, design criteria and construction procedures for selecting and using a geogrid. The Commonwealth of Pennsylvania Department of Transportation Specification (Publication 408/2020) classifies geogrids by reinforcement direction, assigning Class 1 to uniaxial grids and Classes 2‑3 to biaxial grids; the specification further requires that a Class 1 grid be oriented in the primary reinforcement direction while biaxial grids are installed over a geotextile underlayer. For Class 1 uniaxial geogrids the maximum allowable vertical spacing may not exceed 2 feet, whereas for Classes 2‑3 biaxial geogrids the maximum vertical spacing may not exceed 12 inches, and minimum overlap lengths must be at least 3 inches (or 1 foot in both directions for biaxial grids). Identification, storage and handling of all classes are governed by ASTM D4873, which mandates clear labeling of product designation, manufacturer, lot number, quantity and differentiation between similar rolls. Within Class 2 biaxial geogrids the specification distinguishes Type A and Type B products and specifies that polypropylene is the polymer material for stabilization applications while polyester is used for reinforcement. The physical character of each class is described as a regular network of longitudinal and transverse tensile ribs with apertures sufficient to permit mechanical interlock with surrounding unbound materials; the ribs must be stiff and may be integrally formed or welded. Tensile properties are quantified by the ultimate tensile strength (T_U); for Class 2 biaxial geogrids T_U is measured in accordance with ASTM D4354 and shall not be less than 2,000 lb/ft in either the machine‑direction or cross‑direction, and no reduction factors are applied to these grids. For Class 1 uniaxial geogrids the ultimate tensile strength is obtained by ASTM D6637 Method B and expressed as a minimum average roll value (MARV) calculated by subtracting two standard deviations from the twelve‑month average of manufacturer quality‑control results. Creep behavior is characterized by a creep reduction factor (R_F_CR) determined according to AASHTO R 69, ASTM D5262 and ASTM D6992 as the ratio of ultimate strength to the creep‑limiting strength on unconfined samples. Installation damage is accounted for with an installation‑damage reduction factor (R_F_ID) that must never be less than 1.3, while durability is expressed by a durability reduction factor (R_F_D) taken from Table B unless a higher project‑specific value applies. The allowable long‑term tensile strength is calculated by applying the combined reduction factor—the product of R_F_CR, R_F_ID and R_F_D—to T_U, and the maximum allowable strain is limited to five percent for a 100‑year design life. Polymer composition must conform to the types listed in Bulletin 15, with PET carbon‑black content expressed as both minimum and maximum ranges; durability testing involves exposing a specimen to 500 hours of UV radiation per ASTM D4355 and then measuring ultimate tensile strength by ASTM D6637 Method B, with the ratio of UV‑exposed to virgin T_U required to meet the specified minimum in both machine and cross‑machine directions for biaxial geogrids. Surface quality is characterized by visual inspection following ASTM D610 to quantify the percent of uncoated or unbound area. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=43fb4ad2 src=408_2020_11::tab:p710#1 -->
+<p>The table below specifies the required properties for Class 2 biaxial geogrids.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-geogrid-1-cap" tabindex="0"><table class="ct-table" id="ct-geogrid-1" aria-describedby="ct-geogrid-1-sum">
+<caption id="ct-geogrid-1-cap">Table C Required Properties for Class 2 Biaxial Geogrids: Table CRequired Properties for Class 2 Biaxial Geogrids(All values are minimums unless indicated otherwise)</caption>
+<thead>
+<tr><th id="ct-geogrid-1-h0-0" scope="col" rowspan="2">Property</th><th id="ct-geogrid-1-h0-1" scope="col" rowspan="2">Units</th><th id="ct-geogrid-1-h0-2" scope="col" rowspan="2">Test Method</th><th id="ct-geogrid-1-h0-3" scope="col">Type A</th><th id="ct-geogrid-1-h0-4" scope="col">Type B</th><th id="ct-geogrid-1-h0-5" scope="col">Type C</th></tr>
+<tr><th id="ct-geogrid-1-h1-3" scope="col" colspan="2">Subgrade and Subbase Stabilization</th><th id="ct-geogrid-1-h1-5" scope="col">Reinforcement</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-geogrid-1-h2-0" scope="row">Polymer Type</th><td></td><td></td><td headers="ct-geogrid-1-h0-3 ct-geogrid-1-h1-3 ct-geogrid-1-h2-0">PP</td><td headers="ct-geogrid-1-h0-4 ct-geogrid-1-h1-3 ct-geogrid-1-h2-0">PP</td><td headers="ct-geogrid-1-h0-5 ct-geogrid-1-h1-5 ct-geogrid-1-h2-0">PolymericCoated PET</td></tr>
+<tr><th id="ct-geogrid-1-h3-0" scope="row">Aperture Size1,2</th><td headers="ct-geogrid-1-h0-1 ct-geogrid-1-h3-0">in</td><td></td><td headers="ct-geogrid-1-h0-3 ct-geogrid-1-h1-3 ct-geogrid-1-h3-0">1.0 to 1.7(Min. to Max.)</td><td headers="ct-geogrid-1-h0-4 ct-geogrid-1-h1-3 ct-geogrid-1-h3-0">1.0 to 1.7(Min. to Max.)</td><td headers="ct-geogrid-1-h0-5 ct-geogrid-1-h1-5 ct-geogrid-1-h3-0">N/A</td></tr>
+<tr><th id="ct-geogrid-1-h4-0" scope="row">Aperture Open Area3</th><td headers="ct-geogrid-1-h0-1 ct-geogrid-1-h4-0">$\mathrm { i n } ^ { 2 }$</td><td></td><td headers="ct-geogrid-1-h0-3 ct-geogrid-1-h1-3 ct-geogrid-1-h4-0">1.0 to 2.9(Min. to Max.)</td><td headers="ct-geogrid-1-h0-4 ct-geogrid-1-h1-3 ct-geogrid-1-h4-0">1.0 to 2.9(Min. to Max.)</td><td headers="ct-geogrid-1-h0-5 ct-geogrid-1-h1-5 ct-geogrid-1-h4-0">N/A</td></tr>
+<tr><th id="ct-geogrid-1-h5-0" scope="row">Percent Open Area</th><td headers="ct-geogrid-1-h0-1 ct-geogrid-1-h5-0">%</td><td headers="ct-geogrid-1-h0-2 ct-geogrid-1-h5-0">-</td><td headers="ct-geogrid-1-h0-3 ct-geogrid-1-h1-3 ct-geogrid-1-h5-0">65</td><td headers="ct-geogrid-1-h0-4 ct-geogrid-1-h1-3 ct-geogrid-1-h5-0">65</td><td headers="ct-geogrid-1-h0-5 ct-geogrid-1-h1-5 ct-geogrid-1-h5-0">65</td></tr>
+<tr><th id="ct-geogrid-1-h6-0" scope="row">Ultimate Tensile Strength,(TU)1,4</th><td headers="ct-geogrid-1-h0-1 ct-geogrid-1-h6-0">lbs/ft</td><td headers="ct-geogrid-1-h0-2 ct-geogrid-1-h6-0">ASTM D6637(Method B)</td><td headers="ct-geogrid-1-h0-3 ct-geogrid-1-h1-3 ct-geogrid-1-h6-0">1,080</td><td headers="ct-geogrid-1-h0-4 ct-geogrid-1-h1-3 ct-geogrid-1-h6-0">1,780</td><td headers="ct-geogrid-1-h0-5 ct-geogrid-1-h1-5 ct-geogrid-1-h6-0">Design Specific</td></tr>
+<tr><th id="ct-geogrid-1-h7-0" scope="row">Elongation at UltimateTensile Strength1</th><td headers="ct-geogrid-1-h0-1 ct-geogrid-1-h7-0">%</td><td headers="ct-geogrid-1-h0-2 ct-geogrid-1-h7-0">ASTM D6637</td><td headers="ct-geogrid-1-h0-3 ct-geogrid-1-h1-3 ct-geogrid-1-h7-0">5.0 to 15.0(Min. to Max.)</td><td headers="ct-geogrid-1-h0-4 ct-geogrid-1-h1-3 ct-geogrid-1-h7-0">5.0 to 15.0(Min. to Max.)</td><td headers="ct-geogrid-1-h0-5 ct-geogrid-1-h1-5 ct-geogrid-1-h7-0">N/A</td></tr>
+<tr><th id="ct-geogrid-1-h8-0" scope="row">Junction Efficiency5</th><td headers="ct-geogrid-1-h0-1 ct-geogrid-1-h8-0">%</td><td headers="ct-geogrid-1-h0-2 ct-geogrid-1-h8-0">ASTM D7737 andASTM D6637</td><td headers="ct-geogrid-1-h0-3 ct-geogrid-1-h1-3 ct-geogrid-1-h8-0">90</td><td headers="ct-geogrid-1-h0-4 ct-geogrid-1-h1-3 ct-geogrid-1-h8-0">90</td><td headers="ct-geogrid-1-h0-5 ct-geogrid-1-h1-5 ct-geogrid-1-h8-0">N/A</td></tr>
+<tr><th id="ct-geogrid-1-h9-0" scope="row">Flexural Rigidity</th><td headers="ct-geogrid-1-h0-1 ct-geogrid-1-h9-0">g-cm</td><td headers="ct-geogrid-1-h0-2 ct-geogrid-1-h9-0">ASTM D1388</td><td headers="ct-geogrid-1-h0-3 ct-geogrid-1-h1-3 ct-geogrid-1-h9-0">&gt;1,000</td><td headers="ct-geogrid-1-h0-4 ct-geogrid-1-h1-3 ct-geogrid-1-h9-0">&gt;1,000</td><td headers="ct-geogrid-1-h0-5 ct-geogrid-1-h1-5 ct-geogrid-1-h9-0">N/A</td></tr>
+<tr><th id="ct-geogrid-1-h10-0" scope="row">Resistance to InstallationDamage6</th><td headers="ct-geogrid-1-h0-1 ct-geogrid-1-h10-0">%</td><td headers="ct-geogrid-1-h0-2 ct-geogrid-1-h10-0">AASHTO R 69</td><td headers="ct-geogrid-1-h0-3 ct-geogrid-1-h1-3 ct-geogrid-1-h10-0">80</td><td headers="ct-geogrid-1-h0-4 ct-geogrid-1-h1-3 ct-geogrid-1-h10-0">80</td><td headers="ct-geogrid-1-h0-5 ct-geogrid-1-h1-5 ct-geogrid-1-h10-0">N/A</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-geogrid-1-sum">Rows list required physical properties for geogrids, columns provide specifications for Type A, B, and C classifications.</p>
+<p class="ct-notes">Notes: Notes: 1. Both MD and XD. 2. The value is the size of the opening in each direction. 3. The value is the product of the aperture openings in the MD and XD. 4. Values indicated are minimum average roll values (MARV). 5. Calculate by dividing junction strength (as determined by ASTM D7737) by TU and multiplying by 100. 6. When required, conduct installation damage testing as specified in Section 738.2(b)3.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 710.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 185–199), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>Geogrids are intended only for buried applications; they must not be placed in situations with long‑term exposure to sunlight because ultraviolet radiation degrades the polymer matrix. When a sample is subjected to 500 hours of UV radiation (ASTM D4355) its ultimate tensile strength is measured and expressed as a percentage of the virgin material’s strength, and the resulting retained‑strength value must meet the minimum requirement for both machine and cross‑machine directions in biaxial geogrids. The source provides no information on behavior under loading, moisture, temperature changes, or chemical exposure. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (p. 707)</small></p>
+<p>According to the Pavement Policy Manual, the behavior of a geogrid in pavement applications is governed mainly by its physical and mechanical characteristics: the net‑like structure with apertures sized to interlock with surrounding unbound soils, rock or aggregate provides a physical lock, while this interlock enables the material to act as reinforcement that distributes loads across the weak subgrade. No chemical mechanisms are described for geogrid performance in that source. In the Pennsylvania Department of Transportation specifications for extensible reinforcement in MSE walls (section 221.3 CONSTRUCTION), the behavior of a geogrid is governed by physical placement requirements such as keeping it flat, free of wrinkles, and properly stretched or anchored, while respecting the maximum allowable vertical spacing—2 feet for Class 1 uniaxial reinforcement and 12 inches for biaxial types—and ensuring overlaps of at least three inches (or one foot on edges) before backfill is placed. The same construction provisions also require that the geogrid be protected from traffic until it is covered by an eight‑inch lift of backfill, that the maximum backfill drop height shall not exceed 3 feet, and that compaction be performed as specified to avoid deformation. Chemically, the specifications state that the material must be shielded from direct sunlight, ultraviolet rays, temperatures greater than 140°F, mud, dirt, dust, and debris. For Class 2 biaxial geogrids (section 738.3), behavior is controlled primarily by polymer composition—polypropylene (PP) grids are required for stabilization (confinement) applications while polyester (PET) grids are required for reinforcement such as load‑distribution pads or slope reinforcement—the chemical nature that dictates whether the material provides confinement or reinforcement. For those biaxial grids, a physical requirement is a regular network of longitudinal and transverse polymer tensile elements with aperture geometry sufficient to allow mechanical interlock with surrounding soil, which governs how loads are transferred. Mechanically, the same biaxial grids must have a minimum tensile strength of at least 2,000 lb/ft in either the machine direction or cross‑machine direction. For Class 1 uniaxial geogrids (section 738.2), behavior is governed first by physical geometry—a regular network of longitudinal and transverse polymer tensile elements whose aperture size must be sufficient to permit mechanical interlock with the surrounding soil. Mechanically, performance of those uniaxial grids is controlled by the ultimate tensile strength (TU), defined as a minimum average roll value from twelve months of quality‑control testing, and by the creep reduction factor (RF_CR) calculated as the ratio of TU to the creep‑limiting strength; an installation damage reduction factor (RF_ID) defined as TU divided by the damaged tensile strength shall never be less than 1.3, and a durability reduction factor that accounts for long‑term loss of strength together limit allowable strain to five percent for a 100‑year design life. The polymer requirements (section 738.1) state that behavior is governed primarily by the selected polymer type—polymeric coated polyester (PET), high‑density polyethylene (HDPE), or polypropylene (PP)—which defines the chemical composition and includes carbon black content within prescribed limits. Mechanically, performance hinges on the ultimate tensile strength after exposure, expressed as the ratio of UV‑exposed to virgin tensile strength multiplied by 100, which must meet the minimum specified for both directions. Physically, long‑term sunlight exposure is prohibited because a sample subjected to 500 hours of UV radiation according to ASTM D4355 can degrade this tensile‑strength ratio, limiting geogrids to buried applications only; visual inspection per ASTM D610 also controls behavior by limiting the percentage of uncoated or unbound surface area. Finally, the backfill material (section 221.2 MATERIAL) influences geogrid performance through its physical and chemical qualities: it must be natural material free of organic matter and deleterious substances such as clay lumps, friable particles, coal, coke, metallurgical slag or cinders; chemically its pH shall lie between 5.0 and 9.0; physically the plasticity index may not exceed 3 and the angle of internal friction must be at least 34 degrees, ensuring adequate shear resistance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=d42a8870 src=408_2020_11::tab:p734#2 -->
+<p>The table below specifies physical property limits and test standards for geosynthetic materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-geogrid-2-cap" tabindex="0"><table class="ct-table" id="ct-geogrid-2">
+<caption id="ct-geogrid-2-cap">1.e.2 Gypsum Binder Matrix. (table)</caption>
+<thead>
+<tr><th scope="col">Physical Property</th><th scope="col">MARV*</th></tr>
+</thead>
+<tbody>
+<tr><td>Trifluralin (Nodule)</td><td>20%</td></tr>
+<tr><td>Puncture strength (5/16-inch flat head rod) ASTM D 4833</td><td>39 lbs.</td></tr>
+<tr><td>Permittivity</td><td>0.7 sec-1</td></tr>
+<tr><td>ASTM D 4491</td><td></td></tr>
+<tr><td>Ultraviolet resistance Strength retention</td><td>70% after 500 hours</td></tr>
+<tr><td></td><td></td></tr>
+<tr><td>ASTM D 4355</td><td></td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: * Minimum Average Roll Value (+95% of the fabric in a lot will meet or exceed the minimum requirement).</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 734.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 185–186), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>Geogrid durability is compromised by several environmental and mechanical mechanisms identified in the specifications. Direct sunlight, ultraviolet radiation and temperatures greater than 140 °F must be avoided because they cause polymer degradation; consequently geogrids shall be protected from direct sunlight, ultra‑violet rays, temperature greater than 140F, mud, dirt, dust, and debris. Proper handling and storage, at a minimum conforming to ASTM D4873, requires clear identification of each roll and safeguards against the listed contaminants to preserve tensile performance and long‑term durability. Mechanical damage such as tears, punctures, wrinkles or stretching caused by traffic, equipment, or backfill drops exceeding the maximum drop height of 3 feet is prohibited until a minimum one‑lift (8 inch loose layer) cover is placed; traffic or equipment shall not be allowed on the geogrid until it has been covered with one lift of backfill. Any geogrid found with defects, flaws or deterioration from manufacture, transport, storage or installation must be rejected and replaced. Long‑term loss of strength is addressed through three separate reduction factors defined in Section 738.2: a creep reduction factor derived from the ratio of ultimate tensile strength to creep‑limiting strength; an installation damage reduction factor (RFID) that shall never be less than 1.3; and a durability reduction factor (RFD) taken from Table B unless project‑specific data justify a higher value. These factors are multiplied to obtain the allowable long‑term tensile strength for the 100‑year design life, thereby accounting for creep deformation, handling or placement damage, and environmental durability concerns. Because geogrids are vulnerable to ultraviolet degradation, they shall be limited to buried applications and not used where long‑term sunlight exposure is expected. A durability test subjects a sample to 500 hours of UV radiation in accordance with ASTM D4355, after which the ultimate tensile strength expressed as a percentage of the virgin material must meet the minimum required value for both machine and cross‑machine directions. Visual inspection according to ASTM D610 is used to determine any uncoated or unbound surface area, indicating potential damage to the polymer coating; the specifications also prohibit the use of post‑consumer recycled resin in the polymer matrix. For damaged areas less than 3 square feet and located away from the slope face, the geogrid may be repaired by placing a patch of the same material extending at least 3 feet beyond the defect on all sides; the patch must follow the original placement orientation and overlap requirements. When a damaged area exceeds 3 square feet, the geogrid shall be completely removed and replaced, and all geosynthetics shall be placed within ±½ inch of plan elevation to maintain performance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 185–199), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<p>Within the scope of SECTION 221—Extensible Reinforcement for MSE Walls, 221.3 Construction states that susceptibility of geogrid to deterioration rises when the material is exposed to direct sunlight, ultra‑violet rays, temperatures greater than 140F, mud, dirt, dust or debris, and when it contains defects such as tears, punctures or other flaws introduced during manufacture, transportation, storage or installation; protecting the geogrid from those exposures and rejecting any damaged material before placement reduces its tendency to deteriorate. Section 738‑3 Class 2 Biaxial Geogrids specifies that polypropylene (PP) biaxial grids are required for stabilization (confinement) applications while polyester (PET) geogrids are required for reinforcement functions such as load‑distribution pads or slope reinforcement, and these material choices define the intended application and thus affect durability; susceptibility to deterioration is increased when the geogrid is exposed to direct sunlight, ultra‑violet rays, temperatures greater than 140F, mud, dirt, dust or debris, so protecting it from those conditions during handling and storage reduces degradation risk. Section 738‑1 Polymer Requirements requires that geogrids be manufactured from polymeric coated polyester (PET), high‑density polyethylene (HDPE) or polypropylene (PP) without any post‑consumer recycled resin because the specified polymers affect durability, and it further states that geogrids shall not be used where long‑term exposure to sunlight occurs; they must satisfy a 500‑hour UV aging test in which the retained ultimate tensile strength meets the minimum required ratio, and visual inspection of uncoated or unbound surface area according to ASTM D610 is used to assess susceptibility, with greater exposed area implying higher risk. Section 221.2 Material notes that backfill containing organic matter, clay lumps, friable particles, coal, coke, metallurgical slag or cinders makes a geogrid more prone to deterioration, whereas using natural backfill free of those deleterious substances reduces the risk; limiting the plasticity index to a maximum of 3, maintaining pH between 5.0 and 9.0, and ensuring an angle of internal friction not less than 34 degrees also lessen susceptibility. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=2608dac3 src=408_2020_11::tab:p707#1 -->
+<p>The table below specifies the minimum material properties and test methods for PET, HDPE, and PP geogrid polymers.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-geogrid-3-cap" tabindex="0"><table class="ct-table" id="ct-geogrid-3">
+<caption id="ct-geogrid-3-cap">Table A1Requirements for Geogrid Polymers(All values are minimums unless indicated otherwise)</caption>
+<thead>
+<tr><th scope="col">Property</th><th scope="col">Units</th><th scope="col">Test Method</th><th scope="col">PET</th><th scope="col">HDPE</th><th scope="col">PP</th></tr>
+</thead>
+<tbody>
+<tr><td>Carboxyl End Group (CEG)Content of PET Yarns</td><td>mmol/kg</td><td>ASTM D7409</td><td>&lt; 30.0</td><td>N/A</td><td>N/A</td></tr>
+<tr><td>Number Average MolecularWeight (Mn) of PET Yarns</td><td></td><td>ASTM D4603</td><td>25,000</td><td>N/A</td><td>N/A</td></tr>
+<tr><td>Polymeric Coating</td><td colspan="3">Except for manufacturing selvedge edges, the polymericcoating for PET geogrids must be continuous with nomore than 10% of the surface area having uncoated,unbound fiber bundles as determined according to ASTMD610, 5.1-5.3 and 5.5 Procedure.4</td><td>N/A</td><td>N/A</td></tr>
+<tr><td>Carbon Black Content2</td><td>%</td><td>ASTM D5596, ASTM D1603 orASTM D4218</td><td>N/A</td><td>1.0 to 3.5</td><td>1.0 to 3.5</td></tr>
+<tr><td>Melt Flow Index</td><td>g/10 min</td><td>ASTM D1238 usingCondition190/2.16 for HDPE andCondition 230/2.16 for PP</td><td>N/A</td><td>0.50</td><td>0.25</td></tr>
+<tr><td>Density</td><td>g/cm3</td><td>ASTM D792 or ASTM D1505</td><td>N/A</td><td>0.940</td><td>0.905</td></tr>
+<tr><td>Resistance to UVDegradation3</td><td>%</td><td>ASTM D4355 andASTM D6637 (Method A or B)</td><td>N/A</td><td>95</td><td>95</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: Notes:</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 707.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 185–186), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>Geogrids may be placed at the interface between subgrade and aggregate layers to stabilize weak pavement subgrades; their net‑like apertured structure allows interlocking with surrounding unbound materials such as soil, rock, and aggregate, providing reinforcement primarily through mechanical load distribution rather than chemical bonding [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In earthwork applications the performance of a geogrid is governed by the characteristics of the backfill it contacts; the backfill must be natural material free of organic matter, clay lumps, friable particles, coal, coke, metallurgical slag or cinders and must satisfy the quality requirements for Type C coarse aggregate or better [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For Class 1 geogrids the backfill is required to have a maximum plasticity index of 3, a pH between 5.0 and 9.0, and an angle of internal friction not less than 34 degrees on the portion finer than the No. 8 sieve, which together ensure adequate drainage, strength, and compatibility with the reinforcement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. These limits control how the geogrid interacts mechanically and chemically with the surrounding soil and aggregate, preventing deterioration and maintaining load distribution [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (p. 185)</small></p>
+<p>The specification requires that the backfill placed against geogrids contain no organic material or other deleterious substances, and it must be free of clay lumps, friable particles, coal, coke, metallurgical slag or cinders. Additionally, the backfill’s plasticity index may not exceed 3, its pH must lie between 5.0 and 9.0, and the fine‑fraction friction angle must be at least 34 degrees, all of which limit the exposure of the geogrid to clay‑related swelling, chemical attack from extreme pH, or weakening by organic degradation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=c3b1a279 src=408_2020_11::tab:p185#1 -->
+<p>The table below specifies the percent passing limits for sieve sizes in geogrid backfill material.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-geogrid-4-cap" tabindex="0"><table class="ct-table" id="ct-geogrid-4" aria-describedby="ct-geogrid-4-sum">
+<caption id="ct-geogrid-4-cap">221.2 MATERIAL— (table)</caption>
+<thead>
+<tr><th scope="col">Sieve Size</th><th scope="col">Percent Passing</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">1/2 inch</th><td>100</td></tr>
+<tr><th scope="row">No. 40</th><td>0-60</td></tr>
+<tr><th scope="row">No. 200</th><td>0-10*</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-geogrid-4-sum">Rows list sieve sizes and columns give the corresponding percent passing requirements.</p>
+<p class="ct-notes">Notes: *Determination of the fines content (minus No. 200 sieve material) for MSE wall backfill must be determined by wash test according to PTM No. 100. This is in addition to PTM No. 616.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 185.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[2] — SECTION 200 EARTHWORK (p. 185)</small></p>
+<h2 id="influence-of-production-and-placement">Influence of production and placement</h2>
+<p>In Section 221—Extensible Reinforcement for MSE Walls, proper placement of the geogrid is critical; it shall be laid flat and free of wrinkles, any required stretching or anchoring shall be provided, and traffic or equipment shall not be allowed on the geogrid until it has been covered with one lift (8 inch loose layer) of backfill. The backfill may be dumped no higher than 3 feet, should be bladed across the grid to the required lift thickness, and then compacted as specified in Section 206.3 or as otherwise specified. These placement and compaction practices prevent damage to the geogrid and preserve its reinforcing and load‑distribution performance. In Section 224—Geosynthetic Stabilized Bridge Approach, the geogrid sheets shall be placed within ±½ inch of plan elevation and overlapped a minimum of 12 inches on parallel roll edges to preserve continuity. Backfill is installed as two successive 6‑inch compacted layers of PennDOT No. 2A coarse aggregate before the next stabilization layer, creating a stepped appearance that supplies uniform support and load distribution. When a Class 2, Type A biaxial geogrid is used, a Class 4, Type A geotextile face wrap must extend at least 4 feet above and 2 feet below the front edge of the geogrid to further stabilize the slope. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 185–199)</small></p>
+<p>During construction the long‑term behavior of geogrids is most strongly influenced by a series of geometric, handling, material, and backfill variations. The grid must be placed flat and free of wrinkles, stretching and anchoring as necessary; traffic or equipment may not be allowed on the geogrid until it has been covered with one lift (8 inch loose layer) of backfill, and the maximum backfill drop height is 3 feet. Overlaps that are less than the required minimum—no less than 3 inches for uniaxial or a minimum of 1 foot for biaxial—and vertical spacings that exceed the specified limits—2 feet for Class 1 and 12 inches for Classes 2‑3—compromise load distribution, and any geogrid exhibiting tears, punctures, flaws, deterioration, or damage incurred during manufacture, transportation, storage, or installation must be rejected. The backfill placed against the grid must consist of natural materials free of organic matter, clay lumps, friable particles, coal, coke, metallurgical slag or cinders; its plasticity index shall not exceed 3, its pH shall lie between 5.0 and 9.0, and its angle of internal friction shall be at least 34 degrees, meeting at least Type C coarse aggregate specifications. The polymer must be PET, HDPE or PP with no post‑consumer recycled content, and any uncoated or unbound surface area must be identified by visual inspection according to ASTM D610; geogrids shall not be used where they will receive prolonged sunlight exposure, as demonstrated by the 500‑hour UV test. For Class 2 biaxial geogrids a regular network of integrally connected longitudinal and transverse polymer tensile elements with aperture geometry sufficient for mechanical interlock is required, protection from direct sunlight, ultraviolet rays, temperature greater than 140°F, mud, dirt, dust and debris must be provided, and clear identification on every roll—including product designation, manufacturer’s name, lot number, material quantity and differentiation between similar rolls—must be supplied. For Class 1 uniaxial geogrids the installation‑damage reduction factor shall never be less than 1.3; the durability reduction factor shall use the minimum value indicated in Table B unless a higher project‑specific value is justified; and the creep reduction factor shall be determined according to AASHTO R 69, ASTM D5262 and ASTM D6992 based on the ratio of ultimate strength to creep‑limiting strength. In bridge‑approach applications geosynthetics shall be placed within ±½ inch of plan elevation, adjacent strips shall overlap at least 12 inches, a Class 2 Type A biaxial geogrid must have its backing geotextile extend a minimum of 4 feet at the top and 2 feet at the bottom of the face wrap, damage smaller than 3 sq ft may be patched with the same material extending at least 3 feet beyond the defect on all sides, whereas damage larger than 3 sq ft requires complete removal and replacement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 185–199), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>Selection of a geogrid for stabilizing weak subgrades at the subgrade‑aggregate interface must follow the design requirements and be based on the material properties, design specifications, product data and construction procedures documented in Publication 408 Sections 221 and 738, Publication 35 (Bulletin 15), and the manufacturer’s published technical information. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Factors that favor the use of a geogrid include its simple and rapid installation, the increasing variety of available types, brands and quality, and the reduction in material cost that results from strong market competition among manufacturers. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The class of geogrid determines its placement direction: uniaxial grids are positioned parallel to the primary load direction whereas biaxial grids are employed where multidirectional support is required. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For Class 1 uniaxial systems the maximum vertical spacing may be up to 2 feet, while for Classes 2‑3 biaxial systems the maximum vertical spacing is limited to 12 inches. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Adjacent layers of geogrid must overlap at least 3 inches; on concave faces the overlap shall cover a minimum of 75 % of the grid length from the edge, and biaxial installations require a one‑foot edge overlap in both directions. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Prior to placement each geogrid sheet shall be identified in accordance with ASTM D4873, protected from ultraviolet radiation, kept below temperatures of 140 °F, and handled so that damage is avoided. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The selected geogrid must appear on Bulletin 15 and be manufactured from one of the approved polymers—polymeric‑coated polyester (PET), high‑density polyethylene (HDPE) or polypropylene (PP)—as required for its class and type; it may not contain any post‑consumer recycled resin, is intended solely for buried use, and must retain the specified percentage of ultimate tensile strength after exposure of a sample to 500 hours of UV radiation in accordance with ASTM D4355. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When a Class 2 biaxial geogrid is required, the intended function guides polymer choice: polypropylene is specified for stabilization (confinement) applications and polyester for reinforcement such as load‑distribution pads or slope support; the grid shall consist of a regular network of longitudinal and transverse polymer tensile elements with apertures large enough to achieve mechanical interlock, shall be a Type A or B biaxial product fabricated with stiff ribs whose connections are integrally formed or welded, and its ultimate tensile strength must meet a minimum TU of 2,000 lb/ft in either the machine‑direction or cross‑direction for Class 2 Type C grids (reduction factors are not applied to Types A and B). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For a Class 1 uniaxial geogrid the material also must consist of a regular network of longitudinal and transverse polymer tensile elements with aperture geometry sufficient for mechanical interlock; its ultimate tensile strength is expressed as the minimum average roll value (MARV) obtained by subtracting two standard deviations from the twelve‑month average of manufacturer quality‑control tests per ASTM D6637 Method B, the installation damage reduction factor shall never be less than 1.3, the creep and durability reduction factors must meet at least the minimum values shown in Table B, the allowable long‑term tensile strength is calculated by applying the combined reduction factors to TU, and the geogrid may be strained no more than five percent for a 100‑year design life. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The class of geogrid also dictates the required backfill quality: for a Class 1 grid the backfill shall be AASHTO No. 8 coarse aggregate in free‑draining zones or, elsewhere, Type C coarse aggregate or better without clay lumps, friable particles, coal, coke, metallurgical slag or cinders; it must have a maximum plasticity index of 3, a pH between 5.0 and 9.0, and an angle of internal friction of not less than 34° on the portion finer than the No. 8 sieve, whereas Classes 2 and 3 may use AASHTO No. 8, AASHTO No. 57, or PennDOT No. 2A coarse aggregate as specified. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] In a geosynthetic‑stabilized bridge approach the class and type of geogrid determine whether a supplemental face‑wrap is required: a Class 2 Type A biaxial geogrid must be backed by a Class 4 Type A geotextile at the slope face, while a Class 4 Type C geotextile can serve as the stabilization layer without additional wrap; all stabilization layers shall be overlapped a minimum of 12 inches along parallel edges and positioned within ±½ inch of the plan elevation, and patches are permitted only for damaged areas less than 3 square feet, larger damage requiring complete removal and replacement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Each roll of geogrid supplied shall be in the required lengths and clearly identified by the manufacturer with a product model designation, manufacturing plant, and lot number, and when specified it must satisfy the Class 2 Type A criteria defined in Section 738. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 185–199), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<p>According to the Pavement Policy Manual (Publication 242, Change No. 10), designers can improve geogrid performance by selecting higher‑quality geogrids from the expanding range of types and brands and by adhering to the detailed requirements set out in Publication 408 (Sections 221 and 738) and Publication 35, using manufacturer data to define properties, design specifications, product selection and construction procedures as a quality‑control measure. When reinforcement or separation is required but a geogrid may be unsuitable, the same manual recommends employing a Class 4 geotextile—Type A for layer separation or Type C for combined separation and lateral restraint—as an alternative material. The manual also notes that additional subgrade strengthening options such as cement or lime stabilization or rock capping, modeled with CBR = 20 or a structural coefficient of 0.12, can be used to mitigate weak subgrades. The Commonwealth of Pennsylvania Department of Transportation Publication 408 specifies strict quality‑control measures, requiring each geogrid roll to be clearly identified with product designation, manufacturer name, lot number and quantity, and mandating rejection and replacement at no cost of any grid exhibiting defects, tears, punctures, flaws, deterioration or damage incurred during manufacture, transportation, storage or installation. It further requires that geogrids be protected from direct sunlight, ultraviolet radiation, temperatures greater than 140 °F, mud, dirt, dust and debris, with storage and handling conforming to ASTM D4873. Only approved polymers—polymeric coated polyester (PET), high‑density polyethylene (HDPE) or polypropylene (PP)—may be used in geogrid manufacture, and the polymer mix shall not contain post‑consumer recycled resin. A sample of each product must be exposed to 500 hours of UV radiation in accordance with ASTM D4355, and its ultimate tensile strength after exposure must meet the required percentage of the virgin material; visual inspection per ASTM D610 is used to assess uncoated or unbound surface area. For subgrade or subbase stabilization applications, polypropylene biaxial grids are required, whereas polyester grids are prescribed for reinforcement functions such as load‑distribution pads or slope support, thereby matching material stiffness to the intended function. The specification also dictates overlap and spacing requirements: uniaxial grids must overlap a minimum of three inches, biaxial grids at least one foot in both directions; vertical spacing shall not exceed two feet for Class 1 grids and twelve inches for Classes 2‑3, with backfill placed as a minimum eight‑inch loose layer over the grid, limited to a drop height of three feet and compacted as specified to avoid deformation. Performance of Class 1 uniaxial geogrids may be enhanced by manufacturer testing that establishes a minimum average roll value (MARV) for ultimate tensile strength—computed by subtracting two standard deviations from the twelve‑month average—and by calculating a creep reduction factor using the ratio of ultimate to creep‑limiting strength; an installation damage reduction factor must never be less than 1.3 and may be computed as TU divided by Tdam when project conditions demand, while the minimum durability reduction factor from Table B shall be used unless a higher product‑specific value is indicated. When a Class 2 Type A biaxial geogrid is employed as the stabilization geosynthetic, Publication 408 requires it to be backed by a Class 4 Type A geotextile face‑wrap extending at least four feet above and two feet below the grid edge, with adjacent strips of both geogrid and backing geotextile overlapping a minimum of twelve inches, and all layers placed within plus or minus one‑half inch of the design elevation; a layer of Class 4 Type A geotextile must be placed on the prepared subgrade before placement of the geogrid. If minor damage occurs to the installed geogrid, the specification calls for a repair patch made from the same geosynthetic material, extending at least three feet beyond the damaged area on all sides. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 185–199), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>Evaluation of Class 2 biaxial geogrids is based on laboratory testing of tensile properties in accordance with the specified ASTM methods. The material must achieve a minimum tensile strength (TU) not less than 2,000 lb/ft in either the machine‑direction (MD) or cross‑machine direction (XD) as shown in Table C, and sample materials are required to be tested according to ASTM D4354. Identification, storage, and handling procedures must conform to ASTM D4873, which requires rolls to be clearly labeled and protected from sunlight, high temperature, mud, dust and debris; the source does not describe any field or long‑term performance monitoring for this class. For Class 1 uniaxial geogrids the evaluation combines laboratory tests with calculated reduction factors that together define long‑term performance. The ultimate tensile strength is obtained from twelve months of manufacturer quality‑control data and must be verified by testing according to ASTM D6637 Method B, while the creep reduction factor is derived using AASHTO R 69 together with ASTM D5262 and ASTM D6992 on unconfined samples. Installation damage and durability are accounted for through minimum reduction factors from Table B, with RFID never less than 1.3, or product‑specific values; the allowable long‑term tensile strength is computed by applying the combined reduction factor to TU, and the maximum allowable strain of the geogrid is five percent for the 100‑year design life. Across all geogrids the polymer requirements call for laboratory aging and strength tests as well as visual inspection. A sample is exposed to 500 hours of UV radiation according to ASTM D4355 and then its ultimate tensile strength is measured by ASTM D6637 Method B in the MD for uniaxial grids and in both MD and XD for biaxial grids, with the retained strength expressed as a percentage of the virgin material value. The proportion of uncoated or unbound surface area is determined by visual inspection using the examples in ASTM D610, and geogrids should not be used for applications with long‑term exposure to sunlight. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<p>In PennDOT projects geogrids are permitted primarily to reinforce soft subgrade soil and aggregate layers, thereby adding structural capacity to the pavement; when a geogrid is employed for any other soil‑reinforcement purpose it is treated as an experimental construction item, so its design parameters must be established on a project‑by‑project basis using FHWA guidelines and related technical references, and the use must be coordinated through the BOCM Materials Division. The presence of geogrid influences pavement design by requiring specific reinforcement specifications and impacts construction planning and approval procedures. Geogrids are installed at the subgrade‑aggregate interface where their net‑like structure, with apertures large enough to interlock with surrounding soil, rock or aggregate, provides primary reinforcement that stabilizes weak pavement subgrades and improves load distribution. Because they can be placed quickly and benefit from a growing variety of high‑quality, competitively priced products, geogrids simplify construction while contributing to longer‑lasting pavements; their selection and design must follow the specifications outlined in Publication 408 (Sections 221 and 738) and related product data. Section 221 specifies that the grid must be laid flat, free of wrinkles, stretched and anchored as needed, and cannot be subjected to traffic until it is covered by at least one lift of backfill (8 inch loose layer); exceeding a backfill drop height of 3 feet or using tracked equipment that deforms the grid can damage it, reducing durability. The specification limits vertical spacing to no more than 2 feet for uniaxial and 12 inches for biaxial grids, with minimum overlaps of at least 3 inches (or 1 foot on edges) to ensure adequate load distribution and reinforcement continuity, influencing design and long‑term performance. Protecting the material from direct sunlight, UV, temperatures greater than 140 °F, mud, dirt, dust, and debris during storage preserves its integrity, thereby supporting pavement longevity and reducing maintenance. Class 2 biaxial geogrids must provide a regular network of longitudinal and transverse tensile elements whose aperture geometry is sufficient for mechanical interlock with the surrounding soil, which stabilizes the subgrade or subbase and improves load distribution across the pavement. Polypropylene grids are required when the purpose is confinement, while polyester grids are required for reinforcement such as load‑distribution pads, ensuring that the polymer type matches the intended performance function. The specification mandates a minimum tensile strength of at least 2,000 lb/ft in either the machine‑direction or cross‑direction, a threshold that helps maintain pavement durability under traffic loads. Class 1 uniaxial geogrids have their ultimate tensile strength reduced by specific creep, installation‑damage, and durability factors; these reduction factors are multiplied to obtain a combined factor that limits the long‑term allowable tensile strength, ensuring that strain in the grid does not exceed five percent for the 100‑year design life, directly governing pavement design criteria. Because the installation‑damage reduction factor must never be less than 1.3, designers must account for potential handling loss when specifying reinforcement, which helps maintain performance and durability of the reinforced base course throughout service. The geogrid must be manufactured from PET, HDPE or PP polymers without any post‑consumer recycled resin, ensuring baseline mechanical properties required for reinforcing a pavement base. Long‑term sunlight exposure is prohibited; a sample must survive 500 hours of UV radiation according to ASTM D4355 and retain a minimum percentage of its ultimate tensile strength compared with virgin material in both machine and cross‑machine directions, calculated by dividing the tensile strength of the UV‑exposed material by that of the virgin material and multiplying by 100. Visual inspection according to ASTM D610 is required to verify that the uncoated or unbound surface area stays within acceptable limits, helping maintain consistent load distribution and long‑term performance of the pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 6 (pp. 143–150); [2] — SECTION 200 EARTHWORK (pp. 185–186), SECTION 700 MATERIAL (pp. 707–710)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

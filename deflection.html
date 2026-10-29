@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deflection</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html" class="active" aria-current="page">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><span class="crumb-current">Deflection</span></nav>
+<article><h1>Deflection</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-condition-assessment.html">Pavement Condition Assessment</a> <span class="edge edge-taxonomic" title="Deflection is a topic under Pavement Condition Assessment.">is-subtopic-of</span></div><div class="edge-reading">Deflection is a topic under Pavement Condition Assessment.</div><div><a class="tag" href="index.html?q=deflections">deflections</a><a class="tag" href="index.html?q=deflection">deflection</a><a class="tag" href="index.html?q=slab-deflections">slab-deflections</a><a class="tag" href="index.html?q=deflection-tests">deflection-tests</a><a class="tag" href="index.html?q=deflection-data">deflection-data</a></div><div>Created 2026-10-28 · Updated 2026-10-28</div></div>
+<p>Deflection testing is a non‑destructive technique that measures the vertical bending or deformation of a concrete pavement surface under a known load to evaluate the slab’s structural capacity and joint performance [1][2]. By recording unloaded and loaded slab‑corner deflections (ASTM D 4695) or impact‑induced surface deflections with a falling‑weight deflectometer, engineers can compute joint efficiency and back‑calculate an elastic modulus, then compare the results against prescribed limits—such as a loaded corner deflection of 0.02 in., joint efficiency ≥65 %, LVDT differential ≤7.5 mil at one million cycles, or vertical roller deflection &lt;¾ in.—to decide whether stabilization, patching, or other rehabilitation is required [1][2]. The method must be performed under controlled temperature (typically 40–70 °F for slab‑stabilization and 45–90 °F for FWD) and with an unfrozen subgrade to ensure reliable measurements, making it the primary quantitative basis for joint replacement, slab stabilization, rubblizing quality checks, and fracture pattern approval in concrete pavement restoration projects [1][2].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-investigation-objectives">Purpose and investigation objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#existing-information-and-records">Existing information and records</a></li><li><a href="#visual-inspection-and-condition-assessment">Visual inspection and condition assessment</a></li><li><a href="#field-measurements-and-testing">Field measurements and testing</a></li><li><a href="#sampling-and-laboratory-investigation">Sampling and laboratory investigation</a></li><li><a href="#structural-and-functional-performance">Structural and functional performance</a></li><li><a href="#data-interpretation-and-diagnosis">Data interpretation and diagnosis</a></li><li><a href="#findings-confidence-and-next-actions">Findings, confidence, and next actions</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-investigation-objectives">Purpose and investigation objectives</h2>
+<p>Deflection testing is used in concrete‑pavement restoration to assess the structural condition of the existing slab, especially the performance of joints and the need for slab stabilization; the investigation should answer which joints require replacement and where slab‑stabilization measures are warranted. In the slab‑stabilization portion of Section 679‑3, the deflection evaluation examines the condition of concrete pavement joints and cracks, and the investigation must determine whether each joint or crack exhibits a loaded slab corner deflection of 0.02 inch or more and calculate its joint efficiency because those values dictate if the location is to be stabilized, patched, or left unchanged under Section 679‑3(a). The investigation also must verify that testing occurs when air temperature is not below 40 °F and not above 70 °F and that the subgrade is unfrozen before measurements are taken. In the slab‑fracturing portion of Section 522‑3, the deflection evaluation addresses the structural response of a fractured concrete slab; the investigation must check whether vertical deformation under loading is acceptable, using visual observation of roller‑induced vertical deflection to confirm that the substrate does not move. Additionally, the investigation must obtain falling weight deflectometer data on a minimum 1,000‑foot‑long test section with a 9,000‑pound drop weight at intervals of 50 feet or less, and the key question is whether the average elastic modulus calculated from the FWD testing falls within the range specified in Table A. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>In concrete pavement rehabilitation, deflection testing provides quantitative information that directly informs a range of engineering decisions; during preliminary engineering the non‑destructive measurement of surface bending should be used to identify which joints must be replaced and where slab stabilization should be performed, thereby defining the structural capacity of the existing concrete and shaping the rehabilitation scope, including the choice between overlay or other restoration alternatives [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The results also guide sizing of patching and spall repair so that the calculated quantities shall anticipate additional deterioration that will occur between the design field view and actual construction [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Findings support decisions on slab‑jacking needed to restore uniform support [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When excessive slab deflections are observed, indicating voids beneath the slab, engineers are directed to perform slab stabilization by filling those voids, which restores structural integrity and reduces the likelihood of future pumping, faulting, and cracking [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If no preliminary testing has been performed, the guidelines advise stabilizing at least 25 percent of the transverse joints and all patch joints as a quantitative basis for maintenance planning [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The reduction in deflection achieved through stabilization informs subsequent design choices regarding additional reinforcement or redesign, while also guiding routine actions such as joint sealing and drainage upkeep to prevent further loss of support [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Deflection limits for load‑transfer units give quantitative criteria that engineers use to verify joint performance during planning and design; structural adequacy testing must be submitted showing a maximum LVDT differential deflection not more than 7.5 mils at 1 million cycles and not greater than a 2.5‑mil increase at 10 million cycles, and exceeding these thresholds signals that maintenance or rehabilitation actions are needed to restore acceptable joint behavior [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In slab stabilization, deflection test results obtained per ASTM D 4695 within the permitted air‑temperature range of 40 °F to 70 °F are used to decide which joints or cracks require stabilization: any joint or crack that shows a loaded slab corner deflection of 0.02 inch or more and a joint efficiency at 65 % or higher, if approved by the representative, is slated for stabilization, while those with the same deflection but joint efficiency below 65 % are targeted for patching and stabilization, also subject to approval; these thresholds allow planners to prioritize rehabilitation actions and schedule maintenance only where structural performance is compromised, and verify effectiveness through retesting after grout injection [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In rubblizing of concrete pavements, vertical deflection measured under the seating roller serves as a performance check; final seating is satisfactory when the deflection is less than 3/4 inch, otherwise the crew must undercut the area, remove unsuitable or unstable material and re‑compact, thereby informing engineers whether the rubblized base has achieved the required stiffness before overlay placement and guiding decisions on additional compaction or corrective excavation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In slab fracturing of existing concrete pavements, falling weight deflectometer measurements are used to back‑calculate the elastic pavement modulus of the fractured concrete layer; the average modulus is compared against the limits in Table A and, if it falls within that range, the selected fracturing pattern is approved for rehabilitation, whereas values outside the range trigger a change in breaking energy or pattern and require re‑testing, directly informing equipment selection, pattern design, and whether additional base repairs are needed before placing the asphalt overlay [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. FWD testing may not be performed when the pavement surface is frozen or when air temperature is below 45 °F or above 90 °F, ensuring that the deflection results reflect true structural response [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–92); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–421), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589), SECTION 700 MATERIAL (pp. 671–673)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>In the Pavement Policy Manual, deflection testing is appropriate when repairing concrete pavements, specifically for patching and spall repair that are based on actual field measurements or deflection tests as part of a concrete pavement rehabilitation strategy [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual also states that for Portland cement concrete pavements undergoing restoration, deflection testing may be employed to evaluate the condition of the existing slab, to identify joints that should be replaced, and to locate areas requiring slab stabilization; it additionally helps assess subbase or subgrade soil conditions beneath the pavement as part of the overall structural assessment [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania specifications require deflection testing when evaluating load‑transfer units in reinforced and plain cement concrete pavements, provided that the LVDT differential deflection measured on coated dowel bars under dynamic or static loading does not exceed 7.5 mil at 1 million cycles and that the increase to 10 million cycles be no greater than a 2.5‑mil rise from the 1‑million‑cycle value [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Deflection testing of concrete slab pavements is used for evaluating joints or cracks that may require stabilization, but it shall only be performed when the air temperature is at least 40 °F and does not exceed 70 °F, spring‑thaw conditions are absent, and the subgrade is unfrozen [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any joint or crack showing a loaded slab corner deflection of 0.02 inch or more is considered for stabilization, and the decision further depends on whether the joint efficiency is at least 65 % (or less than 65 % for patching) as approved by the Representative [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For rubblized rigid concrete pavements, deflection is used as a quality check during the seating step, and vertical deflection measured under the 50‑ton pneumatic‑tired roller must be less than 3/4 inch to deem the final seating satisfactory [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Falling weight deflectometer testing may be performed to evaluate the structural response of full‑depth rigid concrete slabs that have been fractured and seated under the slab‑fracturing rehabilitation process, because the FWD test is used to back‑calculate the elastic modulus of the fractured concrete layer; however, it shall only be performed when the pavement surface is not frozen and the air temperature is between 45 °F and 90 °F [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–84); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–421), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589), SECTION 700 MATERIAL (pp. 671–673)</small></p>
+<p>Deflection testing, whether using standard deflection procedures or a falling weight deflector, is constrained by temperature and ground conditions that can compromise the reliability of measurements. For slab stabilization under Section 679—Slab Stabilization, the procedure states that deflection testing may not be performed when air temperature is below 40 °F or exceeds 70 °F, nor during spring‑thaw conditions or if the subgrade is frozen; in those circumstances visual verification of pumping or poor joint performance is required before specifying slab stabilization, so a complementary visual inspection is used whenever temperature or ground‑freeze constraints prevent reliable deflection measurements. For slab fracturing under Section 522—Slab Fracturing of Existing Concrete Pavements, the falling weight deflectometer should not be performed when the pavement surface is frozen, or when air temperature falls below 45 °F or exceeds 90 °F; interpretation also relies on visual observation of vertical deflection under a roller to confirm that the substrate is not moving, and therefore if these temperature limits are exceeded or the surface is frozen a different or complementary investigation method must be employed to evaluate the pavement’s structural condition. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="existing-information-and-records">Existing information and records</h2>
+<p>To evaluate deflection, the review should start with existing condition records that quantify visible distress, core logs taken near deteriorated joints and at random locations describing subbase or subgrade soil conditions, and any prior non‑destructive test results such as deflection tests and faulting measurements used to locate joints for replacement or slab stabilization. Additional performance data that inform the pavement’s ability to be rehabilitated—percent patching, concrete compressive strength, air content, observed durability problems, subgrade condition, friction adequacy, and ride quality—should also be gathered from past surveys and test reports. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84)</small></p>
+<p>In the concrete pavement restoration guidelines (section 3.3, concrete rehabilitation strategies) any lack of recent deflection data creates a gap in the records that must be filled by field investigation. Because the quantity of repair work shall anticipate additional deterioration that will occur between the design field view and construction, there is uncertainty about how much further damage will develop after the existing documentation was prepared, requiring field measurements and deflection testing to resolve these missing or inconsistent data points before rehabilitation can be reliably designed. When the existing pavement condition is described only qualitatively in section 4.1, the exact quantities of visible distress should be measured and tabulated, and cores near deteriorated joints and at random locations are frequently missing, leaving subbase or subgrade soil conditions and the depth of deterioration uncertain. Without deflection (or faulting) results it is unclear which joints require replacement or where slab stabilization should be performed. The record may lack preliminary deflection measurements for many joints and cracks, so field investigation must supply those values; without them it is unclear whether the loaded slab corner deflection exceeds the 0.02 inch threshold or whether joint efficiency falls below the 65 % limit that trigger stabilization. When air temperature conditions fall outside the permitted range (below 40 °F or above 70 °F) the existing documentation may rely only on visual verification, creating uncertainty about actual performance, and field testing performed according to ASTM D 4695 under acceptable temperatures is therefore required to resolve these gaps and confirm which slabs meet the stabilization criteria. The current records do not contain measured values of the fractured slab’s elastic modulus, so a falling‑weight deflectometer must be used in the field to verify that the average modulus of the fractured concrete layer falls within the range specified in Table A; if the recorded modulus deviates or exceeds the upper limit, the breaking pattern is uncertain and must be adjusted followed by a new 1,000‑foot‑long test section. Because sonic vibratory equipment may only be employed if the fracturing of the concrete pavement will not cause soil liquefaction of the subgrade, the actual condition of the subgrade is an uncertainty that field investigation must resolve before such equipment can be approved. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–84); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="visual-inspection-and-condition-assessment">Visual inspection and condition assessment</h2>
+<p>In concrete rehabilitation strategies (section 3.3 GUIDELINES FOR DEVELOPING INITIAL COSTS &gt; B. Concrete Rehabilitation Strategies), deflection‑guided field inspection should focus on visible spalling that may require patch repair, any mid‑panel or transverse cracks that could call for a dowel‑bar retrofit, failed transverse joints that need rehabilitation, and deteriorated joint sealing that warrants cleaning and resealing of longitudinal, transverse, and pavement‑shoulder joints; the inspector should also verify that drainage provisions such as a continuous pavement base drain are intact and that guide‑rail and other drainage structures are not compromised. In slab stabilization assessments (section 4.5 SLAB STABILIZATION), deflection examinations should look for visual signs indicating loss of slab support, including transverse joint faulting, fines near joints or cracks on the traffic lane or shoulder, small depressions (blow holes) in the shoulder at a transverse joint or crack, corner breaks, diagonal cracking, and overall slab settlement. Under the construction specifications for slab stabilization (section 679.3 CONSTRUCTION), deflection testing should be supplemented by a visual check for pumping or other poor joint performance when temperature limits prevent measurement, and the inspector must also look for radial cracks that spread outward from grout injection holes, transverse cracks that appear between adjacent holes, and any panel displacement where the pavement is raised in excess of the 0.05 inch allowable tolerance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 91–92); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="field-measurements-and-testing">Field measurements and testing</h2>
+<p>Deflection testing, together with faulting measurements and other nondestructive techniques, should be used to identify which joints require replacement and where slab stabilization should be performed in concrete pavement restoration projects. Faulting measurement records vertical joint displacement, indicating joint distress. Ground‑penetrating radar and related geophysical methods evaluate subbase or subgrade conditions without coring. Friction tests assess surface traction, while roughness measurements gauge ride quality. MIRA surveys provide an overall assessment of existing pavement and subsurface condition. MIT‑Scan 2 checks dowel bar alignment, and MIT Scan T2 determines concrete thickness. A tensile bond tester measures the CPR bond strength. For load‑transfer units in reinforced and plain cement concrete pavements, structural adequacy testing performed according to PTM No. 642 records Linear Variable Differential Transformers (LVDT) differential deflection under both dynamic and static loading, measuring the absolute difference in vertical movement between the loaded and unloaded sides of a joint. The LVDT differential deflection shall not exceed 7.5 mils at 1 million cycles and shall not increase more than 2.5 mils by 10 million cycles, thereby indicating acceptable joint performance over service life. Deflection testing in accordance with ASTM D 4695 records unloaded and loaded slab‑corner deflections to compute joint efficiency (JE = unloaded/loaded × 100). A loaded slab‑corner deflection of 0.02 inch or more triggers stabilization, and when JE is at least 65 % the joint may be fully stabilized; a JE below 65 % leads to patching, subject to representative approval. During final seating of rubblized concrete pavement, a 50‑ton pneumatic‑tired roller is used and the vertical deflection beneath the roller is measured; the pavement is considered properly seated only when that deflection is less than 3/4 inch, indicating sufficient compaction and stability. Falling weight deflectometer (FWD) testing applies a known impact load and records the resulting vertical surface deflections, which are back‑calculated to obtain the elastic modulus of the fractured layer, providing an indication of structural capacity. FWD testing shall be performed in lane centre at intervals of 50 feet or less using a 9,000‑pound drop weight, must not be conducted when the pavement surface is frozen or when air temperature is below 45 °F or above 90 °F, and the equipment shall be calibrated at an SHRP regional calibration facility. Coating integrity of load‑transfer units is verified with a 67.5 V holiday detector, which identifies holidays in the dowel‑bar coating but does not directly measure deflection. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–421), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589), SECTION 700 MATERIAL (pp. 671–673)</small></p>
+<p>Deflection testing for slab stabilization work shall be performed in accordance with ASTM D 4695 and only when the ambient air temperature is between 40 °F and 70 °F; testing must not be carried out under spring‑thaw conditions or on a frozen subgrade. The field quality‑control plan shall list the required equipment, including supply pumps, valves, mixing equipment and injection guns, and shall detail hole spacing, depth, diameter and drilling methods for the stabilization operation. The procedure shall be repeated at every transverse joint or crack as directed, and all test data shall be submitted fifteen working days before work begins. For slab fracturing of existing concrete pavements the deflection assessment shall use a falling weight deflectometer (FWD) operated by a qualified operator, with the device calibrated at an SHRP regional calibration facility within the current year. Testing is limited to non‑frozen surfaces and only when air temperature is between 45 °F and 90 °F, and shall follow AASHTO T256, ASTM D4694, D4695 and D5858 using a 9,000‑lb drop weight. Measurements shall be taken in the lane centre at intervals of 50 ft or less. After an initial 1,000‑ft test section is approved, verification FWD tests shall be performed throughout the fracturing work, with at least three 1,000‑ft “lots” per lane mile selected for testing, and results shall be submitted within seven calendar days for Representative approval before further construction. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="sampling-and-laboratory-investigation">Sampling and laboratory investigation</h2>
+<p>The deflection program should target the fractured concrete pavement itself, using Falling Weight Deflectometer measurements to back‑calculate the elastic modulus of the broken slab. Data are collected in the center of each travel lane at intervals of 50 feet or less with a 9,000‑pound drop weight, and verification tests are performed on three 1,000‑foot “lots” per lane mile as defined by the Representative. The sampling depth corresponds to the full thickness of the concrete slab because the FWD back‑calculation derives properties for the entire fractured layer. Frequency of testing continues throughout the fracturing operation, with a minimum of one initial 1,000‑foot test section and subsequent lot checks until the required modulus criteria are met. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415)</small></p>
+<p>Deflection evaluation requires structural adequacy testing as specified in PTM No. 642, where the LVDT differential deflection of the joint is measured under both dynamic and static loading; the result must not exceed 7.5 mil at 1 million cycles and may increase no more than 2.5 mil by 10 million cycles, thereby assessing the joint’s ability to limit relative movement over service life. In addition, bond‑breaking performance of coated dowel bars is verified with AASHTO M 254 pull‑out tests (Type A or Type B) to confirm that the coating either provides sufficiently low bond strength or meets the required pull‑out load, which evaluates potential deterioration due to loss of slip resistance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 700 MATERIAL (pp. 671–673)</small></p>
+<h2 id="structural-and-functional-performance">Structural and functional performance</h2>
+<p>In the Pavement Policy Manual (Publication 242, Change No. 10) evaluating a concrete pavement’s structural capacity and functional condition relies on several non‑destructive measurements, including deflection tests and faulting measurements to identify joints that require replacement or slab stabilization [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same source adds that friction tests, roughness measurements, MIT Scan T2 surveys of Portland cement concrete pavement thickness, and MIT Scan 2 checks of dowel bar alignment provide data on surface texture, bearing adequacy, layer depth, and load‑transfer efficiency [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the Commonwealth of Pennsylvania Department of Transportation Specification (Publication 408/2020), evaluation of structural capacity for load‑transfer units in reinforced or plain cement concrete pavements requires measuring Linear Variable Differential Transformers differential deflection under both dynamic and static loading on the approach and leave sides of a joint, with the LVDT differential deflection not to exceed 7.5 mil at 1 million cycles [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The specification further states that the increase in LVDT differential deflection shall not be greater than 2.5 mil at 10 million cycles relative to the 1‑million‑cycle value [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For slab stabilization, the required measurements are the loaded slab‑corner deflection obtained by ASTM D 4695 testing together with the unloaded slab‑corner deflection so that joint efficiency (JE = unloaded/loaded × 100) can be calculated; a pavement is slated for stabilization when the loaded slab‑corner deflection reaches 0.02 inch or more and the calculated JE is at least 65%<em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If the JE falls below 65%</em> but the same loaded slab‑corner deflection threshold is met, the joint is to be patched instead [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For rubblized concrete pavements the specification calls for measuring vertical deflection under a 50‑ton pneumatic‑tired roller, and the pavement is considered satisfactorily seated only when that deflection is less than 3/4 inch; no additional measurements such as load‑transfer efficiency, layer thickness, roughness, friction, ride quality, or bearing strength are prescribed for this treatment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 82–84); [2] — SECTION 500—RIGID PAVEMENTS (pp. 420–421), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589), SECTION 700 MATERIAL (pp. 671–673)</small></p>
+<p>In Section 705—Joint Material, the load‑transfer units must show a maximum LVDT differential deflection under dynamic and static loading of not more than 7.5 mil at one million cycles, and the increase in that differential deflection by ten million cycles may be no greater than an additional 2.5 mil over the one‑million‑cycle value; staying within these limits demonstrates that measured pavement deflection aligns with the traffic loading and design assumptions of the specification and satisfies the anticipated remaining service‑life requirements for the joint. In Section 526—Rubblizing of Concrete Pavements, the rubblizing specification requires that after seating, the vertical deflection measured under the 50‑ton pneumatic‑tired roller be less than ¾ inch; this value serves as the explicit performance threshold for the operation, but the source does not provide information on expected traffic loading, design assumptions, or remaining service‑life requirements, so no comparison can be made for those aspects. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 420–421), SECTION 700 MATERIAL (pp. 671–673)</small></p>
+<h2 id="data-interpretation-and-diagnosis">Data interpretation and diagnosis</h2>
+<p>Visual inspection requires measuring and tabulating exact quantities of visible distress, while cores are taken near deteriorated joints and at random locations to obtain laboratory data such as compressive strength, air content and durability observations. For slab stabilization, visual observations first determine whether the ambient temperature permits deflection testing; if air temperature is below 40 °F or exceeds 70 °F testing is omitted and visual verification of pumping quality or poor joint performance is performed before any stabilization is specified. When temperature is within the allowable range, field‑based deflection tests per ASTM D 4695 are conducted at each transverse joint and crack, recording loaded slab corner deflection and unloaded values to compute joint efficiency. Joints that exhibit a loaded slab corner deflection of 0.02 inch or more and a joint efficiency of 65 % or more, if approved by the representative, are stabilized; joints with lower efficiency are patched. The test data together with the list of slabs recommended for stabilization must be provided to the representative at least 15 working days before work begins for approval. After grouting, retesting supplies performance data that determines whether additional groutings or full‑depth replacement are required. For slab fracturing, visual inspection first confirms that all surface cracks are visible and that vertical deflection observed under the roller indicates no substrate movement; these observations trigger falling weight deflectometer (FWD) testing when the pavement is not frozen and air temperature is between 45 °F and 90 °F. The FWD uses a 9,000‑lb drop weight and collects data at intervals of 50 feet or less along the lane center; the operator back‑calculates the elastic modulus of the fractured concrete layer with an approved software package and compares the average value to the range specified in Table A for the treatment. If the percent patching needed on the current project exceeds 10 % (excluding existing good patches), a cost‑effectiveness analysis must be performed to assess whether patching or another rehabilitation alternative is more appropriate, integrating the visual distress quantities, core laboratory results and deflection performance indicators. Integration of visual observations, field deflection measurements, laboratory core data, and derived performance metrics such as percent patching, joint efficiency and elastic modulus guides the selection and approval of concrete pavement rehabilitation actions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–84); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–415), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>In the context of concrete pavement restoration (section 4.1 CPR), deflection‑related distress is usually linked to load‑related overloading or to climate/materials problems such as inadequate drainage and material deterioration, and weak subgrade support may also be a factor because deflection testing is used to locate joints needing slab stabilization; consequently, the most likely causes of the observed condition are overloading, drainage deficiencies, subgrade weakness, and degradation of concrete due to environmental exposure. In the slab‑stabilization context (section 4.5), the excessive slab deflection is most likely caused by a loss of support where small voids have formed beneath the concrete due to pumping action, subgrade consolidation and settlement, especially at transverse joints and corners; water entering the pavement through inadequate drainage or unsealed joints can increase the pumping effect. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 82–92)</small></p>
+<h2 id="findings-confidence-and-next-actions">Findings, confidence, and next actions</h2>
+<p>Deflection testing can be used to determine the quantity of concrete pavement patching and spall repair because those quantities are derived from actual field measurements or deflection results, but the guidance requires that the calculated quantity anticipate additional deterioration that will occur between the design field view and construction, indicating that deflection alone cannot fully predict future pavement condition. In preliminary engineering, non‑destructive deflection measurements should be used to pinpoint joints that require replacement and to locate slabs where stabilization is needed, yet the investigation must still rely on additional data such as cores taken near deteriorated joints, subgrade assessments, and an evaluation of whether distress is load‑related or climate/materials‑related, so deflection alone does not resolve all uncertainties. Excessive slab deflections signal a loss of support beneath concrete slabs, which is associated with transverse joint faulting, corner breaks, diagonal cracking and eventual slab breakup; filling the voids through slab stabilization can restore structural integrity by reducing those deflections and thereby lowering the likelihood of future pumping, faulting and cracking, but slab stabilization does not correct pavement surface depressions, increase the pavement’s design structural capacity, or eliminate existing faulting, leaving uncertainty about long‑term performance beyond the immediate reduction in deflection. LVDT‑measured differential deflection of a joint can be used to confirm the structural adequacy of load‑transfer units because compliance is defined by a maximum differential deflection not more than 7.5 mil at 1 million cycles and by an increase no greater than 2.5 mil at 10 million cycles relative to the 1‑million‑cycle value, providing a quantitative basis for accepting or rejecting dowel‑bar installations under both dynamic and static loading; however, these conclusions are limited to the specific dowel‑bar configurations and testing regimes described in Section 705.3 and do not address performance beyond 10 million cycles, other pavement materials, or variability in field conditions, leaving uncertainty about long‑term behavior outside the prescribed test envelope. Deflection testing performed according to ASTM D 4695 when the air temperature is between 40 °F and 70 °F and the subgrade is not frozen can be used to decide which joints or cracks require slab stabilization, because any joint or crack that exhibits a loaded slab corner deflection of 0.02 inch or more may be stabilized, and if the joint efficiency is at least 65 % (subject to Representative approval) the same threshold applies, whereas lower efficiencies trigger patching and stabilization provided the deflection criterion is also met; however, these conclusions are limited by the temperature and ground‑condition restrictions that prevent testing when air temperature falls below 40 °F, exceeds 70 °F, during spring thaw, or when the subgrade is frozen, leaving uncertainty about the true deflection condition in those situations. Vertical deflection measured under a 50‑ton pneumatic‑tired roller provides a direct check on the adequacy of rubblized‑pavement seating, because when the deflection is less than 3/4 inch final seating is deemed satisfactory, but this conclusion applies only to the seating operation described in Section 526.3(d) and does not extend to other performance attributes such as long‑term structural capacity or traffic response, leaving uncertainty about overall pavement behavior beyond the immediate construction step. Deflection measurements obtained with a falling weight deflectometer can be used to back‑calculate the elastic modulus of a fractured concrete layer and to assess whether a 1,000‑foot‑long test section meets the acceptable range specified in Table A; when the average modulus falls within that range the fracturing pattern is approved, whereas values outside the range require adjustment of the breaking pattern and retesting, but this procedure—requiring data at intervals of 50 feet or less using a 9,000‑pound drop weight and being permissible only when the surface is not frozen and air temperature is between 45 °F and 90 °F—is limited by temperature constraints, calibration requirements, and reliance on back‑calculation software, leaving uncertainty about applicability under other conditions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–92); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–421), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589), SECTION 700 MATERIAL (pp. 671–673)</small></p>
+<p>When deflection testing reveals inadequate support or surface distress, the rehabilitation plan should begin with patching and spall repair sized to the measured deficiencies while anticipating further deterioration before construction; required slab stabilization is then applied to restore full support around the patches and any other weak zones, and slabjacking may be used where needed[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Diamond grinding is specified to improve ride quality except on Vanport Limestone aggregate pavements, and a continuous pavement base drain should be provided to manage moisture[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. All failed transverse joints are rehabilitated (or cleaned and resealed if intact), longitudinal and shoulder joints are sealed, guide‑rail and drainage structures are adjusted or replaced as necessary, and dowel bars are retrofitted at mid‑panel cracks and transverse joints[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Additional nondestructive evaluations such as faulting measurements and core sampling near deteriorated joints and at random locations are employed to verify subbase or subgrade conditions and the extent of deterioration; these results then trigger design checks that assess concrete condition—including percent patching, compressive strength, air content, and visible durability issues—subgrade quality, friction adequacy, and ride quality[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If the total percent patching needed exceeds 10 percent (not including existing concrete patches in good condition), an analysis must be performed to evaluate the cost‑effectiveness of alternatives[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Corrective actions may include joint replacement, slab stabilization or slabjacking, partial‑depth repair, dowel retrofits, cross‑stitching, full‑depth patching, installation of pavement base drains, diamond grinding or grooving, shoulder rehabilitation and joint cleaning or sealing to address the identified load‑related or climate/material distress[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Excessive slab deflections indicate loss of slab support near transverse joints, cracks, or corners; the recommended corrective measure is slab stabilization—drilling holes and filling the voids beneath the concrete with cement grout, hot asphalt, or high‑density polyurethane as specified in Publication 72M, RC‑26M—to restore full support and reduce deflections, performed together with joint and crack sealing and proper maintenance of subsurface drains; if no preliminary testing has been done at least 25 percent of the transverse joints and all patch joints should be stabilized[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p>After a pavement deflection assessment for reinforced or plain cement concrete joints, structural adequacy testing shall be performed in accordance with PTM No. 642 using Linear Variable Differential Transformers to record differential deflection under both dynamic and static loading on the load‑transfer unit[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The measured differential deflection must not exceed 7.5 mils at 1 million cycles, and the increase from 1 million to 10 million cycles must not be greater than a 2.5‑mil increment; values beyond these limits shall trigger repair or replacement of dowel bars, correction of coating holidays, and restoration of damaged surface areas as prescribed[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Ongoing monitoring shall verify that repaired dowels meet the same LVDT criteria and that coating thickness and holiday counts remain within the specified tolerances[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p>When a loaded slab corner deflection of 0.02 inch or more is observed, all joints or cracks whose joint efficiency is at least 65 percent shall be stabilized, and, if approved by the representative, those with joint efficiency below 65 percent shall also be patched and stabilized[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Deflection testing shall only be conducted when air temperature is between 40°F and 70°F and not during spring thaw or on frozen subgrade; results shall be submitted fifteen working days before work begins[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After grouting, a repeat deflection test shall be performed after 24 hours, and any slab that still shows a loaded corner deflection of 0.02 inch or more shall be re‑grouted and retested, with removal and full‑depth replacement possible if movement persists after two groutings[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any pavement raised more than the allowable 0.05 inch tolerance shall be ground to the correct grade before further work[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p>Following rubblizing of concrete pavements, the newly seated surface shall be compacted with a 50‑ton pneumatic‑tired roller and its vertical deflection measured; the treatment shall be considered satisfactory only when the deflection under the roller is less than 3/4 inch, and if that limit is not met the affected zones shall be undercut, unsuitable or unstable material removed, and the backfill compacted in accordance with Section 526.3(c)[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Initial quality control shall include excavation of two 3‑foot by 12‑foot full‑depth sections within the first half‑mile of work to verify that rubblizing dimensions are being achieved, and this excavation testing shall be repeated whenever equipment, pattern, or breaking force changes[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p>After a deflection‑based assessment of slab fracturing, falling weight deflectometer testing shall be scheduled with a calibrated operator; testing shall only occur when the surface is not frozen and air temperature is between 45°F and 90°F. A minimum 1,000‑foot test section shall be established, with FWD data collected at intervals of 50 feet or less using a 9,000‑pound drop weight, and the resulting average elastic modulus of the fractured concrete layer shall fall within the range given in Table A; if the average modulus exceeds the upper limit, the fracturing pattern shall be modified, a new test section prepared, and FWD testing repeated until compliance is achieved[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Visual inspection of vertical deflection under the seating roller shall also serve as a final check before proceeding to asphalt overlay[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 69–70), Ch. 4 (pp. 82–92); [2] — SECTION 500—RIGID PAVEMENTS (pp. 413–421), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589), SECTION 700 MATERIAL (pp. 671–673)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

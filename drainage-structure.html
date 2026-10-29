@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drainage Structure</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html" class="active" aria-current="page">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="subsurface-drainage.html">Subsurface Drainage</a><span class="crumb-sep">›</span><span class="crumb-current">Drainage Structure</span></nav>
+<article><h1>Drainage Structure</h1>
+<div class="meta"><div class="part-of">Part of: <a href="subsurface-drainage.html">Subsurface Drainage</a> <span class="edge edge-taxonomic" title="Drainage Structure is a topic under Subsurface Drainage.">is-subtopic-of</span></div><div class="edge-reading">Drainage Structure is a topic under Subsurface Drainage.</div><div><a class="tag" href="index.html?q=drainage-structures">drainage-structures</a><a class="tag" href="index.html?q=drainage-structure">drainage-structure</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>The drainage structure, comprising pipe underdrains and pavement‑base drains installed in a trench that extends at least two inches into the subgrade, functions as a continuous conduit for positive gravity‑flow removal of water from the pavement subgrade and adjacent foundations. It achieves this by sealing pipe ends, using fittings limited to 45° deflection, providing uninterrupted flow through Class 1 geotextile with a minimum six‑inch overlap, and backfilling with hydraulically compacted fine‑aggregate Type A lifts (no more than nine inches) sprayed with water to maintain moisture control. Additional design features such as pre‑formed drains no thicker than two inches, outlet spacing not exceeding fifteen feet, and Class 4 Type A geotextile membranes protect the system from soil intrusion and flowable backfill pressure, ensuring long‑term pavement performance and structural integrity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>In Section 610 the drainage structure—pipe underdrain or pavement base drain—is installed to provide positive gravity‑flow removal of water from the pavement subgrade and to prevent soil intrusion that would otherwise degrade the pavement’s structural integrity. Installation requirements such as sealing pipe ends, using fittings that do not restrict flow, backfilling within a trench depth extending at least 2 inches into the subgrade, and completing connections to establish positive drainage within 24 hours of the beginning of trenching are intended to ensure continuous drainage and avoid water accumulation during precipitation or overnight exposure; the use of Class 1 geotextile with a minimum 6‑inch overlap and protective measures for trenches further address the need to keep foreign material out of the drainage core, thereby maintaining pavement performance. In Section 220 the drainage structure is required to prevent water from entering or pressurizing the backfilled area and thereby protect foundations and utilities. Accordingly, base drain outlets must be kept clear of flowable backfill placement and solid outlet pipes are furnished where they would intersect the fill; a pre‑formed drain no more than 2 inches thick is placed between the wall and the flowable fill with outlets spaced at not more than 15 feet through the wall, and a Class 4, Type A geotextile membrane is used to keep foundation drains from intrusion and contamination. In Section 615 the drainage structure is provided to guarantee that water beneath the pavement can be discharged by gravity, thereby meeting the performance need for effective subsurface water removal. To achieve this, the trench bottom must be uniformly firm and smooth, the pipe is laid on a minimum of two inches of tamped embankment material, and the outlet is backfilled in 4‑inch layers with thorough tamping before compacting the portion under pavement or shoulder as required; additional protections such as endwalls for plastic pipe and marked outlets ensure the system remains functional and identifiable over time. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<p>According to Section 610, the drainage structure must function as a continuous conduit that prevents water and foreign material from entering the system; this is achieved by sealing pipe ends and using fittings that preclude soil intrusion while providing uninterrupted flow. Structurally, it shall be installed in trenches that extend at least 2 inches into the subgrade, with backfill placed in hydraulically compacted lifts not exceeding 9 inches and sprayed with water at a rate of 1.0 gallon per linear foot; all connections must use fittings whose deflection angles are 45 degrees or less and provide at least 6 inches of geotextile overlap. For durability, the pipe and drain core are required to be protected from damage during construction, stored on elevated platforms, and sealed to keep out foreign material, with any raised core projections facing the pavement side. Safety is addressed by prohibiting open trenches during periods of precipitation or overnight and by barricading trenches in accordance with code, while serviceability is ensured by establishing positive gravity flow within 24 hours of trenching and by maintaining smooth, non‑restricting transitions throughout the system. Section 220 requires that the drainage structure be designed so that its formwork can resist the lateral fluid pressure of unhardened flowable backfill with a minimum factor of safety of 1.3; any pre‑formed drain installed between wall and fill shall not exceed 2 inches in thickness and outlet openings are limited to no more than 15 feet through the wall. Lifts of flowable backfill must be limited to 4 feet unless otherwise approved, and the material temperature must never fall below 50°F; the placed backfill must be maintained at or above that temperature for a minimum of 24 hours to protect durability. Protection against frost, erosion and damage is required, and traffic may not be allowed until surface bleed water has dissipated or the preceding lift has hardened sufficiently to support foot traffic. Under Section 615, the drainage structure provides functional performance by ensuring positive gravity flow in each outlet and by keeping the trench bottom uniformly firm and smooth. The pipe is laid on a 2‑inch layer of satisfactorily tamped embankment material, with joints made by connecting bands or split couplings, and the trench is backfilled in 4‑inch layers of satisfactory embankment material that are thoroughly tamped and compacted as required for the portion under pavement. Durability is addressed by protecting plastic pipe ends from sunlight using satisfactory endwalls and appropriate trench backfill, and outlet opening protection follows the standard drawings. Safety and serviceability are achieved by marking each subsurface drain outlet with a red marker facing approaching traffic and embedding the marker at least 18 inches into the surrounding material. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>The Drainage Structure described in Section 610—Pipe Underdrain and Pavement Base Drain is intended for roadway pavements and may be placed after the adjacent pavement has been constructed except when it is located under curb sections or other special locations; it requires trenching without disturbing the subbase beneath the roadway. For these installations pipe underdrains, including perforated pipe with downward‑facing perforations and semicircular pipe with a smooth bottom, as well as prefabricated pavement base drains, must be installed with Class 1 geotextile, and the trench depth must extend at least 2 inches into the subgrade. The backfill shall consist of fine aggregate Type A placed in hydraulically compacted lifts not exceeding 9 inches, with water spray applied to each lift to achieve positive gravity flow and proper connections to existing drainage structures. Drainage Structure design is also appropriate when the project calls for Class 3 excavation, which includes excavation for new grade separation and drainage structures, or when Class 4 excavation is required because the work involves excavation deeper than the standard depth for pavement base drains, pipe underdrains, subsurface drain outlets, or subgrade drains; in these conditions the approach supports installation of the necessary underground water‑control elements regardless of the specific pavement type. For bridge abutments that are part of a Geosynthetic Stabilized Bridge Approach project, a 6‑inch diameter foundation drain is appropriate; for new bridge structures the foundation drain at the abutment is incorporated in the lump‑sum contract, while for an existing GSBA retrofit the drains are measured and paid on a linear‑foot basis from pipe outlet to pipe outlet. Installation includes excavation, placement of the drainage pipe, coarse aggregate backfill, and a geotextile layer. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 142–199), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The design and installation of pipe underdrains and pavement‑base drains are governed by the requirements set out in Section 610.3 of the incidental construction specifications, which reference the Standard Drawings for layout and dimensions, require trench widths as shown on those drawings and a depth extending at least 2 inches into the subgrade, limit pipe fittings to deflection angles of 45 degrees or less, mandate the use of Class 1 geotextile per Section 212.3(b), and prescribe backfilling with Type A fine aggregate in hydraulically compacted lifts not exceeding 9 inches, each lift being sprayed with one gallon of water per linear foot; connections must be made according to the manufacturer’s recommendations, sealed to prevent soil intrusion, inspected by the Inspector‑in‑Charge before final backfill, and trenches may not be left open during precipitation or overnight, with barricading required by 67 PA Code Chapter 203. Installation methods for prefabricated pavement‑base drains must be submitted in writing to the Representative at least two weeks prior, and outlet piping must follow Section 615.3, including galvanized wire‑mesh shields. Under Section 204 of the Earthwork specifications, drainage structures are governed by defined excavation classes: Class 2 excavation applies to inlet, outlet and parallel ditches, stream channels, structures removed below ground surface and not replaced, spillways, and half‑circle pipe; Class 3 excavation governs new grade‑separation and drainage structures together with new retaining walls, abutments, piers, and wingwalls; and Class 4 excavation covers pipe culverts, pipe‑arches, metal plate pipe, metal plate pipe‑arches, standard endwalls for pipe culverts and pipe‑arches, utilities, and any excavation that exceeds the standard depth for pavement‑base drains, pipe underdrains, subsurface drain outlets, and subgrade drains. In Section 220.3 of the Earthwork specifications, drainage structures are further governed by several explicit requirements: a pre‑formed drain may be no more than 2 inches thick and its outlets must be spaced at not more than 15 feet through the wall; foundation drains must be protected from intrusion and contamination of flowable backfill by a Class 4, Type A geotextile membrane; any formwork that sustains lateral fluid pressure from unhardened flowable backfill must be designed for a total weight load with a minimum factor of safety of 1.3; placement of the backfill may not occur when material temperature is below 50°F or when air or surface temperature is 40°F or lower, and the in‑place material must be kept at no less than 50°F for a minimum of 24 hours; performance testing of the flowable backfill that surrounds the drainage system shall follow AASHTO T 119 slump, AASHTO T 152 (or T 196) air content, AASHTO T 121/ASTM C 136 yield, and compressive‑strength procedures in PTM No. 604. The construction of subsurface drain outlets follows the procedures in Section 615.3, beginning with excavation of a uniformly firm and smooth trench bottom that provides positive gravity flow; the pipe is placed on 2 inches of satisfactorily tamped embankment material, joined with connecting bands or split couplings, and backfilled in 4‑inch layers of satisfactory material that are thoroughly tamped, with the portion under pavement or shoulder compacted as required by Section 601.3(f); connections to underdrains or base drains are limited to a maximum 45‑degree bend (or series of such bends), concrete endwalls or protective endwalls for plastic pipe are provided when indicated, outlet openings are protected per the Standard Drawings, and each outlet is marked with a red subsurface drain outlet marker embedded at least 18 inches from the surface on the traffic‑facing side. Finally, the design and payment of a foundation drain are governed by Section 224—Geosynthetic Stabilized Bridge Approach, which calls for a 6‑inch diameter drain measured in linear feet; for new bridge structures the foundation drain at the abutment is incorporated into the lump‑sum bridge cost, whereas for an existing GSBA retrofit the drains are quantified from pipe outlet to pipe outlet and must include excavation, drainage pipe, coarse aggregate backfill, and geotextile. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=1743eafc src=408_2020_11::tab:p182#1 -->
+<p>The table below specifies the mix design properties and criteria for Type B, C, and D flowable backfill materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-drainage-structure-1-cap" tabindex="0"><table class="ct-table" id="ct-drainage-structure-1" aria-describedby="ct-drainage-structure-1-sum">
+<caption id="ct-drainage-structure-1-cap">TABLE AMix Design</caption>
+<thead>
+<tr><th scope="col">Properties &amp; Criteria</th><th scope="col">Type B</th><th scope="col">Type C</th><th scope="col">Type D</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Mix Design ( /CY)Cement (lbs)*SupplementaryCementitious Material(lbs)*Bottom ash (lbs)*or Coarse Aggregateor Fine AggregateAir GeneratingAdmixture*</th><td>503002600</td><td>150-2003002600</td><td>300-700100-400**</td></tr>
+<tr><th scope="row">Slump (inches)AASHTO T 119, ASTM C136</th><td>7 min****</td><td>7 min****</td><td>7 min****</td></tr>
+<tr><th scope="row">Density (pcf)AASHTO T 121, ASTM C136</th><td>N/A</td><td>N/A</td><td>30-70 oras specified ***</td></tr>
+<tr><th scope="row">Water Absorption ofAggregate AASHTO T 85</th><td></td><td></td><td>20% max</td></tr>
+<tr><th scope="row">Compressive Strength (psi)PTM No. 604 28 Days</th><td>125 max</td><td>800 min</td><td>90-400</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-drainage-structure-1-sum">Rows list material properties and criteria for flowable backfill. Columns provide specifications for Type B, C, and D mixes.</p>
+<p class="ct-notes">Notes: *Quantities may be varied or alternate designs submitted to adapt mix to conform to density and strength requirements or to adapt to specific site conditions.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 182.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 142–199), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>For pipe underdrain and pavement base drain installation the procedure calls for placing the pipe after fine grading is completed and excavating a trench without disturbing the subbase; connections must use fittings with deflection angles of 45 degrees or less and be sealed to keep foreign material out. After the lower two inches of compacted backfill are placed, the pipe is laid according to manufacturer recommendations (perforations down for perforated pipe, semicircular pipe with the smooth portion at the bottom) and inspected before completing backfilling. Class 1 geotextile is required for all base drain construction and may be used for underdrain if indicated. When installing prefabricated pavement base drains a written installation method must be submitted at least two weeks in advance, the trench should extend at least 2 inches into the subgrade, and the drain is placed vertically with the first lift of fine‑aggregate Type A backfill applied simultaneously; backfill lifts are limited to a maximum of 9‑inch (maximum) hydraulically compacted lifts, each compacted hydraulically and sprayed with water at 1.0 gallon per linear foot, while trenches greater than 2 inches deep must not be left open overnight. Connections and outlets follow the manufacturer’s approved details, provide a minimum of 6 inches of geotextile overlap, and must prevent soil intrusion and maintain unrestricted flow for positive gravity drainage. In the flowable backfill portion of the drainage‑structure specification the contractor must design formwork that can resist lateral fluid pressure equal to the total weight of the unhardened fill with a minimum factor of safety of 1.3, and place the material in lifts not exceeding four feet unless otherwise approved; a preformed drain no thicker than two inches is required between the wall and the backfill with outlet pipes spaced at intervals not more than fifteen feet through the wall. All flowable backfill must be kept above fifty degrees Fahrenheit for at least twenty‑four hours or until the next lift is placed, and placement may not begin until surface bleed water has dissipated. Quality control calls for slump testing according to AASHTO T 119 at least once daily or every two hundred cubic yards, air‑content testing per AASHTO T 152 (or T 196) without an aggregate correction factor, and yield testing per AASHTO T 121/ASTM C 136 on the same schedule; compressive strength of molded 4‑by‑8‑inch cylinders is verified by PTM No. 604 with neoprene caps. For subsurface drain outlets a trench is excavated leaving the bottom uniformly firm and smooth so that positive gravity flow can be achieved; a pipe is placed on top of two inches of satisfactorily tamped embankment material, joined with connecting bands or split couplings, and then the trench is backfilled in four‑inch layers of satisfactory embankment material with thorough tamping, while the portion beneath pavement or shoulder is compacted as required by Section 601.3(f). Connections to underdrains or base drains must use suitable couplings and fittings with a maximum 45‑degree bend, and where needed concrete or plastic endwalls protect the outlet, with a red marker embedded at least eighteen inches from the opening facing traffic. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<p>Drainage structures are required to meet a series of design and construction criteria that vary by the specific portion of the work. In Section 610, pipe underdrain shall be placed after fine grading is completed and pavement base drain shall be placed after the adjacent roadway pavement is constructed; fittings must have deflection angles of 45 degrees or less, trenches are to be excavated without disturbing the subbase and must extend at least 2 inches into the subgrade, and trenches may not be left open during periods of precipitation or overnight, nor may trenches greater than 2 inches in depth be left open overnight. The trench is backfilled with fine aggregate Type A using hydraulically compacted lifts that do not exceed 9 inches, each lift being sprayed with water at a rate of 1.0 gallon per linear foot, and a minimum of 6 inches of Class 1 geotextile overlap shall be provided between sections. For drainage structures associated with flowable backfill as described in Section 220, a preformed drain no more than 2 inches thick must be placed between the wall and the fill and its outlets shall be spaced at not more than 15 feet through the wall unless directed otherwise by the Representative; base‑drain outlet pipes must be solid where they intersect flowable backfill, and the forms that retain lateral fluid pressure of unhardened backfill must be designed for a minimum factor of safety of 1.3. Lifts of flowable backfill shall not exceed 4 feet unless approved, and placement temperatures must be maintained at or above 50 °F for a minimum of 24 hours. Section 615 specifies that the subsurface drain outlet trench must be excavated so that the bottom is uniformly firm and smooth to provide positive gravity flow, and the pipe is to be laid on top of two inches of satisfactorily tamped embankment material before being joined with connecting bands or split couplings. After acceptance, backfill shall be placed in four‑inch layers of satisfactory embankment material with thorough tamping; connections to other drains must not exceed a 45‑degree bend, concrete endwalls are provided for outlets not tied into existing structures, plastic pipe ends are protected from sunlight with suitable endwalls and backfill, and each outlet is marked with a red subsurface drain outlet marker embedded at a minimum of 18 inches on the side facing approaching traffic. Finally, Section 224 requires that the foundation drain be sized at a six‑inch diameter and measured in linear foot; for new bridge structures the foundation drain at the abutment is included in the lump‑sum cost for the bridge, while for GSBA existing‑structure retrofits both foundation drains are measured and paid from pipe outlet to pipe outlet and must include excavation, drainage pipe, coarse aggregate backfill, and geotextile. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–199), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>The drainage structure for pipe underdrain and pavement base drain (Section 610) must specify Class 1 geotextile, fine‑aggregate Type A backfill placed in hydraulically compacted lifts not exceeding nine inches, each lift sprayed with water at a rate of 1.0 gallon per linear foot, pipe and fitting connections that limit deflection angles to forty‑five degrees or less, geotextile splices providing at least six inches of overlap, and outlet piping protected with galvanized wire‑mesh shields. For subsurface drain outlets (Section 615) the specification requires pipe to be laid on a two‑inch layer of satisfactorily tamped embankment material and the trench backfilled with satisfactory embankment material in four‑inch layers, each thoroughly tamped and compacted as required under pavement or shoulder; when an outlet is not connected to an existing drainage system concrete endwalls must be constructed, and if plastic pipe is used the ends must be protected from sunlight with suitable endwalls and backfill material. The drainage structure for a geosynthetic stabilized bridge approach foundation (Section 224) requires a six‑inch diameter pipe installed with full excavation, a surrounding layer of coarse aggregate backfill, and an overlying geotextile. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (p. 199), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<p>For drainage structures that use flowable backfill, the specified type must be furnished in accordance with Table A and any field adjustments to the mix are allowed only when the resulting material still meets the Table A criteria; the mix must also demonstrate adequate workability and strength by conducting slump tests as often as necessary (at least once daily or every 200 cubic yard) along with air‑content, yield, and compressive‑strength testing per the prescribed procedures. Structural safety is addressed by designing formwork to resist lateral fluid pressure equal to the total weight of unhardened backfill with a minimum 1.3 factor of safety and limiting lift heights to no more than 4‑foot unless expressly approved. Constructability and performance are further ensured by prohibiting placement when material temperature is below 50°F (or air or surface temperature is 40°F or lower), maintaining the in‑place backfill at not less than 50°F for a minimum of 24 hours, and protecting drainage outlets with appropriate geotextile membranes and preformed drains. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>For drainage structures covered under Section 610—Pipe Underdrain and Pavement Base Drain, joints shall be made according to the manufacturer’s recommendations, using fittings whose deflection angles do not exceed 45 degrees and splice connectors that do not restrict flow. Connections to new or existing drainage elements shall follow approved connection details and must include at least a six‑inch geotextile overlap between sections; outlet pipe and fitting installations shall comply with Section 615.3 and be protected against soil intrusion. All transitions in the system are required to be smooth and nonrestricting to flow, and joints and fittings must be safeguarded from damage during construction. For the flowable backfill application described in Section 220—Flowable Backfill, a pre‑formed drain no more than 2 inches thick shall be placed between the wall and the fill with outlets at not more than 15 feet through the wall (or as directed by the Representative). Foundation drains shall be protected from intrusion and contamination of flowable backfill by using a Class 4 Type A geotextile membrane. Pipe bedding shall provide adequate support to achieve the minimum required bedding from trench bottom to pipe while protecting the pipe from damage, movement, floating and improper alignment, and a Class 4 Type A geotextile shall be placed around the pipe when shown. For subsurface drain outlets covered in Section 615—Subsurface Drain Outlets, pipe joints shall be made with connecting bands or split couplings and shall be linked to an underdrain or pavement base drain using suitable couplings, fittings or special connectors while limiting any bend to a maximum 45‑degree bend or a series of such bends. Where outlets are not tied into new or existing drainage systems, concrete endwalls shall be constructed for protection. When plastic pipe is used, the ends shall be shielded from sunlight with satisfactory endwalls and backfill material. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<p>In accordance with SECTION 610—PIPE UNDERDRAIN AND PAVEMENT BASE DRAIN, drainage structures are interfaced to the pavement system by first completing fine grading, then installing the pipe underdrain and placing the pavement base drain only after the adjacent roadway pavement has been built; the trench for the underdrain or base drain is excavated without disturbing the subbase and must extend at least 2 inches into the subgrade. The underdrain or base drain must be joined to new or existing drainage features using fittings whose deflection angles are 45 degrees or less, sealed at the upstream end and inspected before backfilling; Class 1 geotextile is required beneath all drains with a minimum of 6 inches of geotextile overlap between sections. Backfill is placed in hydraulically compacted lifts no greater than 9‑inch using fine aggregate Type A, each lift sprayed with 1.0 gallon of water per linear foot, and all joints and fittings are protected to prevent soil intrusion. When a drainage structure interfaces with adjacent pavement layers or fill as described in SECTION 220—FLOWABLE BACKFILL, the design must isolate foundation drains from the flowable backfill by installing a Class 4, Type A geotextile separation membrane and placing a pre‑formed drain no more than 2 inches thick between the wall and the fill, with outlet openings spaced not more than 15 feet through the wall (or as directed by the Representative). Pipe bedding must be provided with adequate support to meet the minimum required bedding depth, protected from intrusion of flowable backfill and, when shown, surrounded by a Class 4, Type A geotextile membrane; backfill should be placed in lifts or weighted to prevent pipe floating and maintain alignment. Base drain outlets are also required to be located away from areas where flowable backfill is placed. For subsurface drain outlets covered in SECTION 615—SUBSURFACE DRAIN OUTLETS, the trench is excavated to a uniformly firm and smooth bottom to assure positive gravity flow, after which the pipe is placed on top of two inches of satisfactorily tamped embankment material. The pipe is joined to the underdrain or pavement base drain using suitable couplings or special connectors, and connections are made with a maximum 45‑degree bend or series of 45‑degree bends. Once the outlet pipe has been laid and accepted, the trench is backfilled in four‑inch layers of satisfactory embankment material, each layer being thoroughly tamped, and the portion under pavement or shoulder is compacted as specified in Section 601.3(f). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>In the design of a drainage structure, as specified in Section 610—Pipe Underdrain and Pavement Base Drain, pipe underdrains are placed after fine grading is completed and the pavement base drain is installed only after the adjacent roadway pavement has been constructed. The trench for the base‑drain is excavated to a depth that extends at least 2 inches into the subgrade but does not disturb the existing subbase. Trenches greater than 2 inches in depth are not left open during periods of precipitation or overnight and are barricaded at all times. The lower 2 inches of backfill are compacted before laying the pipe, which is installed with perforations facing down and with the semicircular pipe oriented so that the smooth circular portion is at the bottom; all joints follow the manufacturer’s recommendations and connections are limited to deflection angles of 45 degrees or less. Backfilling is performed with fine‑aggregate Type A in lifts no more than 9 inches thick, each lift being hydraulically compacted and sprayed with water at a rate of 1.0 gallon per linear foot to control moisture. Class 1 geotextile is required for all base‑drain construction, with a minimum overlap of 6 inches at splices, and pipe ends are sealed to prevent foreign material entry. Section 220—Flowable Backfill requires that base‑drain outlets be kept clear of flowable backfill and that solid outlet pipes be installed where the fill intersects a drain. A preformed drain not more than 2 inches thick must be placed between any wall and the backfill, with outlets spaced at not more than 15 feet through the wall. Foundation drains are protected with a Class 4, Type A geotextile membrane and a separation membrane is used to prevent intrusion of the flowable material. Environmental conditions are addressed by prohibiting placement through flowing water, requiring removal of material damaged by rain, maintaining the in‑place backfill temperature at no less than 50°F for at least 24 hours, and covering the finished surface against frost, erosion or damage. Forms that retain lateral fluid pressure must be designed for a minimum factor of safety of 1.3, and lifts shall not exceed 4 feet unless approved. Under Section 615—Subsurface Drain Outlets, the trench is excavated leaving the bottom uniformly firm and smooth to ensure positive gravity flow in the outlet. The pipe is laid on a bed of 2 inches of satisfactorily tamped embankment material, and the trench is backfilled in 4‑inch layers of satisfactory embankment material with thorough tamping; the portion under pavement or shoulder is compacted as specified in Section 601.3(f). Connections to the underdrain or base drain are made with suitable couplings using a maximum 45‑degree bend (or series of such bends). When plastic pipe is used, its ends are protected from sunlight deterioration with satisfactory endwalls and backfill, and the outlet is marked with a red marker embedded at least 18 inches from the surface. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<p>In accordance with Section 610—Pipe Undrain and Pavement Base Drain, drainage structures shall be installed in a trench whose width follows the Standard Drawings and whose depth extends at least 2 inches into the subgrade; pipe fittings shall have deflection angles of 45 degrees or less. The backfill shall consist of fine‑aggregate Type A placed in hydraulically compacted lifts not exceeding 9 inches, each lift being sprayed with water at a rate of 1.0 gallon per linear foot. Trenches may not be left open during periods of precipitation or overnight, and trenches greater than 2 inches in depth shall not be left open overnight; all trenches must be barricaded at all times in accordance with the requirements of 67 PA Code, Chapter 203. Connections and outlet fittings shall be installed so as to preclude soil intrusion and to provide continuous drainage flow. Where a drainage structure is placed in flowable backfill, the design shall include a pre‑formed drain no more than 2 inches thick between the wall and the fill and outlet openings spaced at not more than 15 feet through the wall; the forms that retain the lateral fluid pressure of the unhardened backfill must be designed with a minimum factor of safety of 1.3. Foundation drains shall be protected from intrusion by a Class 4, Type A geotextile membrane, and pipe bedding shall be arranged to prevent floating, movement or misalignment by using lifts or ballast as required. All work shall protect the finished surface from frost, erosion and damage with approved covers, thereby satisfying safety and functional requirements for users. For subsurface drain outlets, the trench shall be excavated so that the bottom is uniformly firm and smooth to provide positive gravity flow; the pipe shall be placed on a 2‑inch layer of satisfactorily tamped embankment material and joined with bands or split couplings. Backfill shall be placed in 4‑inch layers of satisfactory material with thorough tamping, and the portion beneath pavement or shoulder must be compacted as specified in Section 601.3(f). Connections to underdrains or base drains shall use a maximum 45‑degree bend (or series thereof) and may include concrete endwalls when not tied to existing structures, while plastic pipe ends shall be protected from sunlight. Each outlet shall be marked with a red subsurface drain outlet marker on the side of the opening facing approaching traffic, the marker being embedded at least 18 inches deep. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–514)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>In Section 610—Pipe Underdain and Pavement Base Drain, the completed drainage structure is checked by having the pipe inspected by the Inspector‑in‑Charge before backfilling is finished; this inspection confirms that all joints follow the manufacturer’s recommendations, that fittings use deflection angles of 45 degrees or less, and that the upstream end of the pipe is sealed to prevent entry of foreign material. Trench exposure is limited so that no trench greater than 2 inches in depth remains open overnight, and all connections must be installed to preclude soil intrusion and maintain unrestricted flow, thereby demonstrating compliance, constructability, performance, and consistency with the project requirements. In Section 220—Flowable Backfill, verification begins with submission of the placement sequence and, when required, design of formwork that can resist lateral fluid pressure equal to the total weight of unhardened flowable backfill with a minimum 1.3 factor of safety; the formwork must protect base‑drain outlets while a preformed drain no more than 2 inches thick is installed between the wall and the flowable fill, with outlets spaced at not more than 15 feet through the wall or as directed by the Representative. During backfill the contractor must test flowable backfill slump in accordance with AASHTO T 119, air content according to AASHTO T 152 (without an aggregate correction factor) or T 196, and yield according to AASHTO T 121 and ASTM C 136 at least once daily or every 200 cubic yards; cylinders 4‑inch by 8‑inch are molded in accordance with PTM No. 611 and later tested for compressive strength per PTM No. 604 with inspector witness, and any material that does not meet the Table A strength requirements must be removed or may incur liquidated damages, thus confirming compliance, constructability, performance, and consistency with project specifications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 200 EARTHWORK (pp. 183–184), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

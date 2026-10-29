@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reactive Aggregate</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html" class="active" aria-current="page">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="mix-design.html">Mix Design</a><span class="crumb-sep">›</span><span class="crumb-current">Reactive Aggregate</span></nav>
+<article><h1>Reactive Aggregate</h1>
+<div class="meta"><div class="part-of">Part of: <a href="mix-design.html">Mix Design</a> <span class="edge edge-taxonomic" title="Reactive Aggregate is a topic under Mix Design.">is-subtopic-of</span></div><div class="edge-reading">Reactive Aggregate is a topic under Mix Design.</div><div><a class="tag" href="index.html?q=reactive-aggregate">reactive-aggregate</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>Reactive aggregate is an aggregate that contains siliceous minerals—such as opal, chalcedony, tridymite, cristobalite, high‑silica glasses, strained quartz, certain clay minerals, and deleterious substances like reactive chert, gypsum, iron sulfide, amorphous silica or hydrated iron oxide—that can chemically interact with the alkalis in cement paste to form expansive alkali‑silica gel, leading to deleterious expansion and cracking in concrete pavements [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When such aggregates are used they function as load‑bearing components of the mix but must be paired only with approved cement or cement‑supplementary cementitious material combinations that limit the measured 14‑day expansion to between 0.10 % and 0.30 % and, after mitigation, reduce it to less than 0.1 %, otherwise the aggregate is rejected for durability reasons [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Their reactivity is verified by field history, petrographic analysis, or quantitative expansion testing (ASTM C1293 or AASHTO T 303), with a preventive measure deemed effective only when concrete prisms expand less than 0.04 % after two years, ensuring the long‑term durability of the pavement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#influence-of-production-and-placement">Influence of production and placement</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>According to Section 704—Cement Concrete, Reactive Aggregate is an aggregate that may be potentially reactive, meaning it can contribute to deleterious alkali‑silica reaction (ASR) when incorporated into cement concrete; in the pavement system it functions as a constituent of the concrete mix but its presence requires the use of specified cement or cement‑SCM combinations and mitigation measures to preserve durability of paving and permanent structures. In Section 545—Bonded Concrete Overlay, Reactive aggregate refers specifically to coarse aggregates that are identified as reactive or potentially reactive because they show a measurable 14‑day expansion of between 0.10% and 0.30%; in the pavement system they serve as the load‑bearing component of Class AA concrete pavements but must be used only with an approved cement‑supplementary cementitious material combination that limits the resulting expansion to less than 0.1%, otherwise the aggregate is rejected to protect durability. Section 704—Cement Concrete also notes that reactive aggregates are those mineral constituents in an aggregate that can chemically react with the alkalis present in cement; when such a reaction occurs, the products may expand under certain conditions, leading to deleterious expansion within the concrete pavement and potentially causing cracking or other distress, so their presence influences durability rather than providing a beneficial structural function. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=b06011f3 src=408_2020_11::tab:p660#2 -->
+<p>The table below presents the classification of aggregate reactivity classes and their corresponding levels of ASR risk.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-reactive-aggregate-1-cap" tabindex="0"><table class="ct-table" id="ct-reactive-aggregate-1" aria-describedby="ct-reactive-aggregate-1-sum">
+<caption id="ct-reactive-aggregate-1-cap">Table DLevel of ASR Risk</caption>
+<thead>
+<tr><th scope="col">Aggregate Reactivity Class</th><th scope="col">R0</th><th scope="col">R1</th><th scope="col">R2</th><th scope="col">R3</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Level of ASRRisk</th><td>Risk Level 1</td><td>Risk Level 2</td><td>Risk Level 3</td><td>Risk Level 4</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-reactive-aggregate-1-sum">Rows list the Level of ASR Risk, columns give Aggregate Reactivity Class for each risk level.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 660.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 454–455), SECTION 700 MATERIAL (pp. 658–659)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>In SECTION 703—AGGREGATE, Reactive Aggregate is identified by the presence of minerals that are listed as deleterious substances—specifically reactive chert, gypsum, iron sulfide, amorphous silica, and hydrated iron oxide—within coarse aggregate. Such aggregates do not satisfy the definition of hard, tough, durable, uncoated inert particles that should be reasonably free from those reactive minerals, clay, silt, vegetation, and other deleterious substances. In SECTION 545—BONDED CONCRETE OVERLAY OF CONCRETE‑SURFACED PAVEMENTS, Reactive aggregate for Class AA paving concrete consists of durable stone or gravel that is free from slate texture or cleavage planes, and it must exhibit a measured 14‑day alkali‑aggregate expansion between 0.10 % and 0.30 %; any aggregate showing an expansion greater than 0.30 % is rejected, and blast furnace slag aggregate is expressly prohibited. In SECTION 704—CEMENT CONCRETE, Reactive aggregate is defined by the presence of siliceous minerals that can undergo an alkali‑aggregate reaction with cement alkalis. Such minerals include opal; chalcedony as a constituent of chert in carbonate rock or sand and gravel particles; tridymite and cristobalite, high‑temperature silica forms found in andesite or rhyolite; acid glasses containing more than 65 % silica; intermediate glasses containing between 55 % and 65 % silica; strained quartz as a constituent of granite or granite gneiss; and clay minerals as a constituent of graywackes, argillites, phyllites, and siltstones. Calcareous aggregates that contain these forms of silica are also susceptible. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 454–455), SECTION 700 MATERIAL (pp. 636–658)</small></p>
+<p>Variations in the mineral makeup of an aggregate are the primary factor that determines its potential for alkali‑aggregate reaction; siliceous substances such as opal, chalcedony in chert, tridymite, cristobalite, acid glasses containing more than 65 % silica, intermediate glasses containing between 55 % and 65 % silica, strained quartz from granite or granite gneiss, clay minerals from graywackes, argillites, phyllites and siltstones, as well as reactive chert, gypsum, iron sulfide, amorphous silica and hydrated iron oxide are identified as deleterious when present in amounts large enough to cause inconsistent performance in hardened portland cement concrete. The source of the aggregate must be listed in Bulletin 14 or approved by the LTS; any new Type A source that lacks an LTS expansion value is initially recorded with an expansion of 0.11 % (R1) and requires ASR mitigation until definitive ASTM C1293 testing is completed, and when aggregates from different sources are combined the highest identified reactivity level governs the required preventive measures. Processing steps such as thorough washing of coarse aggregate for cement concrete and a six‑month moisture cure for steel‑slag fine aggregate are prescribed to control expansive behavior, with the average total volumetric expansion measured under PTM No. 130 required to be less than 0.50 %; if this limit is exceeded additional curing is mandated before use. Proportioning the mix with an approved cement‑supplementary cementitious material combination may be used when a reactive aggregate shows a 14‑day expansion between 0.10 % and 0.30 %, provided that the blend reduces the expansion to less than 0.1 %; aggregates whose 14‑day expansion exceeds 0.30 % must be rejected for all paving concrete on the project, and any increase in SCM dosage beyond the values prescribed in Section 704.1(g)2.b is not recommended because it may cause excessive retardation of setting and early‑age strength development. Preventive measures are evaluated with the Concrete Prism Test (ASTM C1293); a preventive measure is deemed effective when concrete prisms expand less than 0.04 % after two years, and while substitutions of cement type or SCM type are allowed provided the alkali limits in Section 704.1(g)3 are not exceeded, substitution of aggregates using the preventive measure is prohibited. Aggregates are classified by expansion behavior after testing according to ASTM C1293 or AASHTO T 303 and listed in Bulletin 14; if subsequent test results alter an aggregate’s class, new cement‑concrete mix designs must be developed and submitted for approval within 90 calendar days. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 454–455), SECTION 700 MATERIAL (pp. 635–660)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>The performance of a reactive aggregate is governed primarily by its physical hardness and durability, by the absence of deleterious minerals such as reactive chert, gypsum, iron sulfide, amorphous silica, or hydrated iron oxide, and by its tendency to expand when exposed to moisture; the average total volumetric expansion measured in accordance with PTM No. 130 must be limited to less than 0.50% (Section 703—Aggregate). For Class AA concrete pavements, dimensional stability after alkali exposure is a controlling factor; the specification requires that the 14‑day expansion of such aggregates lie between 0.10% and 0.30% when used with an approved cement‑supplementary cementitious material blend, and any aggregate exhibiting a 14‑day expansion greater than 0.30% must be rejected (Section 545—Bonded Concrete Overlay). Chemical considerations focus on the presence of siliceous constituents capable of participating in alkali‑aggregate reactions; acid glasses containing more than 65 % silica, intermediate glasses containing between 55 % and 65 % silica, as well as minerals such as opal, chalcedony, tridymite, cristobalite, strained quartz, and certain clay minerals are identified as potentially problematic (Section 704—Cement Concrete). Additional key factors include the aggregate’s mineralogical classification per ASTM C295 to ensure similarity with previously used material, the alkali content of the cement, and the type and amount of supplementary cementitious materials incorporated; compliance is verified through petrographic analysis of cores according to ASTM C856 to detect alkali‑silica gel formation and associated microcracking (Section 704—Cement Concrete). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=0dcd2ea2 src=408_2020_11::tab:p663#1 -->
+<p>The table below specifies the maximum alkali content and minimum supplementary cementitious material levels required for prevention level Z.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-reactive-aggregate-2-cap" tabindex="0"><table class="ct-table" id="ct-reactive-aggregate-2" aria-describedby="ct-reactive-aggregate-2-sum">
+<caption id="ct-reactive-aggregate-2-cap">Table IUsing SCM and Limiting the Alkali Content of the Concrete</caption>
+<thead>
+<tr><th scope="col">PreventionLevel</th><th scope="col">SCM as soleprevention</th><th scope="col">Maximum Alkali Content, (lbs./cy) and Minimum SCM Level</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Z</th><td>Level Z fromTable G</td><td>Maximum Alkali Level Content: 3.0 AND minimumSCM Level Y from Table G</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-reactive-aggregate-2-sum">Rows list prevention levels, columns give requirements for sole SCM prevention and alkali content limits. The table specifies conditions based on Table G references.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 663.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 454–455), SECTION 700 MATERIAL (pp. 635–665)</small></p>
+<p>The properties of reactive aggregate are measured by three complementary approaches: field performance history may be used according to AASHTO R 80 Section 6.1, petrographic examination may be used to flag potential reactivity, and quantitative expansion testing is performed using ASTM C1293 or AASHTO T 303 with the resulting expansion assigning the material to a reactivity class such as non‑reactive (R0) or reactive with an expansion of 0.11% (R1) as listed in Bulletin 14; for new Type A sources lacking a listed LTS expansion, an initial AASHTO T 303 test that indicates non‑reactive (R0) is temporarily recorded as 0.11% (R1) pending ASTM C1293 testing, after which the determined reactivity class drives selection of preventive measures. The presence of reactive minerals such as chert, gypsum, iron sulfide, amorphous silica, or hydrated iron oxide is identified through petrographic analysis performed by the LTS in accordance with PTM No. 518 for both fine and coarse aggregates; when steel‑slag aggregate is used, its expansive behavior is evaluated after a minimum six‑month cure by testing total volumetric expansion according to PTM No. 130, and the material is accepted only if the average expansion is less than 0.50%, with chemical testing required by DEP General Permit WMGR144 when traceability cannot be established. Reactivity is also quantified by measuring linear expansion after 14 days; aggregates that show a 14‑day expansion between 0.10% and 0.30% are classified as reactive or potentially reactive, provided an approved cement‑supplementary material blend can reduce the measured expansion to less than 0.1%, while any aggregate exhibiting a 14‑day expansion greater than 0.30% must be rejected for all paving concrete on the project. The degree of alkali‑silica reactivity is determined as specified in Section 704.1(g).1.d.1.c and the aggregate is then assigned to a reactivity class shown in Table C, which is subsequently used to assess ASR risk by referencing the corresponding risk categories listed in Table D. Reactivity may also be established by classifying the aggregate according to ASTM C295 and confirming the presence or absence of alkali‑silica gel and associated microcracking through petrographic analysis of cores performed in accordance with ASTM C856; when a service record of nonreactivity is used as an exception, the record must include a minimum of 10 structures, each over 10 years of age and preferably over 15 years of age, together with visual‑examination reports and representative core petrography. Finally, reactivity is assessed by subjecting a concrete prism containing the aggregate to the ASTM C1293 Concrete Prism Test, which monitors dimensional change over time, and a preventive measure is deemed effective only if the measured expansion of the prisms is less than 0.04% after two years. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=37d20632 src=408_2020_11::tab:p660#1 -->
+<p>Table: Table CClassification of Aggregate Reactivity.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-reactive-aggregate-3-cap" tabindex="0"><table class="ct-table" id="ct-reactive-aggregate-3" aria-describedby="ct-reactive-aggregate-3-sum">
+<caption id="ct-reactive-aggregate-3-cap">Table CClassification of Aggregate Reactivity</caption>
+<thead>
+<tr><th scope="col">Aggregate ReactivityClass</th><th scope="col">Description ofAggregate Reactivity</th><th scope="col">1-Year Expansion in ASTM C1293 (percent)</th><th scope="col">14-d Expansion in AASHTO T 303 (percent)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">RO</th><td>Non-reactive</td><td>≤ 0.04</td><td>≤ 0.10</td></tr>
+<tr><th scope="row">R1</th><td>Moderately reactive</td><td>&gt;0.04 to ≤ 0.12</td><td>&gt;0.10 to ≤ 0.30</td></tr>
+<tr><th scope="row">R2</th><td>Highly Reactive</td><td>&gt;0.12 to ≤0.24</td><td>&gt;0.30 to ≤0.45</td></tr>
+<tr><th scope="row">R3</th><td>Very Highly Reactive</td><td>&gt;0.24</td><td>&gt;0.45</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-reactive-aggregate-3-sum">Rows list aggregate reactivity classes, columns give descriptions and expansion limits for ASTM C1293 and AASHTO T 303 tests.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 660.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 454–455), SECTION 700 MATERIAL (pp. 635–665)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>The behavior of reactive aggregate is governed primarily by a chemical interaction between the alkalis present in cement paste and specific siliceous constituents of the aggregate; this alkali‑aggregate reaction can generate expansive products that produce internal stresses and cracking, and the resulting expansion may be deleterious to concrete durability (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL— &gt; 1.c Lithium Nitrate Admixtures). The reaction is triggered when aggregates contain minerals such as opal, chalcedony, tridymite, cristobalite, high‑silica glasses, strained quartz, or clay minerals found in rocks like granite, graywacke, argillite, phyllite, and siltstone; acid glasses containing more than 65% silica and intermediate glasses containing between 55% and 65% silica are also potentially reactive (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL— &gt; 1.c Lithium Nitrate Admixtures). The chemical reaction forms alkali‑silica gel, and the resulting expansion produces physical movement such as joint widening and visible cracking, while the pressure from the gel induces mechanical microcracking within the concrete matrix (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL— &gt; 3.c ASR Mitigation Flowchart). The expansive gel is quantified in the concrete prism test where an expansion of less than 0.04 % after two years indicates an effective preventive measure; the strain produced by the expanding gel can be limited by using supplementary cementitious materials or lithium nitrate admixtures while keeping the alkali limits from Section 704.1(g)3 in check, although excessive SCM dosages may cause excessive retardation of setting and early‑age strength development that must be avoided (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL— &gt; 2.a Using the Concrete Prism Test (ASTM C1293) to Evaluate Preventive Measures). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 700 MATERIAL (pp. 658–665)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>Reactive aggregates constitute a primary durability concern because they can participate in alkali‑silica reaction (ASR), a chemical interaction between cement alkalis and certain mineral constituents that may generate expansive alkali‑silica gel and lead to deleterious expansion, cracking, joint opening and other distress in concrete pavements. The minerals identified as capable of reacting include reactive chert, gypsum, iron sulfide, amorphous silica, hydrated iron oxide, opal, chalcedony present in chert, high‑temperature silica forms such as tridymite and cristobalite, acid glasses containing more than 65 % silica, intermediate glasses containing between 55 % and 65 % silica, strained quartz found in granite or gneiss, and clay minerals occurring in graywackes, argillites, phyllites and siltstones. For both coarse and fine aggregates the specification classifies any amount of these reactive constituents that is large enough to cause inconsistent performance in asphalt concrete or plastic or hardened Portland cement concrete as deleterious, thereby creating a durability concern.</p>
+<p>When an aggregate is identified as reactive—through field‑performance history, petrographic examination, or expansion testing according to ASTM C1293 or AASHTO T 303—the requirements of Section 704.1(g)3 mandate mitigation measures to control ASR. If one or both of the aggregates (coarse or fine) used in a mix is reactive, mitigation is required as specified in Section 704.1(g)3 and the mixture must be remedied for alkali‑silica reaction as prescribed. In pervious concrete mixes the presence of reactive aggregates similarly triggers remediation for ASR in accordance with Section 704.1(g). For bonded‑concrete overlays, aggregates that exhibit a 14‑day expansion between 0.10 % and 0.30 % may be used only when paired with an approved cement‑supplementary cementitious material blend that reduces the measured expansion to less than 0.1 %; any aggregate showing a 14‑day expansion greater than 0.30 % must be rejected, and the resulting mortar is limited to a maximum expansion of 0.02 % at 14 days and 0.06 % at eight weeks.</p>
+<p>The level of ASR risk for a structure is determined by the aggregate’s reactivity class, the type of structure and the associated risk level; this risk dictates preventive actions such as minimum supplementary cementitious material replacement or the use of low‑alkali cement, as outlined in Section 704.1(g). Lithium nitrate admixtures listed in Bulletin 15 are also recognized as a mitigation option for reactive aggregates. Visual inspection of at least ten structures older than ten years together with petrographic analysis is required to document the presence or absence of alkali‑silica gel formation and associated microcracking; if testing indicates that an aggregate source has begun to produce ASR expansion, no exemption from the prescribed cement/SCM requirements will be accepted.</p>
+<p>A preventive measure for reactive aggregates is considered effective only when concrete prism expansion remains less than 0.04 % after two years. The use of supplementary cementitious materials must remain within the dosage limits prescribed in Section 704.1(g)2.b because exceeding those values may cause excessive retardation of setting and early‑age strength development, a durability concern especially in cool or cold weather construction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 409–455), SECTION 700 MATERIAL (pp. 635–665)</small></p>
+<p>Aggregates that contain reactive minerals—specifically reactive chert, gypsum, iron sulfide, amorphous silica or hydrated iron oxide—in amounts sufficient to cause inconsistent performance increase the susceptibility of concrete to deterioration; conversely, fine aggregate that is hard, durable, uncoated and reasonably free from those deleterious substances reduces it. For steel‑slag fine aggregate, a uniform moist cure for at least six months is required so that its average total volumetric expansion measured by PTM No. 130 remains less than 0.50%, which limits expansive behavior. Coarse aggregate that is hard, tough and durable but contains the same deleterious minerals is more likely to suffer deterioration, whereas coarse aggregate that is reasonably free from those reactive constituents and meets the low absorption limit of a maximum allowable absorption of 3.0% for all Type A use reduces the risk of alkali‑aggregate reaction–related distress. For Class AA paving concrete, aggregates that exhibit a 14‑day expansion between 0.10 % and 0.30 % are considered reactive or potentially reactive and may be used only when an approved cement‑supplementary cementitious material blend reduces the measured expansion to less than 0.1 %; any aggregate with a 14‑day expansion greater than 0.30 % must be rejected, indicating that higher intrinsic expansion increases susceptibility to deterioration. The use of blended hydraulic cements (Type IS or IP) further limits risk by requiring that mortar expansion not exceed 0.02 % at 14 days and 0.06 % at eight weeks. The susceptibility of reactive aggregate to deterioration increases when the aggregate contains siliceous minerals known to react with cement alkalis, such as opal; chalcedony present in chert within carbonate rock or sand‑and‑gravel particles; high‑temperature silica forms like tridymite and cristobalite found in andesite or rhyolite; acid glasses containing more than 65 % silica; intermediate glasses containing between 55 % and 65 % silica; strained quartz occurring in granite or granite gneiss; and clay minerals that occur in graywackes, argillites, phyllites, and siltstones. Under certain conditions these reactions may cause deleterious expansion within the concrete. The susceptibility of a reactive aggregate to deterioration rises when the aggregate is placed in a higher reactivity class, which raises the ASR risk for the structure; it can be lowered by using cement with a maximum alkali content of 1.25 % Na₂Oe and by adding supplementary cementitious materials at the minimum replacement levels prescribed for the selected prevention level, especially when the base Portland cement falls in the moderate‑to‑high alkali range of 0.70 to 1.25 % Na₂Oe. Using supplementary cementitious materials or a lithium nitrate admixture in the concrete mix can lower the susceptibility of reactive aggregates, and the Concrete Prism Test (ASTM C1293) judges the preventive measure effective when prism expansion is less than 0.04 % after two years; however, increasing the SCM dosage beyond the values prescribed in Section 704.1(g)2.b is not recommended because it may cause excessive retardation of setting and early‑age strength development, a condition that becomes critical in cool and cold weather construction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 454–455), SECTION 700 MATERIAL (pp. 635–663)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>Section 704.1 General (1.e.1) requires that reactive aggregates be used only with the cements or cement‑SCM blends specified in Section 704.1(g)3, and when a mix contains one or both reactive coarse or fine aggregates mitigation is required as specified in that same section. The aggregate’s reactivity class, determined by ASTM C1293 or AASHTO T 303 testing, determines the level of prevention, and if several aggregates are used the highest class governs the mitigation strategy. For a new Type A source that initially shows a non‑reactive (R0) expansion, it is listed with an expansion of 0.11% (R1) and ASR mitigation is required until ASTM C1293 results are available, and such sources are retested on a five‑year cycle. Section 703.1 Fine Aggregate specifies that reactive aggregates may contain minerals such as reactive chert, gypsum, iron sulfide, amorphous silica, and hydrated iron oxide, and when these substances are present in amounts large enough to cause inconsistent performance they can react with the alkalis of cement, leading to durability problems such as cracking; consequently fine‑aggregate specifications require that aggregates be reasonably free from those deleterious minerals to avoid adverse binder‑aggregate interactions. Section 703.2 Coarse Aggregate classifies the same mineral constituents—reactive chert, gypsum, iron sulfide, amorphous silica, and hydrated iron oxide—as deleterious because when they occur in amounts sufficient to cause inconsistent performance they can adversely affect hardened Portland cement concrete, and therefore the LTS requires petrographic analysis of coarse aggregate to verify that these reactive constituents are limited so that acceptable durability of the cementitious matrix can be achieved. Section 520.2 Material for pervious‑concrete pavement systems notes that reactive aggregates in a pervious‑concrete mix can engage in alkali‑silica reaction with the cement paste, which may compromise durability; therefore when such aggregates are specified the mixture must be remedied for alkali‑silica reaction according to the procedures set out in Section 704.1(g) while still following the overall pervious concrete mix design requirements of ASTM C 1688. Section 545.2 Material for bonded concrete overlay states that a potentially reactive aggregate may be used only with an approved cement‑supplementary cementitious material blend capable of limiting the aggregate’s 14‑day expansion to less than 0.1%, and the aggregate itself must show a 14‑day expansion between 0.10% and 0.30%; any aggregate exceeding 0.30% expansion is rejected. If a blended hydraulic cement (Type IS or IP) is employed, the resulting mortar may not expand more than 0.02% at 14 days or 0.06% at eight weeks. Section 704.1 General (1.c) describes that reactive aggregate participates in an alkali‑aggregate reaction in which alkalis released from the cement paste chemically interact with certain mineral constituents of the aggregate, generating expansive products that may cause deleterious expansion within the concrete; siliceous substances identified as reactive include opal, chalcedony as a constituent of chert, tridymite and cristobalite, high‑silica glasses containing more than 65% silica or between 55% and 65% silica, strained quartz, and clay minerals found in rocks such as granite, graywacke, argillite, phyllite and siltstone. Section 704.1 General (2.b) requires that when aggregates are classified as potentially reactive the accompanying cement be limited in alkali content and supplementary cementitious materials be used to mitigate alkali‑silica reaction; Portland cement must not exceed a maximum alkali content of 1.25% Na₂Oe for ASR prevention, and the minimum SCM replacement levels given in Table G are intended for cements with moderate to high alkali contents ranging from 0.70 to 1.25% Na₂Oe. Blended hydraulic cements such as Type IS or IP may also be used provided they meet the requirements of Section 704.1(b), thereby controlling the chemical interaction between reactive silica in the aggregate and cement alkalis. Section 704.1 General (3.c) indicates that the expansion produced by reactive aggregates must be controlled by using low‑alkali cement or supplementary cementitious materials unless a documented nonreactivity service record is available; such a record must include at least ten structures each over ten years old (preferably over fifteen), the concrete class or mix design proportions, the cement and alkali content of the cement used, the type of SCMs employed, and petrographic analysis confirming no alkali‑silica gel formation, as verified per ASTM C295 and C856. Section 704.1 General (2.a) states that when a Concrete Prism Test conducted in accordance with ASTM C1293 shows an expansion of less than 0.04% after two years, the preventive measure—generally the use of supplementary cementitious materials or a lithium nitrate admixture—is considered effective for those aggregates. The lithium nitrate admixture shall be added to the mix water with appropriate water‑content corrections, and any substitution of cement types is allowed only if the alkali limits in Section 704.1(g) are not exceeded; substitution of aggregates is prohibited. Increasing the dosage of supplementary cementitious materials beyond the values prescribed in Section 704.1(g)2.b may cause excessive retardation of setting and early‑age strength development, which must be addressed in the construction plan. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=13435730 src=408_2020_11::tab:p662#2 -->
+<p>The table below specifies the adjustment to minimum SCM levels based on cement alkali content.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-reactive-aggregate-4-cap" tabindex="0"><table class="ct-table" id="ct-reactive-aggregate-4">
+<caption id="ct-reactive-aggregate-4-cap">Table HAdjusting the Minimum Level of SCM if using low alkali Portland cement</caption>
+<thead>
+<tr><th scope="col">Cement Alkalis (% Na2Oe)</th><th scope="col">Level of SCM</th></tr>
+</thead>
+<tbody>
+<tr><td>≤ 0.70</td><td>Reduce the minimum amount of SCMgiven in Table G by one preventionlevel.(1)</td></tr>
+<tr><td colspan="2">(The replacement levels should not be below those given in Table G for prevention LevelW regardless of the alkali content of the Portland cement.</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 662.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 409–455), SECTION 700 MATERIAL (pp. 635–665)</small></p>
+<p>Under Section 703.2 the coarse aggregate shall be reasonably free from clay, silt, vegetation and other deleterious substances because their presence can cause inconsistent performance in both asphalt concrete and hardened Portland‑cement concrete; the specification identifies reactive chert, gypsum—a sulfate mineral—iron sulfide, amorphous silica and hydrated iron oxide as examples of minerals that may react with cement alkalis or otherwise compromise durability. In addition, Section 704.1 notes that clay minerals occurring in graywackes, argillites, phyllites and siltstones are among the siliceous substances that may react with concrete alkalis, potentially causing deleterious expansion; this represents a further compatibility risk for reactive aggregate. No other hazards such as additional sulfates, organics, contaminants, dissimilar materials, corrosion, shrinkage restraint or chemical attack are described in these excerpts. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 700 MATERIAL (pp. 636–658)</small></p>
+<h2 id="influence-of-production-and-placement">Influence of production and placement</h2>
+<p>Proper curing of steel‑slag fine aggregate is achieved by completely soaking the material with water before or during stockpiling and then maintaining the stockpile in a uniformly moist condition for a period of not less than six months; after this period the aggregate must show an average total volumetric expansion below 0.50 % to be approved for use, and if that limit is not met additional curing of two months or more is required. When reactive aggregates are used in concrete mixtures, the mix design must incorporate Alkali‑Silica Reaction (ASR) remediation as specified in Section 704.1(g); any extra water may be added at the project only if the resulting plastic unit weight remains within five pounds per cubic foot of the target design unit weight, and that additional water also must respect that limit. For hot‑weather placements the plan shall include detailed provisions indicating the amount of hydration‑stabilizing admixture to be added in five‑degree Fahrenheit increments so that sufficient time is available for placing and finishing before initial set, while cold‑weather provisions shall protect pervious concrete from freezing throughout the seven‑day curing period prescribed by ACI 306.1. Mix designs that incorporate reactive or potentially reactive aggregate must pair the aggregate with an approved cement‑supplementary cementitious material combination capable of reducing the measured 14‑day expansion to a value less than 0.1 %; any aggregate showing a 14‑day expansion greater than 0.30 % shall be rejected. The water‑cement ratio shall be verified in the field using batch tickets for cementitious content determination and the AASHTO T 318‑02 moisture test for water content, and durable stone or gravel that is free from slate texture or cleavage planes should be washed thoroughly during production to remove deleterious material that could exacerbate expansion. By controlling curing of fine aggregate, adhering to mix‑design limits on water addition and unit weight, employing appropriate admixture schedules for temperature extremes, verifying water‑cement ratios, and using clean, suitably treated aggregates, the potential for alkali‑aggregate reaction–induced cracking is limited, thereby preserving the intended strength and durability of the concrete pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 409–455), SECTION 700 MATERIAL (p. 635)</small></p>
+<p>During construction of pervious concrete pavement systems, the long‑term behavior of reactive aggregate is most strongly influenced by how well the mix water is controlled and whether the required alkali‑silica reaction remediation is applied. The mixture must be designed to achieve a plastic unit weight between 115 lb/ft³ and 130 lb/ft³ and a water‑cement ratio of 0.36 ± 0.04; any extra water may be added on site only if the resulting plastic unit weight remains within 5 lb/ft³ of the target design value, because deviations can alter the paste‑aggregate interface and accelerate reaction. If reactive aggregates are present, the specification requires remediation for alkali‑silica reaction as outlined in Section 704.1(g), without which durability problems such as cracking may develop. For bonded concrete overlays on concrete‑surfaced pavements, construction variations that permit excessive aggregate expansion or an improper water‑cement ratio dominate the long‑term performance of reactive aggregate. Section 704.1(g)2 mandates that aggregates showing a 14‑day expansion between 0.10 % and 0.30 % may be used only with an approved cement‑supplementary cementitious material blend that reduces the measured expansion to less than 0.1 %; aggregates whose 14‑day expansion exceeds 0.30 % must be rejected because such higher expansion directly drives later cracking. Section 704.1(g)3.b limits the mortar expansion of blended hydraulic cements to 0.02 % at 14 days and 0.06 % at eight weeks, so exceeding these values can also compromise durability. Field verification of the water‑cement ratio is required by Section 704.1(d)4.c; the ratio must target 0.40 lb/lb and shall not fall below 0.38 lb/lb, and deviations from this range introduce excess moisture that accelerates alkali–aggregate reactions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 409–455)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>Selection of a reactive aggregate begins with an assessment of its field performance history as defined in AASHTO R 80 Section 6.1; such history may be used to establish the potential to contribute to deleterious alkali‑silica reaction with DME/DMM approval. Petrographic examination may be employed to flag an aggregate as potentially reactive, but a definitive expansion test—either ASTM C1293 or AASHTO T 303—is required to assign a reactivity class that drives the level of mitigation; for new Type A sources lacking LTS data an initial AASHTO T 303 test is performed and any source showing a non‑reactive (R0) result is temporarily listed with an expansion of 0.11 % (R1) pending ASTM C1293 testing, and when mixes contain aggregates of differing classes the highest class governs mitigation. Aggregates whose mineralogical composition includes any of the siliceous substances known to react with alkalis—opal; chalcedony present in chert or sand‑and‑gravel particles; high‑temperature silica forms such as tridymite or cristobalite; acid glasses containing more than 65 % silica; intermediate glasses containing between 55 % and 65 % silica; strained quartz found in granite or granite gneiss; and clay minerals occurring in graywackes, argillites, phyllites, and siltstones—should be identified and generally avoided for applications where durability is critical. For fine aggregate the material must consist of hard, durable, uncoated inert particles that are reasonably free from clay, silt, vegetation, and deleterious substances such as reactive chert, gypsum, iron sulfide, amorphous silica, and hydrated iron oxide; it must meet the physical property limits set out in Table A of an approved source and its quality is verified through petrographic analysis according to PTM No. 518 together with any additional durability tests deemed necessary. Coarse aggregate is required to be hard, tough, durable and uncoated while being reasonably free from clay, silt, vegetation and deleterious minerals such as reactive chert, gypsum, iron sulfide, amorphous silica or hydrated iron oxide; compliance must be shown through petrographic analysis according to PTM No. 518 (and any other durability tests deemed necessary) and the material must be obtained from a source listed in Bulletin 14 or otherwise approved by the LTS. For any Class AA paving concrete aggregates that are classified as reactive or potentially reactive may be used only if laboratory testing shows a 14‑day expansion between 0.10 % and 0.30 % and the aggregate is paired with an approved cement‑supplementary cementitious material blend that reduces the measured expansion to less than 0.1 %; aggregates exhibiting a 14‑day expansion greater than 0.30 % must be rejected, and this requirement applies to all paving concrete on the project. The reactivity class determined from the expansion test is then combined with the structure type classification to evaluate ASR risk using Table D; together they determine the required level of prevention from Table E, which in turn dictates the minimum supplementary cementitious material replacement rate shown in Table G, and when Portland cement is used the optional chemical limit of a maximum alkali content of 1.25 % Na₂Oe must be met for ASR mitigation. When a preventive measure is applied the selection of a reactive aggregate is governed by the results of the ASTM C1293 concrete prism test; only aggregates for which the measured expansion remains less than 0.04 percent after two years are considered acceptable, and mixtures qualified using the preventive measure must keep their alkali content within the limits set out in Section 704.1(g)3 while the dosage of supplementary cementitious materials may not exceed the values prescribed in Section 704.1(g)2.b; substitution of the aggregate itself is prohibited. The Department may allow an aggregate that is classified as potentially reactive to be specified without the usual cement or supplementary cementitious material requirements only when a documented service record of nonreactivity exists, and that record must cover at least ten structures each older than ten years (preferably over fifteen) and include visual inspection results, concrete mix information, cement alkali content, SCM usage, any distress observed, and petrographic analysis of cores performed to ASTM C856 that confirms the absence of alkali‑silica gel and microcracking; additionally the aggregate must be classified according to ASTM C295 and shown to have mineralogical composition matching the aggregate proposed for use, and if field history later shows ASR expansion no exemption is permitted. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 454–455), SECTION 700 MATERIAL (pp. 635–665)</small></p>
+<p>To mitigate the deleterious effects of reactive aggregate, the specification requires that any potentially reactive aggregate be used only together with cement or cement‑SCM blends identified in Section 704.1(g)3 and that a mitigation plan be applied whenever a coarse or fine aggregate is classified as reactive (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL &gt; 1.e.1). Reactivity must be established through field performance history, petrographic examination and expansion testing performed to ASTM C1293 or AASHTO T303; Type A sources are retested on a five‑year cycle per ASTM C1293, and the resulting reactivity class dictates the preventive measures (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL &gt; 1.e.1). When new test results alter an aggregate’s ASTM C1293 reactivity class, a revised cement concrete mix design that reflects the updated class must be prepared and submitted for approval within ninety calendar days (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL &gt; 1.e.1).</p>
+<p>For fine aggregate, the specification requires it to be reasonably free of deleterious substances such as reactive chert, gypsum, iron sulfide, amorphous silica, and hydrated iron oxide, and it must be sourced from a Bulletin 14‑listed supplier or otherwise approved by the LTS; quality is controlled by petrographic analysis according to PTM No. 518 and, when traceability of steel‑slag aggregate is lacking, chemical testing under DEP General Permit WMGR144 (Section 703—AGGREGATE &gt; 703.1 FINE AGGREGATE). A steel‑slag fine‑aggregate stockpile not exceeding 30,000 tons must be cured at least six months with total volumetric expansion verified to be less than 0.50 % (PTM No. 130).</p>
+<p>Coarse aggregate must also be free from the same deleterious substances and its quality verified through petrographic analysis per PTM No. 518; alternative non‑reactive sources such as durable stone, properly washed gravel, blast‑furnace slag, steel slag (subject to expansion testing under PTM No. 130) or granulated slag are acceptable substitutes (Section 703—AGGREGATE &gt; 703.2 COARSE AGGREGATE). For Type A use the maximum allowable absorption is 3.0 % as determined by AASHTO T 85, and stockpiles must be tested for total expansion less than 0.50 % before acceptance (Section 703—AGGREGATE &gt; 703.2 COARSE AGGREGATE).</p>
+<p>When reactive aggregates are incorporated into pervious concrete pavement systems, the mix must be remedied for Alkali‑Silica Reaction in accordance with Section 704.1(g); a hydration‑stabilizing admixture (ASTM C494 Type D) may be added to control setting and early strength, especially under hot‑weather conditions, and the concrete mix design shall follow ASTM C1688 with a water‑cement ratio of 0.36 ± 0.04 together with an approved QC plan per Section 106 (Section 520—PERVIOUS CONCRETE PAVEMENT SYSTEM &gt; 520.2 MATERIAL).</p>
+<p>For bonded concrete overlays, reactive aggregate exhibiting a 14‑day expansion between 0.10 % and 0.30 % may be used only when paired with an approved cement‑supplementary cementitious material blend that reduces the measured expansion to less than 0.1 %; any aggregate showing more than 0.30 % expansion is rejected (Section 545—BONDED CONCRETE OVERLAY OF CONCRETE‑SURFACED PAVEMENTS &gt; 545.2 MATERIAL). Portland cement may be partially replaced by fly ash or slag cement provided at least 400 lb/yd³ of Portland cement remains and total cementitious content stays within Table A limits, with slag cement limited to not exceed 30 % of the cementitious blend; blended hydraulic cements Type IS or IP are permitted only if mortar expansion does not exceed 0.02 % at 14 days and 0.06 % at 8 weeks, and field verification of water‑cement ratio must be performed using batch tickets and AASHTO T 318‑02 (Section 545—BONDED CONCRETE OVERLAY OF CONCRETE‑SURFACED PAVEMENTS &gt; 545.2 MATERIAL).</p>
+<p>Preventive measures for aggregates identified as potentially reactive include the use of supplementary cementitious materials at the minimum replacement levels shown in Table G, selecting Portland cement with a maximum alkali content of 1.25 % Na₂Oe, or employing blended hydraulic cements of type IS or IP as defined by AASHTO M 240 after assessing aggregate reactivity, structure class and risk level (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL &gt; 2.b).</p>
+<p>Mitigation may also be achieved by supplying the chemical admixtures required in Section 711.3; when a 25 % extra cement allowance is used instead of the standard anti‑washout admixture, that extra cement may be substituted with other cementitious material while permitting up to 50 % of the water dose for the replacement based on the mix’s water‑cement ratio, and additional admixtures beyond an AWA may be added as needed (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL &gt; 3.c).</p>
+<p>The Concrete Prism Test (ASTM C1293) can be employed to qualify mixtures that incorporate supplementary cementitious materials or blended cements with volumetric SCM replacements less than those specified in Section 704.1(g)2.c, as well as remediation using metakaolin or a lithium nitrate admixture added to the mix water with appropriate water‑content corrections; effectiveness is confirmed when prism expansion remains less than 0.04 % after two years, provided that alkali limits set out in Section 704.1(g)3 are not exceeded and SCM dosages do not surpass the values prescribed in 704.1(g)2.b to avoid excessive early‑age retardation (Section 704—CEMENT CONCRETE &gt; 704.1 GENERAL &gt; 2.a). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 409–455), SECTION 700 MATERIAL (pp. 635–665)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>The evaluation of potentially reactive aggregate may incorporate field performance histories documented in accordance with AASHTO R 80 Section 6.1, and long‑term service records that include a minimum of 10 structures each over 10 years of age (preferably over 15 years) together with visual examination reports of cracking or joint expansion, concrete mix details, cement and alkali contents, any supplementary cementitious materials used, petrographic analysis of representative cores performed to ASTM C856 to identify alkali‑silica gel and microcracking, and aggregate classification testing according to ASTM C295 to confirm mineralogical similarity with the proposed source. Petrographic examination can classify an aggregate as potentially reactive; for fine and coarse aggregates the LTS conducts petrographic analysis in accordance with PTM No. 518, and when traceability of steel‑slag material is lacking chemical testing under DEP General Permit WMGR144 may be required. Steel‑slag stockpiles must pass an expansion test specified in PTM No. 130 that shows an average total volumetric expansion less than 0.50% after a minimum six‑month moist cure before the LTS will approve their use, and for coarse steel‑slag aggregate the swelling test per PTM No. 130 is required with acceptance only if the total expansion is less than 0.50%. Lightweight coarse aggregate must meet an absorption factor not to exceed 2.5% (PTM No. 526) and satisfy freeze‑thaw resistance criteria specified in AASHTO T 161. Definitive reactivity levels must be obtained from expansion testing performed under ASTM C1293 or AASHTO T 303, with results recorded in Bulletin 14; for new Type A sources lacking long‑term data the LTS initially conducts AASHTO T 303 and, if the result shows non‑reactive (R0), the aggregate is provisionally listed with an expansion of 0.11% (R1) pending ASTM C1293 testing, and all Bulletin 14 Type A aggregates are retested on a five‑year cycle per ASTM C1293 to monitor long‑term performance. Evaluation for Class AA paving relies on laboratory expansion testing; aggregates are considered reactive if a 14‑day expansion measured in the lab falls between 0.10% and 0.30%, and they may be used only when an approved cement‑supplementary cementitious material blend reduces that expansion to less than 0.1%; any aggregate showing a 14‑day expansion greater than 0.30% must be rejected, and when blended hydraulic cement is employed the specification further limits mortar expansion to no more than 0.02% at 14 days and 0.06% at 8 weeks. The Concrete Prism Test (ASTM C1293) may be used to evaluate preventive measures; the test monitors prism expansion over a two‑year period and deems a preventive measure effective when the measured expansion is less than 0.04 percent after 2 years, and no additional field or long‑term performance evidence beyond this laboratory expansion criterion is described in that section. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 454–455), SECTION 700 MATERIAL (pp. 635–665)</small></p>
+<p>Reactive aggregates contain siliceous minerals such as opal, chalcedony, tridymite, cristobalite, high‑silica glasses, acid glasses with more than 65 % silica, intermediate glasses with 55 % to 65 % silica, as well as reactive chert, gypsum, iron sulfide, amorphous silica and hydrated iron oxide. When these constituents react with the alkalis in cement they can form alkali‑silica gel whose products may cause deleterious expansion within concrete, producing microcracking that appears as cracking and joint widening and thereby reducing pavement durability. For both fine and coarse aggregate the specifications require the material to be reasonably free from such reactive substances; amounts large enough to cause inconsistent performance in asphalt concrete or plastic or hardened Portland cement concrete are deemed deleterious, and petrographic analysis is used to verify compliance. Aggregates will be tested according to ASTM C1293 or AASHTO T 303 and listed in Bulletin 14; the degree of alkali‑silica reactivity of an aggregate will be determined as specified in Section 704.1(g).1.d.1.c and recorded in Table C, and the reactivity class governs the level of ASR risk considered in Table D.</p>
+<p>If one or both of the aggregates (coarse or fine) used in a mix is reactive, mitigation is required as specified in Section 704.1(g)3, and the aggregate must be paired only with the cement‑or cement‑SCM blends prescribed for ASR mitigation. The mix design must incorporate the preventive measures indicated in the ASR mitigation flowchart (Section 704.1(g)3.c). For pervious concrete mixtures the same remediation requirement applies, and the mixture proportions must follow ASTM C1688. In Class AA bonded concrete overlays aggregates classified as reactive or potentially reactive may be used only when their measured 14‑day expansion lies between 0.10 % and 0.30 % and the selected cement‑supplementary cementitious material combination can limit the resulting concrete expansion to less than 0.1 %; aggregates showing more than 0.30 % expansion must be rejected. When blended hydraulic cements such as Type IS or IP are used, mortar expansion shall not exceed 0.02 % at 14 days and 0.06 % at eight weeks.</p>
+<p>Designers must first assess the aggregate reactivity class to determine the ASR risk level; this decision sets the minimum supplementary cementitious material replacement levels appropriate for Portland cements of moderate to high alkali contents (0.70 % to 1.25 % Na₂Oe) and may require conformity to the optional chemical limit of a maximum alkali content of 1.25 % Na₂Oe for ASR prevention. Lithium nitrate admixtures listed in Bulletin 15 are permitted as part of the mitigation strategy, but dosage levels of SCMs beyond those prescribed in Section 704.1(g)2.b are not recommended because they may cause excessive retardation of setting and early‑age strength development, which is critical for construction in cool weather. Substitution of aggregates using the preventive measure is prohibited.</p>
+<p>The effectiveness of a preventive measure is evaluated with the Concrete Prism Test (ASTM C1293); a mixture is deemed effective only when prism expansion is less than 0.04 % after two years, directly influencing durability by limiting cracking. New Type A sources lacking long‑term swelling data are initially assigned a 0.11 % expansion (R1) and must be mitigated until test results become available; all Type A sources are retested on a five‑year cycle with any change in reactivity class prompting new mix designs to be submitted for approval within ninety calendar days. An exemption from these requirements is possible only when a documented service record of nonreactivity exists for at least ten structures each over ten years old (preferably over fifteen), with visual inspection and petrographic analysis confirming absence of alkali‑silica gel and associated microcracking; if such documentation is unavailable or testing indicates the aggregate has begun to form ASR expansion, the prescribed mitigation measures—including chemical admixtures, up to 25 % extra cement that may be replaced by supplementary material, and water addition up to 50 % of the mix’s water‑cement ratio—must be applied. Ongoing maintenance planning should therefore incorporate monitoring for signs of expansion or cracking so that corrective actions can be taken in accordance with the prescriptive methods. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — SECTION 500—RIGID PAVEMENTS (pp. 409–455), SECTION 700 MATERIAL (pp. 635–665)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

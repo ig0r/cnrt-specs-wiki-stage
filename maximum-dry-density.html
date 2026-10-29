@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maximum Dry Density</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html" class="active" aria-current="page">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><a href="compaction.html">Compaction</a><span class="crumb-sep">›</span><span class="crumb-current">Maximum Dry Density</span></nav>
+<article><h1>Maximum Dry Density</h1>
+<div class="meta"><div class="part-of">Part of: <a href="compaction.html">Compaction</a> <span class="edge edge-taxonomic" title="Maximum Dry Density is a topic under Compaction.">is-subtopic-of</span></div><div class="edge-reading">Maximum Dry Density is a topic under Compaction.</div><div><a class="tag" href="index.html?q=maximum-dry-density">maximum-dry-density</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>Maximum Dry Density is the greatest dry unit weight a soil can achieve when compacted at its optimum moisture content under a specified compactive effort, and it is established in the laboratory by the Moisture‑Density Test (PTM 106) on representative samples[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. This laboratory value becomes the benchmark for field compaction of subgrade and fill materials; in‑place density measured with PTM 402 must reach at least 97 % of the maximum dry density for all lifts except the top three feet, which must attain 100 %, thereby providing a stable mass that resists rutting, displacement, or shear‑wave deformation[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The target reflects material characteristics—well‑graded, coarse‑grained soils typically yield higher densities than fine‑grained or poorly graded soils—and compaction is required within a moisture window of –3 % to optimum moisture content to ensure the desired density is attainable[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-quality-objectives">Purpose and quality objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#test-methods-and-procedures">Test methods and procedures</a></li><li><a href="#sampling-and-testing-frequency">Sampling and testing frequency</a></li><li><a href="#acceptance-criteria-and-tolerances">Acceptance criteria and tolerances</a></li><li><a href="#quality-control-and-process-monitoring">Quality control and process monitoring</a></li><li><a href="#nonconformance-and-corrective-action">Nonconformance and corrective action</a></li><li><a href="#documentation-and-reporting">Documentation and reporting</a></li><li><a href="#relationship-to-long-term-performance">Relationship to long-term performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-quality-objectives">Purpose and quality objectives</h2>
+<p>Maximum Dry Density evaluates the compaction performance of subgrade soils by quantifying the greatest dry unit weight attainable when the soil is compacted at its optimum moisture content with a specified compactive effort.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The value is obtained in the laboratory Moisture‑Density Test (PTM No. 106) on representative 50‑lb bags, and it reflects that well‑graded or coarse‑grained soils can achieve higher densities, which influences CBR values and overall subgrade stability.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For embankment and fill materials such as soil and Type 1 granular material, Maximum Dry Density serves as the target compaction level, with the required in‑place density expressed as a percentage of that laboratory‑determined maximum.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Except for the top three feet, the compacted mass shall be not less than 97 % of the maximum dry density; the uppermost three feet shall be compacted to 100 % of the maximum dry density.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] In special rolling operations, material forming embankment foundations or existing embankments more than three feet below the proposed subgrade elevation shall be compacted to 97 % of the maximum dry density, whereas material constituting structure foundations, subgrades, or lying within three feet of the proposed subgrade elevation shall be compacted to 100 % of the maximum dry density.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Compaction shall occur at a moisture content between minus 3 % of optimum moisture content and optimum moisture content, and any material above the optimum moisture content must be dried before compaction.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] In‑place moisture and density are measured using PTM No. 402 with a calibrated nuclear gauge, and acceptance testing is considered satisfactory when independent gauge readings fall within ±2.0 lb/ft³ for wet density and within ±0.8 w for moisture content.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] If the required density is not obtained, the area must be promptly reworked, reshaped and recompacted or removed and replaced.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 141–143); [2] — SECTION 200 EARTHWORK (pp. 146–165)</small></p>
+<p>Maximum Dry Density is employed as a quality check to verify that subgrade soil can be compacted to its highest achievable dry unit weight at the optimum moisture content, which underpins reliable CBR values and resilient modulus estimates; failure to reach this density signals insufficient compaction and reduced bearing capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Section 206—Placement and Compaction of Embankment and Fill, the specification requires soil placed in embankments or fills to be compacted to a density based on the maximum dry density determined by PTM 106 at optimum moisture content within –3 % of target, with all but the upper three feet achieving at least 97 % of that maximum dry density and the top three feet required to reach 100 %, verified by in‑place dry‑density testing per PTM 402; meeting these thresholds is intended to produce a stable soil mass that exhibits no rutting, displacement, or shear wave when subjected to traffic or equipment loads, and any area falling below the required percentages must be reshaped, recompacted and retested [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Moisture‑density acceptance testing in the same section enforces that the in‑place density meet the prescribed target (maximum dry density at optimum moisture), because densities below the requirement can produce unstable zones such as permanent deformation greater than ½ inch; wet‑density readings must be within ±2.0 lb/ft³ and moisture readings within ±0.8 % of target, with failure triggering corrective actions including gauge checks, new testing and adjustment of compaction operations [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In Section 341—Cold Recycled Asphalt Base Course, each layer must be compacted to a minimum density of 96 % of the PTM 402 target density, with in‑place density determined for every 3,000‑square‑yard area according to AASHTO T 310; if an area is below this minimum and additional compaction does not achieve it, the procedure mandates scarifying, adjusting moisture content, and recompacting, and failure to reach the 96 % threshold would deem the base course unacceptable [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 208—Special Rolling requires material for embankment foundations or existing embankments more than three feet below the proposed subgrade to be compacted to at least 97 % of maximum dry density, while structure foundations, subgrades, and material within three feet of the proposed subgrade elevation must be compacted to 100 % of maximum dry density, with moisture content maintained between minus 3 % of optimum moisture content and optimum moisture content; achieving these densities prevents excessive permanent deflection or rutting—defined as greater than ½ inch for existing subgrade and greater than 1 inch for embankment foundations—and if the material cannot be compacted to a stable mass because it is too wet, it must be dried by disking, scarifying, or other means before further compaction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 6 (pp. 141–143); [2] — SECTION 200 EARTHWORK (pp. 146–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Maximum Dry Density applies to the subgrade soil material that forms the roadbed in any pavement reconstruction project, including rubblized projects, and is obtained from laboratory moisture‑density testing (PTM No. 106) on representative samples taken from cut, fill or at‑grade locations; the optimum moisture content and maximum dry density are used together with CBR results to confirm that the subgrade can be compacted to the required level [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Well‑graded and coarse‑grained soils are expected to reach higher maximum dry densities, whereas poorly graded or fine‑grained soils will achieve lower values, influencing the selection of compaction effort and any needed subgrade improvement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Section 206, when placing and compacting soils, Type 1 granular material, or Type 2 granular material in embankments or fills, the optimum moisture content and maximum dry density are determined according to PTM No. 106; each full‑width lift shall be compacted to not less than 97 % of that density except for the top three feet, which must reach 100 % [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 208 extends the use of Maximum Dry Density to fine‑grained cohesive soils compacted with a sheepsfoot, pad foot, or pneumatic‑tire roller, requiring compaction to 97 % of maximum dry density when they form embankment foundations or existing embankments more than three feet below the proposed subgrade elevation, and to 100 % for structure foundations, subgrades, or any material within three feet of the proposed subgrade elevation, with moisture content maintained between minus 3 % of optimum moisture content and optimum moisture content [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Granular materials compacted with a smooth steel‑drum vibratory roller operating at no more than 2 miles per hour are subject to the same density requirements, although vibratory compaction is not permitted on fine‑grained soils such as silt and fine sands [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 341 applies Maximum Dry Density, expressed as the PTM 402 target density, to cold‑recycled asphalt base course material during compaction; each 3,000‑square‑yard area shall be compacted to at least 96 % of the PTM 402 target density as measured by AASHTO T 310, and if an area falls below this threshold the contractor must scarify, adjust moisture content, and recompact, with a new PTM 402 target density established and the 96 % minimum reapplied if necessary [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 6 (pp. 141–143); [2] — SECTION 200 EARTHWORK (pp. 149–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<p>In Section 206—Placement and Compaction of Embankment and Fill, the specification requires that a maximum dry density be determined for soils and for Type 1 granular material as directed in Section 206.3(b)1.a and 1.b using PTM No. 106, and each compacted lift must reach at least 97 % of that density, with the top three feet required to reach 100 %. The requirement does not apply to rock, shale, random material or Type 2 granular material, where compaction is judged by a non‑movement condition rather than a percentage of maximum dry density. Compaction must be performed with equipment limited to 1.5 ft/s, using padfoot rollers for soil and smooth‑drum vibratory rollers for Type 1 material, and lift thickness may be reduced to four inches in pipe trenches or confined areas; moisture must stay within –3 % of optimum for soil or ±2 % for Type 1 material at the time of compaction. Frozen material may not be placed or compacted, and wet material must be dried to those same moisture tolerances before compaction.</p>
+<p>In Section 208—Special Rolling, compaction to 97 % of maximum dry density is required for embankment foundations or existing embankments that are more than three feet below the proposed subgrade elevation, while compaction to 100 % of maximum dry density is required for structure foundations, subgrades, or any material within three feet of the proposed subgrade elevation. The moisture condition for achieving these densities is limited to a range from minus 3 % of optimum moisture content up to the optimum moisture content, and material that exceeds the optimum must be dried before compaction. The specification does not provide an optional case and explicitly states that special rolling may not replace the required compaction procedures. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 149–165)</small></p>
+<h2 id="test-methods-and-procedures">Test methods and procedures</h2>
+<p>Maximum Dry Density is defined as the highest density achievable for a given soil type at its optimum moisture content and is determined by conducting the Moisture Density Test identified as PTM No. 106.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The procedure begins with determining the optimum moisture content and maximum dry density in accordance with PTM No. 106, after which the in‑place dry density is verified using PTM No. 402 employing the direct transmission method.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For verification, a nuclear density/moisture gauge calibrated according to AASHTO T 310 (or PTM No. 418 for Troxler gauges) must be used, with calibration required every twelve months and daily standardization recorded on Form TR‑4276AC; each acceptance result is verified with an independent gauge and is acceptable only when its wet‑density reading is within ±2.0 lb/ft³ and its moisture reading within ±0.8w, with results entered on Form TR‑4276AD.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] During embankment and fill placement, soil lifts are placed in uniform six‑inch compacted layers and compacted with a padfoot roller that meets Section 108.05(c)3.g, operating at no more than 1.5 feet per second for at least six seconds per pass, and a single static pass of a smooth drum roller may precede the padfoot compaction.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Compaction must achieve not less than 97 % of the maximum dry density except in the top three feet where 100 % is required, while moisture must be maintained within –3 % of optimum for soil (±2 % for Type 1 granular material), and moisture content of compacted material is measured according to PTM No. 402; any deviation beyond these limits triggers re‑wetting or drying and repeat compaction.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When special rolling is required, a test‑strip compaction is performed after each pass in accordance with AASHTO T191 or AASHTO T310, using acceptable equipment that includes a pneumatic‑tire roller capable of varying the load from 26 tons to 28 tons, a sheepsfoot or pad foot roller with a minimum foot or pad contact pressure of 160 pounds per square inch, a smooth steel drum vibratory roller with a minimum dynamic force at the drum of 50,000 pounds, or a loaded triaxle dump truck with a gross vehicle weight of 72,000 pounds.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The soil is first compacted to a moisture content between minus 3 % of optimum and optimum using the appropriate roller for the soil type at a speed not exceeding 2 miles per hour; density is required to reach 97 % of maximum dry density for embankment foundations or 100 % of maximum dry density for structure foundations, subgrades, or material within three feet of proposed subgrade elevation, and after each pass the in‑place moisture and density are measured, with special rolling proceeding only when the increase in density is less than 1 % over three consecutive passes and the material appears stable.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For a cold‑recycled asphalt base course, the target density is first set according to PTM No. 402 and then verified in the field by measuring the in‑place density of each 3,000‑square‑yard area using AASHTO T 310; the compacted layer must reach at least 96 % of the PTM 402 target density, with rollers specified in Section 108.05(c) used for compaction, and any shortfall is corrected by scarifying, adjusting moisture content, re‑compacting or by establishing a new target density if needed.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All liquid‑metering equipment employed in the cold‑recycled asphalt base course must maintain a variation of not more than ± 2.0 percent by weight.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 141–143); [2] — SECTION 200 EARTHWORK (pp. 146–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<p>For moisture and density determinations under Section 206.3(a)3, the nuclear density/moisture gauge must be calibrated every 12 months and a current calibration sheet showing projected monthly decay limits must accompany each gauge; daily standardization of the gauge is recorded on Form TR‑4276AC. The testing technician must be a properly trained Nuclear Equipment Operator who holds a valid nuclear gauge operator certification throughout placement and compaction activities. Testing locations must be chosen so that influences on gauge performance are minimized, and gauges must be kept at least 30 feet apart from each other and any other radioactive source during acceptance and verification tests. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 146–149)</small></p>
+<h2 id="sampling-and-testing-frequency">Sampling and testing frequency</h2>
+<p>In the cold‑recycled asphalt base course described in Section 341, the maximum dry density is first established by determining a target density according to PTM No. 402 and the contractor must compact the material to at least 96 percent of that target. The field program requires that the in‑place density be measured for every 3,000‑square‑yard segment using AASHTO T 310, so each 3,000‑square‑yard area serves as a testing location and the test is performed once per segment as construction proceeds; if a segment fails to meet the 96 percent threshold, additional compaction, scarifying, or moisture adjustment must be applied before work continues. Under the special rolling requirements of Section 208, the target density is expressed as a percentage of maximum dry density and the crew must verify that each compaction pass attains the required level before moving on. When moisture‑density test data are not yet available, a test‑strip approach is used and after every pass the in‑place moisture and density are measured at several pre‑determined random locations according to AASHTO T 191 or AASHTO 310, resulting in several measurements per pass. Compaction is considered satisfactory when the measured moisture‑density does not increase by more than 1 percent over three consecutive passes, after which special rolling may proceed. The required density level is 97 percent of maximum dry density for embankment foundations deeper than 3 ft and 100 percent of maximum dry density for structure foundations, subgrades, or material within 3 ft of the proposed subgrade elevation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 163–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<p>For cold‑recycled asphalt base courses (Section 341), the contractor must first determine the target density according to PTM No. 402 and then compact the layer to at least 96 percent of that target. In‑place density is determined on each 3,000‑square‑yard area in accordance with AASHTO T 310 so that every segment represents the completed work; any segment that fails the minimum requires scarifying, moisture adjustment and re‑compaction before further placement. Prior to placing the wearing or binder course the contractor must dry cut or dry extract a minimum of three samples selected at random from throughout the entire cold‑recycled base‑course project in accordance with PTM No. 1, each sample being at least 1,200 g, and determine their moisture content according to PTM No. 749. When moisture‑density test data are not available for special rolling (Section 208), the contractor compacts using a test‑strip approach with the proposed equipment and after each pass checks in‑place moisture and density at several pre‑determined random locations in accordance with AASHTO T 191 or AASHTO T 310; these measurements serve as the representative sample of the material, process, lot, or completed work. The results are considered acceptable when the measured moisture‑density does not increase by more than 1 percent over three consecutive passes and the material appears stable, at which point special rolling may proceed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 163–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<h2 id="acceptance-criteria-and-tolerances">Acceptance criteria and tolerances</h2>
+<p>Under Section 206.3(b) soil and Type 1 granular material must be compacted to at least 97 % of the maximum dry density for all lifts except the uppermost three feet, which are required to reach 100 % of the maximum dry density; moisture content must be kept within –3 % of optimum for soil and ±2 % of optimum for Type 1 material, and the compacted layer is considered acceptable only when a stable condition with no visible rutting, displacement or shear‑wave bulging under the compaction equipment is observed. For those materials the in‑place moisture and density must be determined by the direct transmission nuclear gauge method and meet the required density at the optimum moisture range; verification testing of one of the first three acceptance tests and thereafter at least one test per ten acceptance tests must show readings that are within ±2.0 pounds per cubic foot for wet density and within ±0.8 w for moisture content percent when compared to the contractor’s gauge, otherwise corrective action is required. For the cold‑recycled asphalt base course the placed material must reach at least 96 percent of the PTM 402 target density, with in‑place density measured for every 3,000‑square‑yard segment according to AASHTO T 310; any segment that falls below the minimum after initial rolling must be scarified, have its moisture adjusted and be re‑compacted, and if it still does not meet the limit a new target density is established. For embankment foundations or existing embankments more than 3 feet below the proposed subgrade elevation the material must be compacted to at least 97 % of maximum dry density, while structure foundations, subgrades and any material within 3 feet of the proposed subgrade elevation must reach 100 % of maximum dry density; in all cases moisture content must lie between minus 3 % of optimum moisture content and optimum moisture content, and when moisture‑density test data are unavailable a test strip approach using AASHTO T191 or AASHTO 310 is required, with special rolling proceeding only after the measured moisture‑density does not increase by more than 1 % over three consecutive passes and the material appears stable. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 146–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<p>For each 3,000‑square‑yard area the in‑place density is measured according to AASHTO T 310 and must reach at least 96 percent of the PTM No. 402 target density; any individual area that falls below this minimum triggers additional compaction, and if that does not succeed the crew must scarify, adjust moisture content, and re‑compact (or establish a new target density and again meet 96 percent). The specification therefore evaluates results on an area‑by‑area basis rather than by lot averages or statistical variability. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<h2 id="quality-control-and-process-monitoring">Quality control and process monitoring</h2>
+<p>According to the Pavement Policy Manual, the laboratory and field program shall verify that soil classification, gradation curve, percent passing the #200 sieve, Atterberg limits, optimum moisture content, and the achieved maximum dry density are all within the ranges expected for the material [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The manual notes that well‑graded, coarse‑grained soils generally achieve higher densities than poorly graded or fine‑grained soils, so these parameters must be tracked to ensure compactive effort is applied at the correct moisture condition [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania Department of Transportation specifications require continuous monitoring of in‑place moisture content and dry density with a nuclear gauge calibrated per AASHTO T310, where gauges must be calibrated every 12 months and daily standardization recorded [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For embankment and fill placement (Section 206), the moisture content shall be maintained within minus 3 % of optimum for soil and plus or minus 2 % of optimum for Type 1 granular material, while the target density must meet acceptance limits of at least 97 % of the maximum dry density for most lifts and 100 % for the top three feet [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Lift thicknesses are limited to six inches, compaction equipment speed shall not exceed 1.5 feet per second and a minimum pass time of six seconds is required; after each pass the compacted layer is inspected for stability such that any rutting, displacement or shear wave triggers re‑drying, moistening, reshaping, recompaction and retesting [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Verification testing by an independent gauge on one of the first three acceptance tests and at least every ten thereafter must fall within ±2.0 lb/ft³ for wet density and within ±0.8 % for moisture; if verification or acceptance fails, gauge standards are to be checked against reference blocks and any non‑conforming gauge repaired or replaced before work proceeds [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For cold‑recycled asphalt base course (Section 341), the contractor shall monitor the target density specified by PTM No. 402 and verify that each compacted layer reaches at least 96 % of that target; in‑place density is measured for every 3,000‑square‑yard area using AASHTO T310 and any zone falling below the minimum triggers scarifying, moisture adjustment and recompaction, while moisture content is tracked so that curing continues until the average moisture content drops below 2 % before a wearing or binder course can be placed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Special rolling operations (Section 208) also require continuous monitoring of in‑place moisture content and dry density relative to the specified maximum dry density; material must be compacted to at least 97 % of the maximum dry density for embankment foundations deeper than three feet and to 100 % for structure foundations, subgrades or any layer within three feet of the proposed subgrade elevation, with moisture maintained between minus 3 % of optimum moisture content and the optimum value [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After each compaction pass, in‑place moisture and density are checked at several random locations using AASHTO T191 or AASHTO T310; work proceeds only when the measured moisture‑density increase is no more than 1 % over three consecutive passes and the material appears stable, and any excess moisture must be removed by disking, scarifying or other means before further compaction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The specifications also call for monitoring of lift thickness, equipment speed, gauge calibration tolerances, layer stability, curing moisture levels, and corrective actions such as reshaping, re‑drying, recompaction, or replacement when required to maintain consistent maximum dry density quality [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=4d613102 src=pub_242_change_10::tab:p143#1 -->
+<p>The table below presents typical ranges for compacted dry unit weight and optimum moisture content by AASHTO soil classification.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-maximum-dry-density-1-cap" tabindex="0"><table class="ct-table" id="ct-maximum-dry-density-1" aria-describedby="ct-maximum-dry-density-1-sum">
+<caption id="ct-maximum-dry-density-1-cap">TABLE 6.1TYPICAL COMPACTED DRY DENSITY AND OPTIMUM MOISTURE CONTENT RANGES OF SOILS (BASED ON FHWA NHI-05-037)</caption>
+<thead>
+<tr><th scope="col">AASHTO SOILCLASSIFICATION</th><th scope="col">COMPACTEDDRY UNIT WEIGHT(lb/ft³)</th><th scope="col">OPTIMUMMOISTURE CONTENT(%)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">A-1</th><td>115-134</td><td>5-15</td></tr>
+<tr><th scope="row">A-2</th><td>109-134</td><td>9-18</td></tr>
+<tr><th scope="row">A-3</th><td>100-119</td><td>5-12</td></tr>
+<tr><th scope="row">A-4</th><td>94-125</td><td>10-20</td></tr>
+<tr><th scope="row">A-5</th><td>84-100</td><td>20-35</td></tr>
+<tr><th scope="row">A-6</th><td>94-119</td><td>10-30</td></tr>
+<tr><th scope="row">A-7</th><td>81-115</td><td>15-35</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-maximum-dry-density-1-sum">Rows list AASHTO soil classifications, columns give ranges for compacted dry unit weight and optimum moisture content.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 143.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 141–143); [2] — SECTION 200 EARTHWORK (pp. 146–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<p>For embankment and fill placement (Section 206), when field density tests show the in‑place dry density falling below the specified thresholds—less than 97 % of the maximum dry density for soil lifts and less than 100 % for the top three feet—or when moisture measurements are outside the allowed range—soil more than -3 % from optimum or Type 1 granular material beyond ±2 % of optimum—or when visual signs such as rutting, displacement or a shear wave appear during compaction, the crew must adjust the process by drying, reshaping, recompacting and retesting the material to satisfy the moisture‑and‑density requirements. When acceptance testing shows the compacted material does not meet the required density within the specified moisture limits, the contractor must promptly rework, reshape and recompact or replace the area and conduct an acceptance retest before moving on; if that retest still fails, the standard count of the acceptance test gauge shall be checked against its reference block and any gauge that does not meet calibration or daily standardization requirements must be diagnosed and repaired or replaced before work may proceed; should the gauges be functioning properly yet density remains unsatisfactory, a new moisture‑density test shall be performed to determine whether the material’s moisture‑density relationship has changed, and if it has, new target values for moisture and density must be established for all subsequent QC, acceptance and verification testing; any verification test that is not within ±2.0 pounds per cubic foot for wet density or within ±0.8w for moisture triggers gauge checks and immediate contact with the DME/DMM or District Compaction Supervisor before work can continue. For cold‑recycled asphalt base course (Section 341), when the in‑place density measured for each 3,000 sq yd area falls below the required minimum of 96 percent of the PTM 402 target density, the contractor must first attempt additional compaction; if that still does not meet the 96 percent threshold, the work must be scarified, the moisture content adjusted and re‑compacted; should the density remain below the minimum even after these steps—provided the base course is uniform in texture and stable—a new target density shall be established according to PTM No. 402 and the layer compacted again to at least 96 percent of that revised target, and the Representative may also call for a new target if the original minimum was achieved with only minimal compaction. During special rolling (Section 208), if after each compaction pass the in‑place moisture‑density values fail to increase by more than 1 % over three consecutive passes, or if a stable mass cannot be achieved because the material is too wet, the crew must dry by disking, scarifying, or other means and re‑compact before proceeding; any measured density that does not meet the required 97 % of maximum dry density for embankment foundations deeper than three feet, or the 100 % requirement for structure foundations, subgrades, or material within three feet of the proposed subgrade elevation, must also trigger corrective compaction actions; permanent deflection or rutting greater than ½ inch on existing subgrade or cut, or greater than 1 inch on embankment foundations, signals unsatisfactory stability and requires stabilization such as undercutting, replacement, or additional rolling. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=2261b226 src=408_2020_11::tab:p147#1 -->
+<p>The table below specifies the minimum quality control test frequencies for embankment, subgrade, and pipe backfill materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-maximum-dry-density-2-cap" tabindex="0"><table class="ct-table" id="ct-maximum-dry-density-2">
+<caption id="ct-maximum-dry-density-2-cap">Table A Minimum QC Test Frequency: Table AMinimum QC Test Frequency</caption>
+<thead>
+<tr><th scope="col">Material</th><th scope="col">Embankment or Fill</th><th scope="col">Subgrade*</th><th scope="col">Pipe Backfill</th></tr>
+</thead>
+<tbody>
+<tr><td>Start-upFrequency</td><td>One QC test per lift for each 500square yards placed; minimumsix tests per lift per day. Inlimited or restricted areas the testrate should not exceed the ratefor pipe backfill.</td><td>One QC test per lift foreach 400 square yardsplaced; minimum eighttests per lift per day.</td><td>For every pipe run conductone QC test for every 50cubic yards of pipe backfill;minimum two tests per liftper day.</td></tr>
+<tr><td>ProductionFrequency</td><td>One QC test per lift for each -3,000 square yards placed;minimum three tests per lift per</td><td>One QC test per lift foreach 1,600 square yards</td><td>For every pipe run conductone QC test for every 200cubic yards of pipe backfill;</td></tr>
+<tr><td></td><td>day. In limited or restricted areas the test rate should not exceed the rate for pipe backfill.</td><td>placed; minimum three tests per lift per day.</td><td>minimum two tests per lift per day.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: *Subgrade consists of the top 3 feet of the material immediately below the pavement section subbase.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 147.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 146–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<h2 id="nonconformance-and-corrective-action">Nonconformance and corrective action</h2>
+<p>If inspection or testing shows that the placed soil or granular material does not meet the required moisture‑content and density—i.e., it is below at least 97 % of the specified maximum dry density for most lifts or below 100 % for the top three feet—the Representative may require replacement of any damaged or displaced material, and the contractor must dry, reshape, recompact, and retest the affected area until it satisfies the moisture‑content and density requirements (Section 206). When acceptance testing indicates that the required density of the compacted material is not obtained, the contractor must promptly rework, reshape and recompact or remove and replace the damaged area and then perform an acceptance retest before placement or testing of another area; if that retest fails, the standard count of the acceptance test gauge on a reference standard block must be checked in accordance with PTM No. 418 or AASHTO T310, and any gauge not meeting calibration limits must be diagnosed, repaired or replaced before work may proceed (Section 206). If the gauge is functioning properly but density still cannot be achieved within the specified moisture limits, a new moisture‑density test shall be conducted according to PTM No. 106 to determine whether the moisture‑density relationship has changed; if it has, new target values are established, and if it has not, the contractor must review operations, make adjustments within specification requirements, and amend the QC Plan to obtain acceptable results (Section 206). When compaction testing under Section 341(c) shows that an area’s in‑place density—determined for each 3,000‑square‑yard segment per AASHTO T 310—is below the required minimum of 96 % of the PTM 402 target density, the contractor must first attempt additional compaction; if that does not achieve the minimum, the area is to be scarified, its moisture content adjusted, and re‑compacted. Should the density remain below the minimum even after those steps and the base course be uniform in texture and stable, a new target density is to be calculated according to PTM No. 402 and the material compacted again to at least 96 % of that revised target; the Representative may also require a new target density if they determine the original compaction was minimal, and if the completed base course is deemed unacceptable, construction must be stopped until the cause of the non‑conformance is corrected (Section 341). When compaction testing shows that material has not reached the required percentage of maximum dry density—97 % for embankment foundations or existing embankments more than three feet below the proposed subgrade, and 100 % for structure foundations, subgrades, or material within three feet of the proposed subgrade elevation—the crew must adjust moisture by drying (disking, scarifying, or other means) until it falls between minus 3 % of optimum moisture content and the optimum, then recompact to meet the density target. If a stability assessment records permanent deflection or rutting greater than ½ inch for existing subgrade or greater than 1 inch for embankment foundations, the subgrade is deemed unsatisfactory and must be stabilized either by additional compaction or by undercutting/excavating and replacing the material with approved fill as directed (Section 208). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 146–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<p>When the compacted material fails to meet the required density, work must be promptly reworked, reshaped and recompacted or removed and replaced before an acceptance retest is performed. If that acceptance retest still does not meet the specified requirements, the standard count of the acceptance gauge is checked on its reference block and the gauge repaired or replaced as needed; if the gauge functions properly but the density remains unsatisfactory, a new moisture‑density test is conducted to determine whether the material’s moisture‑density relationship has changed, and any revised target values are then used for QC, acceptance and verification testing, effectively adjusting the acceptance criteria. Verification tests that differ from the contractor’s results beyond the allowed ±2.0 lb/ft³ wet density or ±0.8w moisture tolerance require both gauges to be checked again and the Representative to contact the DME/DMM for further guidance before work can continue. For cold‑recycled asphalt base course, when the in‑place density of a 3,000‑square yard area determined according to AASHTO T 310 is less than the required minimum of 96 percent of the PTM No. 402 target density and additional compaction does not achieve that level, the work must be scarified, the moisture content adjusted, and re‑compacted. If a subsequent test still shows density below the minimum but the base course is uniform in texture and stable, a new target density shall be determined according to PTM No. 402 and the layer compacted again to at least 96 percent of that new target. The Representative may require a new target density when the Contractor achieved the minimum density with minimal compaction, prompting further review; if after these actions the completed base course is still deemed unacceptable, construction must be stopped and resumed only after correcting the cause of the unacceptable condition. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 146–149), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<h2 id="documentation-and-reporting">Documentation and reporting</h2>
+<p>According to the Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), the Maximum Dry Density documentation shall contain the results of the Moisture‑Density Test identified as PTM No. 106 that show both the maximum dry density and the optimum moisture content for each sample [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual requires that the documentation also include the soil classification per AASHTO M 145, gradation data, the percent passing the #200 sieve, Atterberg limits and the Group Index for every laboratory sample [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Sampling information required by the Pavement Policy Manual must record that three fifty‑pound bags of representative material were taken from cut, fill or at‑grade locations in order to capture site variability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. All laboratory results listed in the Maximum Dry Density file shall be certified by the PennDOT BOCM MD Laboratory Testing Section, and when California Bearing Ratio (CBR) values exceed 10 or fall below 5 they must be reviewed and approved by the District Geotechnical Engineer and the Chief Geotechnical Engineer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The corrective‑action portion of the Pavement Policy Manual states that verification shall confirm that CBR test results are supported by the companion laboratory tests, and if those results lie outside typical ranges further evaluation or subgrade improvement shall be undertaken [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania Department of Transportation Specification 408/2020 requires that inspection records for each lift record the material type, borrow source, compaction equipment, equipment speed not to exceed 1.5 ft/s and a minimum pass duration of 6 s, together with moisture‑content and in‑place dry‑density test results obtained according to PTM No. 106 and PTM No. 402 (direct transmission or backscatter as required) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For embankment foundations the recorded densities shall demonstrate that material below the top three feet achieves at least 97 % of the maximum dry density, while the upper three feet must reach 100 % of the maximum dry density, and moisture content shall be maintained within –3 % of optimum for soil or ±2 % of optimum for Type 1 granular material (surface damp for Type 2) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any observed rutting, displacement, shear‑wave response, or a measured density that fails to increase by more than 1 % over three consecutive passes shall trigger a corrective‑action entry documenting drying, reshaping, re‑compacting and retesting the affected area, with replacement of material recorded if judged necessary by the Representative [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The contractor must submit a compaction‑control quality‑control plan on Form CS‑206 for review, maintain a current annual calibration sheet for each nuclear density/moisture gauge, and record daily gauge standardization together with every moisture‑density test result and any acceptance retest on Form TR‑4276AC; all acceptance testing performed at the frequencies listed in Table B shall also be entered on that form [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Independent verification tests performed by the Representative are to be recorded on Form TR‑4276AD, and when results fall outside ±2.0 pounds per cubic foot for wet density or within ±0.8 w for moisture tolerances corrective measures shall be documented [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The assigned compaction‑control technician is required to hold a valid nuclear gauge operator certification, and any failed acceptance retest shall prompt a check of the gauge standard count, possible recalibration, and documentation of re‑work, reshaping or replacement before further testing proceeds [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During cold‑recycled asphalt base course (CRABC) compaction, inspection records must include the target density derived from PTM 402 and the measured in‑place density for each 3,000‑square‑yard segment as determined by AASHTO T 310; results are to be compared with a required minimum of 96 % of the PTM 402 target density, and any segment falling below that threshold shall be logged together with corrective actions such as scarifying, adjusting moisture content, re‑compacting, or establishing a new PTM 402 target density and compacting to at least 96 % of the new target [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The Maximum Dry Density documentation shall also record in‑place moisture‑density test results taken after each compaction pass at several predetermined random locations using AASHTO T191 or AASHTO T310, indicating whether the achieved density meets the required 97 % of maximum dry density for embankment foundations (or deeper existing embankments) or the 100 % requirement for structure foundations, subgrades and material within three feet of the proposed subgrade elevation, and confirming that moisture content lies between minus 3 % of optimum and optimum [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If permanent deflection exceeds the specified limits—greater than ½ inch for subgrade or greater than 1 inch for embankments—the records shall capture corrective actions such as undercutting to the prescribed depth, installing geotextile and back‑filling as directed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All sampling locations, test methods, acceptance thresholds and any stabilization measures taken are required to be logged as part of the inspection record [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 6 (pp. 141–143); [2] — SECTION 200 EARTHWORK (pp. 146–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<p>For Section 206—Placement and Compaction of Embankment and Fill, quality records for maximum dry density compaction must be documented on the prescribed forms—Form CS‑206 for the compaction control QC Plan submitted to the Representative before placement, Form TR‑4276AC for daily gauge standardization and all moisture‑density test results, and Form TR‑4276AD for each verification test. The Representative reviews the QC plan at pre‑construction and examines acceptance and verification results, comparing verification readings to the contractor’s values and ensuring they fall within ±2.0 pcf wet density and ±0.8w moisture; any discrepancy triggers gauge calibration checks, re‑testing or amendment of the QC plan. These records support acceptance by confirming that required density at the optimal moisture content has been achieved and provide a traceable basis for corrective actions such as rework, reshaping, or updating target moisture‑density relationships, thereby informing future performance evaluation.</p>
+<p>For Section 341—Cold Recycled Asphalt Base Course, Cold‑In‑Place, the contractor must determine the in‑place density using AASHTO T 310 and record that value as a quality record. The recorded density is then reviewed against the requirement to achieve at least 96 percent of the PTM 402 target density; if it falls short, the reviewer directs scarifying, moisture adjustment and re‑compaction, or, when necessary, a recalculation of a new PTM 402 target density followed by compaction to 96 percent of that new target. Acceptance is granted only when the recorded densities meet the 96 percent threshold, and any corrective actions taken are documented for future performance evaluation.</p>
+<p>For Section 208—Special Rolling, quality records shall capture the in‑place moisture and density values measured after each compaction pass using AASHTO T191 or AASHTO 310, and must indicate whether the achieved density meets the required percentage of maximum dry density—97 % for embankment foundations deeper than three feet and 100 % for structure foundations, subgrades, or material within three feet of the proposed subgrade elevation—as well as the moisture content range between minus 3 % of optimum moisture content and optimum moisture content. The records must also note any occurrence where the measured moisture density does not increase by more than 1 % over three consecutive passes, which triggers corrective actions such as drying (by disking, scarifying, or other means) and recompaction before special rolling can proceed. Review by the Representative shall compare these documented values against the acceptance thresholds; if permanent deflection exceeds ½ inch for existing subgrade or 1 inch for embankments, the Representative shall deem stability unsatisfactory and require stabilization measures such as undercutting and replacement. The compiled records therefore support acceptance of the compaction work and provide a baseline for future performance evaluation by demonstrating compliance with density, moisture, and deflection criteria and any corrective actions taken. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 146–165), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<h2 id="relationship-to-long-term-performance">Relationship to long-term performance</h2>
+<p>According to SECTION 206—PLACEMENT AND COMPACTION OF EMBANKMENT AND FILL, each soil lift must be compacted to at least 97 % of the maximum dry density and the top three feet must reach 100 % of the maximum dry density while moisture is kept within the optimum range; when these tolerances are satisfied the material is required to be stable with no rutting, displacement or shear wave under compaction equipment, which directly demonstrates resistance to distress such as rutting or shoving. Likewise, SECTION 208—SPECIAL ROLLING requires that embankment foundations or existing embankments deeper than three feet be compacted to at least 97 % of the maximum dry density, and that structure foundations, subgrades and material within three feet of the proposed subgrade elevation be compacted to 100 % of the maximum dry density with moisture content between minus 3 % of optimum moisture content and optimum moisture content. In‑place moisture‑density values are checked after each compaction pass using AASHTO T191 or AASHTO 310, and if the measured density does not increase by more than 1 % over three consecutive passes and the material appears stable, special rolling may proceed; otherwise the material must be dried and recompacted. Stability is judged by permanent deflection or rutting—more than ½ inch for existing subgrade or more than 1 inch for embankment foundations indicates unsatisfactory stability, which would lead to distress and reduced service life if not corrected, prompting undercutting, replacement and re‑compaction. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 149–165)</small></p>
+<p>After construction of embankments or fills, the Representative may require post‑construction verification that the compacted material continues to satisfy the moisture and density tolerances by determining the in‑place dry density according to PTM No. 402 using the direct transmission method or backscatter when appropriate and confirming it remains within the specified percentages of maximum dry density—at least 97 percent for all but the top three feet and 100 percent for the top three feet—and within the required moisture range (‑3 percent of optimum for soil, ±2 percent for Type 1 granular). If any rutting, displacement or shear wave is observed, the affected area must be dried, reshaped, re‑compacted and retested for moisture and density requirements. For cold‑recycled asphalt base courses, the contractor must verify that the achieved density meets the required target by determining the in‑place density of each 3 000‑square‑yard area using AASHTO T 310 and confirming it reaches at least a minimum density of 96 percent of the PTM 402 target density; if an area falls below this level and further compaction cannot meet the minimum, the specification calls for scarifying, adjusting moisture content, and re‑compacting or establishing a new target density. In addition, before any wearing or binder course is installed the cured material must be dry‑cut or dry‑extracted from at least three randomly selected locations (each sample at least 1 200 g) and the average moisture content must be less than 2 percent, with core holes backfilled and compacted. Finally, surface tolerance is checked on a 3 000‑square‑yard area at three spots using a 12‑foot straight edge, and any section where the average of the maximum space exceeds 1/2 inch must be corrected. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 149–151), SECTION 300 BASE COURSES (pp. 216–217)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

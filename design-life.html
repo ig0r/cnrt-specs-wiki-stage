@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Life</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html" class="active" aria-current="page">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Design Life</span></nav>
+<article><h1>Design Life</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Design Life is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Design Life is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=design-life">design-life</a><a class="tag" href="index.html?q=design-period">design-period</a><a class="tag" href="index.html?q=20-year-design-life">20-year-design-life</a><a class="tag" href="index.html?q=design-year">design-year</a><a class="tag" href="index.html?q=structural-design-life">structural-design-life</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>Design Life is the defined performance period during which a pavement must stay in acceptable condition before reaching its terminal serviceability and requiring major rehabilitation, serving as the time horizon for calculating traffic loads, frost‑heave effects, and structural requirements[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In practice a 20‑year design life is assumed for Superpave asphalt courses, roller‑compacted concrete on local and collector roads (with a 1.0 % annual traffic growth rate), and overlay projects, allowing the designer to compute equivalent single axle loads, set terminal serviceability indices (e.g., 2.5 for collectors, 2.0 for locals) and reliability targets (90 %/85 %) that govern slab thickness, mix selection, and allowable cracking percentages[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The design life thus links traffic projections, material properties, environmental factors such as frost‑heave, and prescribed minimum/maximum structural lifespans (8–20 years for overlays) to ensure the pavement meets durability, ride quality, and safety objectives throughout its intended service period[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Design Life is employed to define a performance period over which a pavement must remain in acceptable condition before reaching terminal serviceability and requiring major rehabilitation. For Superpave paving courses, a 20‑year design life ESAL count establishes the expected traffic loading rate, allowing the volumetric mixture design to resist permanent deformation (rutting) and low‑temperature thermal cracking throughout that period. In roller‑compacted concrete designs for local and collector roads with ADT ≤ 2000, assuming a 20‑year design life together with a 1.0 % traffic growth rate permits calculation of the minimum slab depth needed to achieve the specified terminal serviceability (2.5 for collector roads, 2.0 for local roads) at a reliability of 90 %, while allowing up to 15 % of slabs to crack at the end of the life. For frost‑heave considerations, design life serves as the time horizon used to estimate the loss of serviceability so that the terminal serviceability requirement can be satisfied during the intended years of operation. In overlay projects, specifying a minimum 8‑year and maximum 20‑year structural design life ensures that the new surface maintains adequate structural capacity, ride quality, and friction, thereby preventing premature rehabilitation when existing pavements are structurally inadequate, provide poor ride, or exhibit low friction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 7 (pp. 154–157), Ch. 8 (pp. 166–167), Ch. 9 (pp. 168–169), Ch. 10 (pp. 176–177)</small></p>
+<p>In the context of roller‑compacted concrete (RCC) pavements on local and collector roads with an average daily traffic not exceeding two thousand vehicles, the design life is required to be twenty years while assuming a one‑point‑zero percent annual traffic growth. The design must limit slab cracking to no more than fifteen percent at the end of that period, achieve a terminal serviceability index of two point five for collector routes and two point zero for local routes, and meet reliability targets of ninety percent and eighty‑five percent respectively. Structural thickness is derived from the subgrade resilient modulus and one‑way average daily truck traffic using a six‑inch unbound granular subbase as the supporting layer. For overlay designs, the structural design life must achieve at least eight years and shall not exceed twenty years, which constitutes the explicit structural objective in the overlay design criteria; no additional functional, durability, safety, or serviceability objectives are specified. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 166–167), Ch. 10 (pp. 176–177)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Design Life considerations for roller‑compacted concrete (RCC) are appropriate when the pavement is intended as a concrete pavement, a concrete shoulder, or a concrete base course and the project meets an average daily traffic of less than or equal to 2,000 vehicles and a speed limit of 55 mph or less; under these conditions RCC may be used on local and collector roads, as shoulders adjacent to reinforced or plain cement concrete pavements, for temporary median crossovers or widening areas during construction, or as a final wearing course or base course beneath an asphalt wearing surface, and the typical design life is estimated to be 20 years. Design Life is applied to RCC pavement designs for local and collector roads that have an average daily traffic of 2,000 vehicles or fewer; in these applications the design assumes a 20‑year design life with a 1.0 % traffic growth rate, incorporates a 6‑inch unbound granular subbase, and uses a terminal serviceability of 2.5 with a reliability of 90 % for collector roads and a terminal serviceability of 2.0 with a reliability of 85 % for local roads. The 20‑year design life is applied when calculating the equivalent single axle loads for any Superpave asphalt concrete course—wearing, binder or base layers—and must be used for every project, even pavement‑preservation work, regardless of the actual service life anticipated. Design Life is applied when designing full‑depth flexible pavements; the approach uses the terminal serviceability index together with any loss of serviceability caused by frost heave, and the design life appears as the time axis on the frost‑heave serviceability charts used for projects such as Interstates that may be subject to frost heave. Design Life is applied in overlay projects that aim to improve ride quality, correct suspected structural deficiencies, or remedy low‑friction conditions, covering overlays on existing asphalt concrete, fractured Portland cement concrete slabs, plain PCC slabs, and composite AC/PCC pavements, including both bonded and unbonded concrete overlays as defined by the seven DARWin overlay types, and for these resurfacing or overlay treatments the structural design life shall be at least 8 years and shall not exceed 20 years. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–113), Ch. 8 (pp. 166–167), Ch. 9 (pp. 168–169), Ch. 10 (pp. 176–177)</small></p>
+<p>When a project involves new construction on collectors or local roads, the Simple Method can be used instead of the rigorous traffic‑load calculation provided that the layer thicknesses obtained with the Simple Method do not exceed the minimum layer thicknesses for that roadway type; if those limits are exceeded, the Rigorous Method must be employed. The Simple Method is also acceptable for rehabilitation projects as long as the required structural capacity does not surpass the existing pavement’s capacity, otherwise the rigorous ESAL evaluation is required. For cross routes that interchange with limited‑access freeways, the Simple (or minimum) design values may be used only if the projected design‑year ADT is 8,000 or less; a higher ADT forces use of the Rigorous Method. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 7 (pp. 154–157)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>For the roller‑compacted concrete designs the information required includes a 20‑year design life with a 1.0% annual traffic growth rate, one‑way average daily truck traffic (ADTT) for the road type, the subgrade resilient modulus MRSG calculated as 1,500 × CBR, and a 6‑inch unbound granular subbase layer; the designs also rely on standard PennDOT values for PCC pavement design as existing‑condition inputs and apply terminal serviceability values (2.5 for collector roads, 2.0 for local roads) together with reliability targets (90% for collectors, 85% for locals). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 166–167)</small></p>
+<p>The design life for roller compacted concrete (RCC) pavements is governed by PennDOT Publication 408 specifications, specifically Sections 323, 502, and 658, together with the concrete‑pavement design procedures in Chapter 8 of this Manual and joint‑spacing rules from Publication 72M, Roadway Construction Standards, RC‑27M. RCC may only be placed on roadways whose average daily traffic does not exceed 2,000 vehicles and whose speed limit does not exceed 55 mph; if the surface is exposed and the speed limit is 35 mph or greater the surface must be diamond‑ground, and under these constraints a typical design life for RCC is estimated to be twenty years. For RCC designs on local and collector roads with an ADT of 2,000 or less, the design life is governed by a twenty‑year service period as prescribed in the standard PennDOT values for PCC pavement design found in Chapter 8 and applied using ACPA StreetPave12 software; the analysis assumes a traffic growth rate of 1.0 %, permits up to 15 % slab cracking at the end of service, and applies terminal serviceability limits of 2.5 with a reliability of 90 % for collector roads and 2.0 with a reliability of 85 % for local roads. The Superpave paving course guidelines state that the design life governing pavement performance is a twenty‑year period; all equivalent single axle loads (ESALs) must be calculated using a twenty‑year design life and applied in the volumetric mixture design even when the anticipated service life is shorter, and the resulting ESAL values place the project into one of five load ranges that determine the required PG binder and other mix specifications. The guidelines also recommend that most projects should have no more than three individual mix designs per project, while major projects should not exceed five individual mix designs. Under the Traffic Analysis for Pavement Design (Chapter 7, Section 7.1) the performance period is defined as the time an initial or rehabilitated pavement will last before reaching its terminal serviceability, and the required traffic inputs—average daily traffic, lane count, truck percentages (100 % for two‑lane highways, 90 % for four‑lane, 80 % for six‑lane or more), directional distribution factor (default 50 % unless directed otherwise) and growth rates—must be supplied by the Bureau of Planning and Research or obtained from the Roadway Management System and entered into DARWin’s Rigorous ESAL calculation method. The Simple Method may be used on collectors and local roads only if the resulting pavement layer thicknesses do not exceed the minimum thicknesses for that roadway type; otherwise the Rigorous Method must be applied, and the Simple Method must not be used on any roadways other than collectors and local roads. Cross routes with direct access to limited‑access freeways must use the Rigorous Method when the design‑year ADT exceeds 8 000. For full‑depth flexible pavement design the design life is governed by the 1993 AASHTO Guide for Design of Pavement Structures, Appendix G Section G.2 Frost Heave, which requires that the loss of serviceability due to frost heave be determined and added to the terminal serviceability value taken from Table 6.3; the required frost‑heave inputs are a Frost Heave Rate that should be obtained from Table 9.1 or Table 9.2, a Maximum Potential Serviceability Loss derived from the Design Freezing Index using Figure 9.1 and Figure G.7, and a Frost Heave Probability that uses the recommended range of 25 %‑75 %; these three factors are plotted on Figure G.8 with the design life in years forming the vertical axis. According to Chapter 10 General, any pavement overlay design shall have a structural design life that does not fall below eight years and must not exceed twenty years; the design must be based on adequate and accurate traffic information—including current ADT, projected growth, and truck percentage—and the determination of the design daily 18‑kip ESALs must follow Chapter 7. Each overlay design also requires completion of Form D‑4332 for PDAU concurrence and FHWA approval where applicable. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–113), Ch. 7 (pp. 154–157), Ch. 8 (pp. 166–167), Ch. 9 (pp. 168–169), Ch. 10 (pp. 176–177)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>For Superpave paving courses the design ESALs are calculated using a 20‑year design life; the resulting 20‑year ESAL value is placed into one of five predefined ranges (&lt; 0.3 million, 0.3 to &lt; 3.0 million, 3.0 to &lt; 10.0 million, 10.0 to &lt; 30.0 million, ≥ 30.0 million) which must be specified in the item numbers and drive the Superpave volumetric asphalt mixture design that incorporates the selected PG‑binder grade and performance prediction models for rutting and thermal cracking. When the estimated ESAL range is greater than 10 million ESALs the District should specify a polymer modified (PG 64E‑22) binder for wearing courses, whereas lower ranges may allow alternative specifications; for mix designs under certain quantity limits the ESAL range may be shifted up or down by one range to reduce the number of mixes. Design Life analysis requires determining the total 18‑kip equivalent single axle loads over the performance period by applying the Rigorous ESAL Calculation method in DARWin, which must incorporate inputs such as ADT, lane count, truck percentages, directional factor, vehicle classification shares, annual traffic growth and average initial truck factors using a compound growth rate; the compound growth rate calculation method in DARWin must be used. For collectors and local roads the Simple Method may be used only when the pavement layer thicknesses obtained with that method do not exceed the minimum thicknesses for the appropriate roadway type, and if those limits are exceeded the daily 18‑kip ESALs must be evaluated using the Rigorous Method; the Simple Method requires a 0 % annual truck factor growth rate. On cross routes that interchange with limited‑access freeways, if the design year ADT exceeds 8 000 then the Rigorous Method must be used to calculate the daily 18‑kip ESALs. For roller‑compacted concrete on local and collector roads with an ADT ≤ 2000 the Design Life is incorporated by assuming a 20‑year service period and applying a 1.0 % traffic growth rate while using the ACPA StreetPave12 software to compute the required RCC thickness based on subgrade support; the procedure calculates the subgrade resilient modulus as MRSG = 1500 × CBR, employs one‑way average daily truck traffic for both collector and local roads, and applies a terminal serviceability of 2.5 with 90 % reliability for collectors or 2.0 with 85 % reliability for locals to determine the minimum pavement depth. In full‑depth flexible pavement design the Design Life enters as the time variable t on the AASHTO frost‑heave serviceability chart; the procedure begins by drawing a vertical line at the number of years equal to the design life and then uses the frost‑heave rate, the maximum potential serviceability loss derived from the Design Freezing Index via the referenced figures, and an assumed frost‑heave probability in the recommended range of 25 %–75 % to trace horizontal and vertical lines on Figure G.8 to obtain the ΔPSI_FH loss; the required frost‑heave rate is taken from Table 9.1 or Table 9.2, and a Frost Heave spreadsheet tool provided on the PennDOT PDAU website may be used to automate these steps. In overlay projects the structural design life is limited to a minimum of 8 years and a maximum of 20 years; the design must first incorporate accurate traffic inputs—current ADT, projected growth and truck percentage—to compute the daily 18‑kip ESALs in accordance with Chapter 7, after which the resulting ESALs are entered into DARWin, which applies the 1993 AASHTO Pavement Design Procedures for the seven allowable overlay types. When a bonded concrete overlay is specified the thickness is obtained with the BCOA‑ME mechanistic‑empirical design procedure developed under FHWA research, and all required data and calculations are documented on Form D‑4332 for PDAU concurrence. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 7 (pp. 154–157), Ch. 8 (pp. 166–167), Ch. 9 (pp. 168–169), Ch. 10 (pp. 176–177)</small></p>
+<p>The design life for Superpave paving courses is assumed to be a 20‑year period; all design equivalent single axle loads (ESALs) must be calculated using that 20‑year design life even when the anticipated service life is shorter, and the resulting 20‑year ESAL total is placed into one of five predefined ranges (&lt; 0.3 million, 0.3–&lt; 3.0 million, 3.0–&lt; 10.0 million, 10.0–&lt; 30.0 million, ≥ 30.0 million ESALs). Projects whose estimated range is greater than 10 million ESALs are required to specify a polymer modified (PG 64E‑22) binder for the wearing course. The Design Life, referred to as the performance period, is defined as the time an initial or rehabilitated pavement will last before reaching its terminal serviceability; to satisfy this period the traffic loading must be calculated with the rigorous 18‑kip ESAL method using the ADT at opening, the number of lanes in the design direction, and lane‑specific truck percentages (100 % for two‑lane highways, 90 % for four‑lane highways, 80 % for six or more lanes). A directional distribution factor of 50 % is applied unless directed otherwise, and annual growth rates for total traffic and truck factor are assumed equal across vehicle classes with a default 0 % growth in truck factor unless evidence justifies a different rate. For cross routes where the projected design‑year ADT exceeds 8,000, the rigorous method must be used rather than the simple method, which may only be applied when resulting layer thicknesses do not exceed minimum values. For roller‑compacted concrete designs on local and collector roads with an ADT ≤ 2,000 a 20‑year design life is assumed together with a 1.0 % traffic growth rate and a 6‑inch unbound granular subbase layer; the design permits up to 15 % of slabs to crack by the end of that period. The design criteria require a terminal serviceability of 2.5 and a reliability of 90 % for collector roads, and a terminal serviceability of 2.0 and a reliability of 85 % for local roads. In full‑depth flexible pavement design the design life is used as the time variable on the frost‑heave serviceability loss chart, so the vertical line drawn for t must equal the number of years specified as the design life; when estimating that loss the frost‑heave probability applied must be chosen within the recommended range of 25 %–75 %. All overlay designs must be designed for a minimum 8‑year structural design life and a maximum of 20 years; to satisfy this, the designer shall use adequate and accurate traffic information—including current ADT, projected growth, and truck percentage—as the basis for design. The resulting daily 18‑kip ESALs shall be determined in accordance with Chapter 7, and Form D‑4332 must be completed and submitted for concurrence and FHWA approval. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 7 (pp. 154–157), Ch. 8 (pp. 166–167), Ch. 9 (pp. 168–169), Ch. 10 (pp. 176–177)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>For the RCC designs described in Chapter 8, a 20‑year design life assumes a 6‑inch unbound granular subbase and determines the required slab thickness from tables that give the minimum RCC pavement depth without a supported edge; if a supported edge (curb‑and‑gutter or widened lane) is provided, the slab thickness may be reduced by 1 inch. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (pp. 166–167)</small></p>
+<p>Thicknesses for RCC pavement are determined by applying the current PennDOT concrete pavement design procedures (Chapter 8, Section 8.15), which allow a design thickness ranging from 4 inches to 18 inches and consider the expected compressive strength of the mix. Joint spacing is governed by the pavement thickness: when the RCC slab is less than 8 inches thick, control joints are spaced between 15 feet and 20 feet; for slabs 8 inches or greater, the spacing equals the thickness multiplied by 2.5 feet, and for shoulder sections the joints must align with the spacing and alignment of the adjacent concrete mainline. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>For roller‑compacted concrete pavements covered by Section 4.11, the Design Life specification must identify the concrete constituents—cement, aggregate and water—and it requires a low water‑to‑cement ratio that may be as low as 0.30 but typically 0.40. The mix shall employ a dense aggregate gradation with a maximum aggregate size less than 1 inch; air entrainment may or may not be used and admixtures are limited. The specification should set the target compressive strength of the hardened concrete between 4,000 psi and 10,000 psi, and it may allow a pavement thickness that can range from 4 inches to 18 inches. Under the Superpave system described in Section 5.9, a 20‑year design life obliges the designer to specify the performance‑grade (PG) binder required for the project and to calculate the corresponding ESAL range that will be recorded in the item numbers and descriptions; the PG‑binder selection follows Section 5.10/Table 5.5. When an Asphalt Rich Base Course is used, the mix must have a nominal maximum aggregate size of 25.0 mm and be designed to contain air voids of 2.5%, and it is limited to ESAL mixes below 0.3 million. Fiber‑modified courses may only be employed with PG 58S‑28, PG 64S‑22 or PG 64E‑22 binders as indicated in the specifications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=efdd81eb src=pub_242_change_10::tab:p114#1 -->
+<p>The table below specifies PG binders for Superpave pavement courses based on project types and traffic conditions.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-design-life-1-cap" tabindex="0"><table class="ct-table" id="ct-design-life-1" aria-describedby="ct-design-life-1-sum">
+<caption id="ct-design-life-1-cap">TABLE 5.5 SELECTING PG-BINDERS FOR SUPERPAVE PAVEMENT COURSES</caption>
+<thead>
+<tr><th scope="col">PG-BINDER</th><th scope="col">PROJECT TYPES</th><th scope="col">ELIGIBLEPAVEMENTCOURSES</th><th scope="col">COST(STANDARDORPREMIUM)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">PG 58S-28</th><td>To be used in the northern half of the State{Districts 1-0, 2-0, 3-0, 4-0, 9-0, 10-0, 11-0,12-0, and 5-0 (Monroe, Carbon, &amp;Schuylkill Counties only)} under light trafficconditions and level or rolling terrain. Donot use in heavily trafficked intersections.Do not use on steep downgrades wheretraffic is under moderate to heavy braking.Do not use on steep upgrades where trucktraffic slows considerably. Use in situationswhere PG 58-22 was specified in the past.</td><td>WearingBinderBase</td><td>Standard(but may bedifficult toacquire)</td></tr>
+<tr><th scope="row">PG 64S-22</th><td>To be used in any part of the State undermost traffic conditions. Use in situationswhere PG 64-22 was specified in the past.</td><td>WearingBinderBaseLevelingScratch</td><td>Standard</td></tr>
+<tr><th scope="row">PG 64E-22</th><td>To be used in any part of the State underheavy traffic situations, at intersections, onsteep grades, or at locations where ruttinghas occurred in the past. Use isrecommended for projects that have anestimated ESAL range ≥ 10 million ESALs.Use in situations where polymer-modifiedasphalt (PMA) was specified in the past.</td><td>WearingBinder *</td><td>Premium</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-design-life-1-sum">Rows list specific PG-Binder types and their usage conditions. Columns provide details on project types, eligible pavement courses, and cost classification for each binder.</p>
+<p class="ct-notes">Notes: *Under extremely heavy traffic situations or locations where rutting has been a problem in the past, the District should specify the PG 64E-22 in both the Wearing Course and Binder Course.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 114.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–113)</small></p>
+<p>For roller‑compacted concrete pavements intended to achieve a typical 20‑year design life, the mixture is proportioned with a low water‑cement ratio— as low as 0.30 but typically 0.40— and a dense aggregate gradation whose maximum size is less than 1 inch; limited admixtures may be used and air entrainment may be omitted, producing compressive strengths from 4,000 psi to 10,000 psi that satisfy the structural demands of roadways with an ADT ≤ 2000 and speed limit ≤ 55 mph. The dry mix can be placed with a conventional or high‑density asphalt paver and compacted without forms, steel reinforcement, or dowel bars, which simplifies constructability; control joints are spaced 15–20 ft for sections thinner than 8 inches and at a spacing equal to 2.5 times the pavement thickness in feet for thicker sections to manage cracking, and overall pavement thickness is selected between 4 inches and 18 inches using PennDOT concrete design procedures. For Superpave paving courses the 20‑year design life is applied by first calculating the 20‑year ESALs for the segment; the resulting value is placed in one of five ESAL ranges recorded in the item description, and that range dictates the PG binder selection. When the estimated ESAL range exceeds ten million ESALs a polymer‑modified PG 64E‑22 binder shall be specified to avoid rutting, while lower ranges may use less severe binders. The number of distinct mix designs is limited—normally no more than three per project and not more than five for major projects—to control constructability; optional fiber‑modified courses may be used with PG 58S‑28, PG 64S‑22, or PG 64E‑22 binders on eligible courses. For new or reconstructed bases thicker than six inches an Asphalt Rich Base Course must be placed to provide tensile strength and resistance to bottom‑up cracking, thereby meeting structural and durability requirements over the 20‑year design life. In overlay designs that are required to meet a minimum 8‑year structural design life and a maximum of 20 years, adequate and accurate traffic information—including current ADT, projected growth and truck percentage—is used as the basis for design to determine daily 18‑kip ESALs. The appropriate asphalt material—leveling, wearing or base course—is then selected from Tables 10.1‑10.3 according to the highway’s ADT, and layer thickness is limited by the minimum and maximum values in Table 10.4; when an asphalt overlay is placed over cement concrete or brick pavement for the first time a minimum of 2½ inches of binder material shall be provided, and at least the minimum thickness indicated for the chosen wearing‑course material must be met. If a parking‑lane curb reveal condition exists the wearing course may be tapered to a 1‑inch depth at the curb but travel lanes must still meet the stated minima; any incompatibility with these requirements shall be consulted with the District Pavement Management Engineer/Manager. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=6c72902f src=pub_242_change_10::tab:p177#1 -->
+<p>The table below specifies the suitability of various leveling course materials for specific applications based on highway ADT.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-design-life-2-cap" tabindex="0"><table class="ct-table" id="ct-design-life-2" aria-describedby="ct-design-life-2-sum">
+<caption id="ct-design-life-2-cap">TABLE 10.1SUITABILITY OF LEVELING COURSE FOR SPECIFIC APPLICATIONS BASED ON HIGHWAY ADTTABLE 10.2</caption>
+<thead>
+<tr><td></td><th id="ct-design-life-2-h0-1" scope="col" colspan="8">LEVELING COURSE</th></tr>
+<tr><th id="ct-design-life-2-h1-0" scope="col">CURRENTADT</th><th id="ct-design-life-2-h1-1" scope="col">FB-1</th><th id="ct-design-life-2-h1-2" scope="col">FB-2</th><th id="ct-design-life-2-h1-3" scope="col">FJ-1, FJ-1C, SP 4.75 mm</th><th id="ct-design-life-2-h1-4" scope="col">SP6.3 mm</th><th id="ct-design-life-2-h1-5" scope="col">SP 9.5 mm FG</th><th id="ct-design-life-2-h1-6" scope="col">SP9.5 mm</th><th id="ct-design-life-2-h1-7" scope="col">SP12.5 mm</th><th id="ct-design-life-2-h1-8" scope="col">SP19.0 mm</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-design-life-2-h2-0" scope="row">0 - 800</th><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-1 ct-design-life-2-h2-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-2 ct-design-life-2-h2-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-3 ct-design-life-2-h2-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-4 ct-design-life-2-h2-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-5 ct-design-life-2-h2-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-6 ct-design-life-2-h2-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-7 ct-design-life-2-h2-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-8 ct-design-life-2-h2-0">Yes</td></tr>
+<tr><th id="ct-design-life-2-h3-0" scope="row">801 - 1,500</th><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-1 ct-design-life-2-h3-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-2 ct-design-life-2-h3-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-3 ct-design-life-2-h3-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-4 ct-design-life-2-h3-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-5 ct-design-life-2-h3-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-6 ct-design-life-2-h3-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-7 ct-design-life-2-h3-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-8 ct-design-life-2-h3-0">Yes</td></tr>
+<tr><th id="ct-design-life-2-h4-0" scope="row">1,501 - 3,000</th><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-1 ct-design-life-2-h4-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-2 ct-design-life-2-h4-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-3 ct-design-life-2-h4-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-4 ct-design-life-2-h4-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-5 ct-design-life-2-h4-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-6 ct-design-life-2-h4-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-7 ct-design-life-2-h4-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-8 ct-design-life-2-h4-0">Yes</td></tr>
+<tr><th id="ct-design-life-2-h5-0" scope="row">3,001 - 5,000</th><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-1 ct-design-life-2-h5-0">No</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-2 ct-design-life-2-h5-0">No</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-3 ct-design-life-2-h5-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-4 ct-design-life-2-h5-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-5 ct-design-life-2-h5-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-6 ct-design-life-2-h5-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-7 ct-design-life-2-h5-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-8 ct-design-life-2-h5-0">Yes</td></tr>
+<tr><th id="ct-design-life-2-h6-0" scope="row">5,001 - 12,000</th><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-1 ct-design-life-2-h6-0">No</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-2 ct-design-life-2-h6-0">No</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-3 ct-design-life-2-h6-0">*2</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-4 ct-design-life-2-h6-0">*2</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-5 ct-design-life-2-h6-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-6 ct-design-life-2-h6-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-7 ct-design-life-2-h6-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-8 ct-design-life-2-h6-0">Yes</td></tr>
+<tr><th id="ct-design-life-2-h7-0" scope="row">12,001 - 20,000</th><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-1 ct-design-life-2-h7-0">No</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-2 ct-design-life-2-h7-0">No</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-3 ct-design-life-2-h7-0">*2</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-4 ct-design-life-2-h7-0">*2</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-5 ct-design-life-2-h7-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-6 ct-design-life-2-h7-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-7 ct-design-life-2-h7-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-8 ct-design-life-2-h7-0">Yes</td></tr>
+<tr><th id="ct-design-life-2-h8-0" scope="row">Above 20,000</th><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-1 ct-design-life-2-h8-0">No</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-2 ct-design-life-2-h8-0">No</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-3 ct-design-life-2-h8-0">No</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-4 ct-design-life-2-h8-0">*2</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-5 ct-design-life-2-h8-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-6 ct-design-life-2-h8-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-7 ct-design-life-2-h8-0">Yes</td><td headers="ct-design-life-2-h0-1 ct-design-life-2-h1-8 ct-design-life-2-h8-0">Yes</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-design-life-2-sum">Rows list current ADT ranges, columns give suitability for specific leveling course types based on highway traffic volume.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 177.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 5 (pp. 111–113), Ch. 10 (pp. 176–177)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>For roller‑compacted concrete pavements the design life does not call for steel reinforcing or dowel bars and forms are unnecessary. The Department will require control joints in the shoulders to line up with the adjacent concrete mainline, and when joints are specified the plan must set spacing – for RCC less than 8 in thick the control joints are spaced 15 feet to 20 feet, while for RCC 8 in or greater the joint spacing equals the pavement thickness multiplied by 2.5 feet. No other reinforcement, load‑transfer systems, transitions, or connections are prescribed. For the RCC designs that adopt a 20‑year design life the pavement is specified as a non‑dowelled concrete slab with no explicit joint or reinforcement requirements; if a supported edge—defined as either a curb and gutter or a widened lane—is provided, the required slab thickness may be reduced by one inch. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 8 (pp. 166–167)</small></p>
+<p>The design life assumed for roller‑compacted concrete (RCC) pavements is typically 20 years, and the interface between the RCC layer and adjacent concrete or asphalt features is governed by joint placement and surface preparation. Control joints in the RCC shoulders should match up to the spacing and alignment of the adjoining mainline concrete pavement; for RCC pavements less than 8 inches thick the control‑joint spacing should be 15 feet to 20 feet, and for RCC pavements 8 inches or greater the spacing should equal the pavement thickness multiplied by 2.5 feet. When the RCC surface is exposed to traffic at a speed limit of 35 miles per hour or greater the pavement surface must be textured by diamond grinding before service, whereas if the RCC serves as a base course beneath an asphalt wearing course the RCC surface does not need diamond grinding before placing the asphalt wearing course or surface treatment. The subgrade and subbase must be prepared to support compaction of the RCC and are treated as separate construction items. Overlay designs are required to provide a minimum 8‑year structural design life and may extend to a maximum of 20 years, so the interface treatment must accommodate that service period. When asphalt is placed over cement concrete or brick pavements for the first time a minimum of 2 ½ inches of binder material is required, and the wearing‑course thickness follows the minima in Tables 10.4 and 10.5; if a parking lane with a critical curb reveal exists the wearing course may be tapered to a 1‑inch depth at the curb (only within the parking lane) and careful attention must be given to compaction in this area and to sealing the pavement/curb joint. For overlays that rely on bonding between concrete and existing asphalt, a bonded concrete overlay design procedure (BCOA‑ME) is required because the standard AASHTO method does not account for such bonding. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 10 (pp. 176–177)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>In Superpave design, a 20‑year design life is employed to calculate equivalent single axle loads (ESALs), and those ESAL values drive the selection of performance grade binders and mixture proportions that are intended to resist the climatic conditions at the project site, including thermal cracking and rutting. For moisture protection the specifications require an Asphalt Rich Base Course in base layers thicker than six inches, which provides moisture‑damage resistance throughout the service life; all ARBC materials are limited to less than 0.3 million ESAL (50 gyrations) mix designs with design air voids of 2.5 % to give the asphalt base course the highest tensile strength at the bottom of the pavement section, thereby promoting better resistance to bottom‑up cracking and moisture damage during its service life. For full‑depth flexible pavements the Design Life serves as the time axis on the frost‑heave serviceability chart, and the loss of serviceability due to frost heave is added to the terminal serviceability value. The loss must be determined using three factors: the frost‑heave rate, which shall be taken from Table 9.1 or Table 9.2 according to the subgrade soil type; the maximum potential serviceability loss, which is obtained by reading Figure G.7 with the depth of frost penetration derived from the Design Freezing Index and a FAIR drainage quality; and the frost‑heave probability, for which a recommended range of 25 %–75 % is used. By incorporating the design freezing index (climate), drainage quality (moisture) and soil frost‑heave characteristics, the environmental conditions are accounted for in the Design Life calculation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=a4ae668d src=pub_242_change_10::tab:p170#1 -->
+<p>The table below lists the estimated average rate of heave in mm/day for various subgrade soil classifications.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-design-life-3-cap" tabindex="0"><table class="ct-table" id="ct-design-life-3" aria-describedby="ct-design-life-3-sum">
+<caption id="ct-design-life-3-cap">TABLE 9.1 ESTIMATED AVERAGE RATE OF HEAVE (UNIFIED SOILS CLASSIFICATION SYSTEM)</caption>
+<thead>
+<tr><th scope="col">CLASSIFICATION OFSUBGRADE SOIL*</th><th scope="col">ESTIMATED AVERAGE RATEOF HEAVE(mm/day)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">GW</th><td>2</td></tr>
+<tr><th scope="row">GP</th><td>3</td></tr>
+<tr><th scope="row">GM</th><td>4</td></tr>
+<tr><th scope="row">GC</th><td>4</td></tr>
+<tr><th scope="row">GW -GM</th><td>4</td></tr>
+<tr><th scope="row">GW GC</th><td>3</td></tr>
+<tr><th scope="row">GP GM</th><td>4</td></tr>
+<tr><th scope="row">GP - GC</th><td>4</td></tr>
+<tr><th scope="row">GM - GC</th><td>5</td></tr>
+<tr><th scope="row">SW</th><td>3</td></tr>
+<tr><th scope="row">SP</th><td>1</td></tr>
+<tr><th scope="row">SM</th><td>7</td></tr>
+<tr><th scope="row">SC</th><td>5</td></tr>
+<tr><th scope="row">SW - SM</th><td>7</td></tr>
+<tr><th scope="row">SW - SC</th><td>4</td></tr>
+<tr><th scope="row">SP SM</th><td>7</td></tr>
+<tr><th scope="row">SP - SC</th><td>3</td></tr>
+<tr><th scope="row">SM SC</th><td>5</td></tr>
+<tr><th scope="row">ML</th><td>15 - 20</td></tr>
+<tr><th scope="row">CL</th><td>8</td></tr>
+<tr><th scope="row">OL</th><td>***</td></tr>
+<tr><th scope="row">MH</th><td>**</td></tr>
+<tr><th scope="row">CH</th><td>1</td></tr>
+<tr><th scope="row">OH</th><td>**</td></tr>
+<tr><th scope="row">ML-OL</th><td>** 15 -20</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-design-life-3-sum">Rows list soil classifications, columns give estimated average rate of heave in mm/day.</p>
+<p class="ct-notes">Notes: *For MFC A and MFC B pavement designs, this chart is to be used with laboratory classification of subgrade soils. For MFC C, MFC D, and MFC E pavement designs, laboratory classifications are not required (i.e., field classifications are acceptable).</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 170.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 9 (pp. 168–169)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>In section 4.11, the roller‑compacted concrete pavement guidelines estimate the design life for RCC to be 20 years; the lower water‑cement ratio mix may produce a higher compressive strength pavement than conventional concrete pavements, and the mix’s potential compressive strength range of 4,000 psi to 10,000 psi suggests a capacity for resisting distress, although no specific test method is prescribed. The ride quality result will vary depending on the equipment used during placement, and the guidance explicitly states: Do not select RCC pavements for locations where the International Roughness Index (IRI) will be measured to determine ride quality and payment incentives.</p>
+<p>In section 8.16, for roller‑compacted concrete designs on local and collector roads with an ADT ≤ 2000, a 20‑year design life is assumed together with a 1.0 % traffic growth rate; performance is judged by allowing for 15 % of slabs to crack at the end of the pavement’s life and by requiring a terminal serviceability index of 2.5 for collector roads and 2.0 for local roads, both evaluated using the standard PennDOT serviceability rating system, while reliability targets of 90 % (collector) and 85 % (local) are applied.</p>
+<p>In section 9.3, the design life for a full‑depth flexible pavement is expressed through the terminal serviceability value listed in Table 6.3 plus the calculated loss of serviceability due to frost heave; to use the chart, begin by drawing a vertical line corresponding to the time, t, which should equal the design life in years, then plot the project’s frost‑heave rate and the maximum potential serviceability loss derived from the depth of frost penetration calculated from the Design Freezing Index, and select a frost‑heave probability within the recommended range for frost heave probability (Pf) of 25 %–75 %; the resulting ΔPSIFH is subtracted from the base terminal serviceability to yield the final index, which serves as the quantitative measure of performance over the design life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99), Ch. 8 (pp. 166–167), Ch. 9 (pp. 168–169)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full Depth Reclamation</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html" class="active" aria-current="page">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="rehabilitation.html">Rehabilitation</a><span class="crumb-sep">›</span><span class="crumb-current">Full Depth Reclamation</span></nav>
+<article><h1>Full Depth Reclamation</h1>
+<div class="meta"><div class="part-of">Part of: <a href="rehabilitation.html">Rehabilitation</a> <span class="edge edge-taxonomic" title="Full Depth Reclamation is a topic under Rehabilitation.">is-subtopic-of</span></div><div class="edge-reading">Full Depth Reclamation is a topic under Rehabilitation.</div><div><a class="tag" href="index.html?q=full-depth-reclamation">full-depth-reclamation</a><a class="tag" href="index.html?q=full-depth-reclamation">full-depth-reclamation</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>Full Depth Reclamation (FDR) is a pavement rehabilitation process that uniformly crushes the entire flexible‑pavement section together with a predetermined portion of the underlying material, blends the pulverized aggregate with a stabilizing agent, and then places and compacts the mixture to form a new, well‑drained base layer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By pulverizing the deteriorated asphalt and weak base in a single pass, the technique eliminates existing distresses such as rutting, cracking, raveling, potholes and drainage deficiencies, while restoring structural strength, flexibility, proper cross‑slopes, and resistance to moisture‑induced damage and freeze‑thaw cycles [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The operation is carried out with a self‑propelled traveling rotary reclaimer capable of cutting up to 16 in. deep and reducing material to a maximum particle size of 2 in., automatically metering water and additives, after which the reclaimed mix is shaped by motor grading and compacted with appropriate rollers to achieve densities comparable to a standard 2A subbase [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Full Depth Reclamation is applied to deteriorated flexible pavements that would otherwise need conventional reconstruction because the existing material must be removed and disposed of; by uniformly crushing and pulverizing the full pavement depth plus a portion of the underlying layer into a stabilized base, FDR resolves structural or base failures in existing flexible pavements while conserving the in‑situ material. It is also applied to pavements that have become severely distressed, where a deteriorated asphalt layer and weak underlying base can cause reflective cracking or other pavement failures; the process pulverizes the entire asphalt section through to the base, mixes it with stabilizing agents, and compacts it into a new base, thereby eliminating existing distresses and restoring strength, flexibility, drainage, and proper cross‑slopes. In addition, FDR is indicated when a pavement’s support layers need improvement, typically signaled by severe rutting, cracking, raveling, potholes, or drainage problems that reflect underlying structural deficiencies; the reclaimed material is mixed with a stabilizing agent and compacted to create a well‑drained base capable of supporting future traffic loads. The treatment also remediates pavements vulnerable to freeze‑thaw damage, water‑induced deterioration, and insufficient fatigue performance by stabilizing the reclaimed material so it better resists these distress mechanisms. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 124–128)</small></p>
+<p>Full Depth Reclamation is employed primarily to rehabilitate severely distressed pavements by pulverizing the existing asphalt and underlying layers, mixing them with a stabilizer, and compacting the blend into a new base; this process restores the roadway’s functional performance and repairs the existing pavement damage by improving the support layers so that the rehabilitated road can again perform its intended function. In addition, the technique seeks to prevent the same distress mechanisms—such as rutting, cracking, potholes, raveling, and drainage problems—from causing future failure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress that Full Depth Reclamation seeks to remediate is primarily driven by excess moisture entering the pavement system, which erodes material integrity and reduces structural capacity, especially when drainage problems allow water to accumulate in the subgrade; this manifests as rutting, cracking, raveling, potholes and other drainage‑related failures. Inadequate support layers also contribute to these symptoms, prompting the need for a reclaimed base that restores sufficient structural strength. Distress is often driven by water infiltration that causes water‑related damage, repeated traffic loads that produce fatigue cracking, and freeze‑thaw cycling that degrades the reclaimed material. Using chlorides lowers the freezing temperature of the reclaimed mix, thereby reducing deterioration from freeze‑thaw cycles, while emulsified asphalt adds resistance to water‑related damage and improves fatigue resistance under loading. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–128)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Full Depth Reclamation is appropriate when the existing pavement shows support‑layer distress—such as rutting, cracking, raveling, potholes or drainage issues—that requires improvement of the base rather than only surface repair; the anticipated traffic loading falls within a range that can be accommodated by a design consistent with standard pavement design traffic analysis procedures; a recent pavement condition survey and in‑situ testing confirm the nature of the distress and provide adequate subgrade strength, while sufficient existing pavement thickness and suitable subgrade material are available to be incorporated into the reclaimed layer; and any site drainage deficiencies have been identified and corrected so that the reclaimed layer will rest on a well‑drained foundation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126)</small></p>
+<p>Full Depth Reclamation should be avoided when the pavement’s problems are primarily surface‑related rather than deficiencies in the support layers, because other rehabilitation methods will generally perform better for those distresses.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] It also should not be selected if a reliable traffic forecast, recent condition survey, adequate in‑situ subgrade testing and proper sampling cannot be obtained, or if existing drainage problems cannot be corrected before construction; in such cases an alternative maintenance, preservation, rehabilitation, or repair approach should be used.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Full Depth Reclamation must be withheld when weather conditions prevent proper curing or cause nuisance to nearby users, specifically if the air temperature falls—or is expected to fall—below 40 °F during the required seven‑day cure period.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The treatment also must not be placed if rain occurs or is forecast within two hours of completing placement.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Dry additive application should be avoided when wind conditions would make blowing dry additives objectionable to traffic or adjacent property owners.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Cement‑slurry mixes with accelerating admixtures must not be placed if the air temperature is projected to drop below 35 °F within the first twenty‑four hours after placement; otherwise an alternative maintenance, preservation, rehabilitation, or repair method should be selected.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 300 BASE COURSES (pp. 221–222)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>To decide if Full Depth Reclamation is appropriate and where it should be applied, an initial evaluation must gather traffic level estimates, a recent pavement condition survey documenting distress such as rutting, cracking, raveling, potholes and drainage problems, and in‑situ strength measurements using tests like the Falling Weight Deflectometer, dynamic cone penetrometer or light weight deflectometer. The distress survey also helps identify the mechanisms causing damage so they can be avoided in the reclaimed layer. In addition, a systematic sampling program that follows the prescribed number of locations, sample size, depth and handling procedures is required to characterize the existing pavement and subgrade materials before design. These inspections, measurements and tests together provide the information needed to assess layer thicknesses, drainage conditions and overall suitability of FDR. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126)</small></p>
+<p>Full Depth Reclamation is applied to pavements that are already distressed, and it is especially recommended when the distress reaches a severe level; under those conditions the existing asphalt and underlying layers are pulverized, stabilized, and compacted to form a renewed base capable of supporting further traffic. The treatment should be considered whenever the support layers—base or subgrade—require improvement rather than when surface‑related problems dominate, as indicated in Table 5.8, which identifies FDR as appropriate for situations where underlying deficiencies are present while other rehabilitation strategies are generally more effective for surface issues such as rutting, cracking, raveling, potholes, or drainage problems. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Full Depth Reclamation requires that the entire flexible pavement section together with a predetermined portion of the underlying material be uniformly crushed, pulverized, or blended to produce a stabilized base course (section 2.1 GENERAL) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The stabilization may involve mechanical binders, chemical additives such as calcium chloride, asphalt, cement, lime, or other agents, and can be achieved by mechanical, chemical, asphalt, or other processes (section 5.15 FULL DEPTH RECLAMATION TECHNIQUES) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the project mix design calls for it, imported aggregate or reclaimed asphalt pavement may be added to the pulverized material (SECTION 344—FULL DEPTH RECLAMATION &gt; 344.1 DESCRIPTION) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Pulverizing and mixing are performed with a self‑propelled traveling rotary reclaimer that must be capable of reducing pavement and subgrade to a maximum particle size of 2 in., cutting to depths of up to 16 in., and providing at least an 8‑ft working width while automatically metering water, dry or liquid additives, and emulsion (SECTION 344—FULL DEPTH RECLAMATION &gt; 344.3 CONSTRUCTION) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The reclaimer pulverizes the existing asphalt layer together with any underlying aggregate base or subgrade, after which motor graders shape the reclaimed mix to the required roadway grade (section 5.15 FULL DEPTH RECLAMATION TECHNIQUES) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The blended material is then placed to the specified depth and graded in accordance with the approved mix design before being compacted to form a new base layer ready for an asphalt overlay or surface treatment (SECTION 344—FULL DEPTH RECLAMATION &gt; 344.3 CONSTRUCTION) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For reclaimed layers less than 8 in deep that use an emulsion or foamed‑asphalt base, a pneumatic‑tire roller of 25 tons or greater must be employed for breakdown and intermediate rolling (SECTION 344—FULL DEPTH RECLAMATION &gt; 344.3 CONSTRUCTION) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the reclaimed depth is 8 in or more, initial breakdown shall be performed with a 25‑ton vibratory padfoot roller followed by finish rolling with a single or tandem steel‑drum static roller of 12 to 14 tons (SECTION 344—FULL DEPTH RECLAMATION &gt; 344.3 CONSTRUCTION) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Mechanical stabilization may add aggregate or RAP during pulverization to improve gradation, whereas chemical stabilization incorporates wet or dry additives such as Portland cement, lime, fly ash, or similar agents (section 5.15 FULL DEPTH RECLAMATION TECHNIQUES) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Pulverization stabilization relies only on the in‑place materials plus moisture (section 5.15 FULL DEPTH RECLAMATION TECHNIQUES) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The reclaimed layer thickness must be selected based on the composition of the existing pavement and subgrade, anticipated traffic loads, and environmental conditions, and any existing drainage problems must be identified and corrected before constructing the reclaimed layer (section 5.15 FULL DEPTH RECLAMATION TECHNIQUES &gt; B. Selection of Projects) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Calcium or magnesium chloride may be used as a stabilizing agent, generally applied as a minimum 35 % solution at a rate of 0.1–0.15 gallons per square yard for each inch of reclaimed depth (section 5.15 FULL DEPTH RECLAMATION TECHNIQUES) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Emulsified asphalt can also be incorporated according to the mix‑design procedures outlined in Bulletin 27, with rates, application methods, and quality‑control requirements detailed in the relevant Appendix J sections (section 5.15 FULL DEPTH RECLAMATION TECHNIQUES &gt; INTENTIONALLY BLANK) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<!-- concept-tabular:begin key=accdd0f4 src=408_2020_11::tab:p221#1 -->
+<p>The table below specifies the mix design procedures for primary stabilizing additive types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-full-depth-reclamation-1-cap" tabindex="0"><table class="ct-table" id="ct-full-depth-reclamation-1" aria-describedby="ct-full-depth-reclamation-1-sum">
+<caption id="ct-full-depth-reclamation-1-cap">TABLE AMix Design Procedure for Primary Stabilizing Additive Type</caption>
+<thead>
+<tr><th scope="col">Primary Stabilizing Additive</th><th scope="col">Mix Design Procedure</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Asphalt</th><td>Pub. 27 (Bulletin 27)</td></tr>
+<tr><th scope="row">Chemical (Portland Cement, Hydrated Lime,Supplementary Cementitious Material**&amp;Portland Cement Slurry)</th><td>Pub. 242 Appendix J.3</td></tr>
+<tr><th scope="row">Calcium Chloride</th><td>PTM No. 106 *, Pub. 242 Appendix J.3</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-full-depth-reclamation-1-sum">Rows list primary stabilizing additives while columns give their corresponding mix design procedures.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 221.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 124–128); [2] — SECTION 300 BASE COURSES (pp. 220–222)</small></p>
+<p>Full Depth Reclamation works by uniformly crushing the entire flexible pavement section together with a predetermined portion of the underlying material and blending it with a stabilizing agent, producing a reclaimed layer whose basic pulverization yields support characteristics comparable to a standard 2A subbase material [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The type of stabilization—mechanical, chemical, asphalt, calcium‑chloride or other processes—may affect the resulting structural capacity and structure‑layer coefficient, with chemical stabilization using cement, lime or similar additives providing stiffness equivalent to or slightly better than that achieved from asphalt material stabilization, while asphalt‑stabilized layers can generally be considered similar to existing layer coefficients for cold recycling [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Calcium chloride or magnesium chloride act as particle‑cementing agents that can increase strength and lower the freezing temperature, thereby improving freeze‑thaw resistance; they are generally applied as a minimum 35 % solution at a rate of 0.1 to 0.15 gal per square yard for each inch of depth reclaimed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When emulsified asphalt is used it improves resistance to water‑related damage and fatigue and works well with other additives such as granular materials, cement and lime, but the appropriate amount and type must be selected through the mix‑design process [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Stabilizer selection must match the project mix design, which may specify asphalt material, Portland cement, other chemical agents, or calcium chloride, and the reclaimed aggregate size shall not exceed 2 inches in greatest dimension as controlled by the reclaimer’s cutting drum and speed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Proper water proportioning relative to cut depth, width, and machine speed, as specified by the equipment’s integral liquid‑proportioning system, further influences the homogeneity and strength of the rebuilt base [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Placement must occur when air temperature will remain at least 40 °F for the required seven‑day cure period, and if a cement slurry with accelerating admixtures is used the temperature may not drop below 35 °F within the first 24 hours after placement; rain or wind conditions that could introduce moisture or blow dry additives are prohibited [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Existing pavement condition is critical because the pulverizing machine always penetrates completely through the asphalt layers into the underlying base layers, eliminating the potential for reflective cracking that would occur if a weak base remained and making the technique suitable for severely distressed pavements and for upgrading existing bases [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A thorough assessment of the existing pavement should consider traffic level, severity of distresses such as rutting, cracking, raveling, potholes and drainage problems, and in‑situ strength measurements from Falling Weight Deflectometer, Dynamic Cone Penetrometer or Light‑Weight Deflectometer testing that define subgrade stiffness [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Material properties of the reclaimed layer—including inherent strength potential, moisture content for compaction, gradation when additional aggregate or RAP is introduced, and type and amount of chemical stabilizer (cement, lime, fly ash)—must be compatible with the existing base and subgrade; increasing the amount of chemical stabilizer can generally increase strength but excessive amounts may result in brittleness [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Proper sampling depth and handling are required to verify these properties, and any excess moisture or poor drainage in the subgrade must be corrected before reclamation because water can degrade material integrity and structural capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<!-- concept-tabular:begin key=c85876f9 src=pub_242_change_10::tab:p127#1 -->
+<p>The table below presents a selection matrix for Full Depth Reclamation based on specific pavement distress types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-full-depth-reclamation-2-cap" tabindex="0"><table class="ct-table" id="ct-full-depth-reclamation-2">
+<caption id="ct-full-depth-reclamation-2-cap">TABLE 5.8 SELECTION OF FULL DEPTH RECLAMATION (FDR)</caption>
+<thead>
+<tr><th scope="col">PAVEMENT DISTRESS</th><th scope="col">FDR</th></tr>
+</thead>
+<tbody>
+<tr><td>Surface DefectsRavelingFlushingLow skid resistance</td><td></td></tr>
+<tr><td>DeformationCorrugationsLow RuttingModerate/High Rutting1</td><td>X 2,3</td></tr>
+<tr><td>Cracking (Load Associated)AlligatorLongitudinalWheel PathPavement EdgeSlippage</td><td>XXX</td></tr>
+<tr><td>Cracking (Non-Load Associated)Block (Shrinkage)Longitudinal (Joint)Transverse (Thermal)Reflection</td><td>XXX</td></tr>
+<tr><td>Maintenance PatchingSpraySkinPotholeFull Depth Replacement</td><td>X4X4X</td></tr>
+<tr><td>Weak Base or Subgrade</td><td>X</td></tr>
+<tr><td>Ride Quality/RoughnessGeneral UnevennessDepressions (Settlement)High Spots (Heaving)</td><td>X 5X6</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: 1 Rutting originating from the lower portion of the pavement (below surface course and including base and subgrade). 2 The addition of new aggregate may be required for unstable mixes. 3 The chemical stabilization of the subgrade may be required if the soil is soft, or wet. 4 In some instances, spray and skin patches may be removed by cold planing prior to these treatments (considered if very asphalt rich, bleeding). 5 Used if depressions are due to a poor subgrade condition. 6 Used if high spots caused by frost heave or swelling of an expansive subgrade soil exist.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 127.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 124–128); [2] — SECTION 300 BASE COURSES (pp. 221–222)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>Prior to initiating Full Depth Reclamation the roadway must be evaluated and assessed; this evaluation includes gathering traffic forecasts, conducting a pavement condition survey, performing in‑situ subgrade testing, and obtaining representative samples so that layer thicknesses can be defined and any existing drainage problems should be identified and corrected before constructing the reclaimed pavement layer. The construction phase must include compliance with applicable environmental standards and the development of a quality‑control plan at least two weeks before work starts, and a 300‑foot test strip is then constructed to verify equipment calibration, water and additive rates, and minimum density. Full depth reclamation begins with a road reclaimer that pulverizes the existing asphalt layer and penetrates completely through it into the underlying aggregate base or subgrade, thereby removing the distressed material in a single pass. A self‑propelled traveling rotary reclaimer (or equivalent machine) capable of cutting through the roadway to depths of up to 16 inches while pulverizing the material to a maximum particle size of 2 inches and automatically metering water and any dry or liquid stabilizing additive is used for this removal. Stabilization of the reclaimed mixture may be achieved mechanically by introducing additional aggregate while the reclaimed mix is reshaped and re‑compacted, or chemically by applying dry or slurry additives either ahead of the reclaimer or through a spray bar in the mixing chamber; one or more agents such as cement, fly ash, lime kiln dust, asphalt, or other chemicals can be used. The in‑place pulverized material is subsequently mixed with the required stabilizing additives and, when necessary, imported aggregate or reclaimed asphalt pavement to achieve the specified grading. After stabilization the mixture is placed back at roadway grade, where a motor grader shapes it to the required cross‑slope and elevation. For layers less than 8 inches thick a 25‑ton pneumatic tire roller (or greater) is used for breakdown and intermediate rolling; when the layer is 8 inches or deeper a 25‑ton vibratory padfoot roller provides initial breakdown, and final compaction is completed with a single or tandem steel‑drum static roller of 12 to 14 tons. The compacted mix then serves as a new base layer that can be opened to traffic and will receive an asphalt overlay or surface treatment. Placement may not occur if air temperature is expected to fall below 40 °F during the required seven‑day cure period, if rain is forecast within two hours of completion, or if cement slurry containing accelerating admixtures would be placed when temperature is anticipated to drop below 35 °F in the first 24 hours. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 300 BASE COURSES (pp. 220–222)</small></p>
+<p>The Full Depth Reclamation process begins with an in‑place pulverizing operation performed by a pavement pulverizer or road reclaimer that breaks down the existing asphalt surface and underlying base material. The equipment required includes a self‑propelled traveling rotary reclaimer capable of cutting to depths of up to 16 inches and having a working width of at least 8 ft, as specified for the reclamation operation. Stabilizing agents may be introduced either dry or as a slurry ahead of the reclaimer, or they can be sprayed into the mixing chamber of the reclaimer through a spray bar during pulverization. After pulverization, the reclaimed material is blended with the stabilizer and, when required by the approved FDR mix design, with imported aggregate or reclaimed asphalt pavement (RAP). The mixed material is then placed back to grade and shaped using a motor grader or an approved placement method. Compaction follows, employing equipment selected according to the mix depth: a 25‑ton pneumatic tire roller for emulsion‑ or foamed‑asphalt mixes less than 8 inches deep, a 25‑ton vibratory padfoot roller for depths of 8 inches or more, and a 12‑ to 14‑ton steel‑drum static roller for finish rolling. Prior to full production a quality‑control plan must be submitted at least two weeks in advance, the equipment calibrated, and a 300‑ft test strip constructed and densified to verify application rates and achieve the required minimum density before proceeding with the remainder of the work. Wet subgrade locations should be identified and effective drainage installed before reclamation to ensure a well‑drained pavement system. Work may not be placed when air temperature is expected to fall below 40 °F during the seven‑day cure period, nor when rain is occurring or anticipated within two hours of completion; cement slurry mixes with accelerating admixtures also require written approval if temperatures may drop below 35 °F in the first 24 hours. Dry additive application must be avoided under wind conditions that would make blowing additives objectionable to traffic or adjacent property owners. Dust and fugitive‑material controls must be employed throughout the operation to protect adjacent properties. Traffic may be permitted to resume only after the compacted base has been achieved and the required density is verified. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 300 BASE COURSES (pp. 220–222)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>Prior to any Full Depth Reclamation work, the existing pavement must be evaluated through a traffic level estimate and a recent distress survey that documents rutting, cracking, raveling, potholes, and drainage issues, and in‑situ testing such as Falling Weight Deflectometer, dynamic cone penetrometer or lightweight deflectometer to establish subgrade stiffness; representative material samples are also collected according to the sampling criteria. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The design phase must identify the required layer thickness and correct any existing drainage problems before reclamation begins. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Selection of the stabilization method—whether pulverization only, mechanical addition of aggregate, or chemical additives—requires laboratory determination of stabilizer type and content, with excessive amounts avoided because they may cause brittleness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] During construction, inspection must verify that the pulverized material does not exceed a maximum particle size of 2 inches in its greatest dimension. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The rates of water and stabilizing additive applied to the reclaimed mix must match the design specifications, and dry additive shall be withheld when wind conditions could cause blowing. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All equipment used for pulverization, mixing, and compaction must be calibrated and the calibration records retained before use. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Weather suitability is verified by ensuring that air temperature does not fall below 40 °F during the required seven‑day cure period, that rain is not expected within two hours of completion, and that cement slurry containing accelerating admixtures is not placed when temperatures are anticipated to drop below 35 °F in the first twenty‑four hours. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A 300‑foot test strip must be constructed before full production to demonstrate proper mixing, compaction, shaping, and to confirm that the minimum density can be achieved; after the test strip, the n=1 density for each 3,000 square‑yard lot is determined in accordance with PTM No. 402. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After placement of the reclaimed base, a post‑placement in‑situ test such as Falling Weight Deflectometer shall be performed to verify the stiffness of the newly formed layer. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 300 BASE COURSES (pp. 221–222)</small></p>
+<p>A satisfactory Full Depth Reclamation must first be verified on a 300‑foot test strip that demonstrates the complete pulverizing, mixing, placement and final compaction sequence and proves that the minimum density can be achieved as specified in 344.3(e)3.a; thereafter n=1 density is determined for each 3,000 sq yd lot according to PTM No. 402. All equipment used must be calibrated and capable of producing a reclaimed material with a maximum particle size of 2 inches, and the reclaimer, rollers and other machinery must meet the dimensional and weight specifications described in the construction section. The work may not be placed when air temperature falls, or is anticipated to fall, below 40 °F within the subsequent required 7‑day cure period, nor may it be performed in rain or if rain is anticipated within 2 hours of completion, and cement slurry with accelerating admixtures requires written approval if temperatures are expected to drop below 35 °F in the first 24 hours. Proper records of water and additive application rates must be kept and any deviations corrected before full production proceeds. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 221–222)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Full Depth Reclamation improves overall pavement condition by pulverizing the existing asphalt and underlying base, which eliminates existing distresses and creates a renewed base layer. The pulverizing machine always penetrates completely through the asphalt layers into the underlying base layers, thereby eliminating the potential for reflective cracking or pavement failure resulting from a weak base layer. By re‑establishing drainage and cross‑slopes, the treatment restores functionality that supports proper water runoff. The process adds strength and flexibility to the existing pavement materials, providing structural reinforcement while reducing the risk of reflective cracking. Because the reclaimed material can be further stabilized with chemicals such as calcium chloride or magnesium chloride, cement, fly ash, or emulsified asphalt, durability is enhanced; the chloride additives provide a gain in strength due to particle cementing and lower the freezing temperature of the reclaimed material, improving resistance to freeze‑thaw cycles when applied as at least a 35 % solution at a rate of 0.1 to 0.15 gallons per square yard for each inch of depth reclaimed, while emulsified asphalt stabilization improves resistance to water‑related damage and fatigue performance under loading. Collectively supporting improved functionality and potentially extending the pavement’s service life, reclamation can be used as a first step in stage construction, adding more structure as needed to meet increasing traffic demands over time. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–128)</small></p>
+<p>Recurring distresses after Full Depth Reclamation often reflect the pre‑rehabilitation condition—rutting, cracking, raveling, potholes and drainage problems—because the same damage mechanisms can reappear if they are not addressed during design. Their development is influenced by several factors identified in the selection process, including a reliable estimate of future traffic loading, the existing pavement condition revealed by a distress survey, the in‑situ strength of the subgrade measured with FWD or other tests, and especially excess moisture which can degrade material integrity. Excess moisture can result in the loss of pavement material integrity and the weakening of the pavement’s structural capacity. Generally, increasing the amount of chemical stabilizer increases strength, but excessive amounts may cause brittleness. Full‑depth reclamation can also fail when prescribed weather and quality‑control limits are not met; placement must be avoided if air temperature falls below 40 °F during the required seven‑day cure period because such conditions jeopardize proper curing. Likewise, reclamation work should not be performed in rain or when rain is anticipated within two hours of finishing, as moisture at that stage can prevent adequate cure. Using equipment that has not been calibrated before application, or proceeding without a quality‑control plan and an approved test strip, can lead to inadequate mixing and insufficient density, which are common sources of distress in reclaimed bases. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 300 BASE COURSES (pp. 221–222)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After the Full Depth Reclamation work is completed, the reclaimed section should be evaluated with in‑situ testing; a Falling Weight Deflectometer test is performed to determine the stiffness of the newly compacted pavement and dynamic cone penetrometer or lightweight deflectometer measurements may also be taken to confirm subgrade strength. These post‑construction tests provide the data needed to verify that the reclaimed base meets design requirements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=356c6662 src=pub_242_change_10::tab:p281#1 -->
+<p>The table below specifies climatic limitations for construction based on the type of stabilizer used. It relates to the section <a href="#materials-and-repair-details">Materials and repair details</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-full-depth-reclamation-3-cap" tabindex="0"><table class="ct-table" id="ct-full-depth-reclamation-3" aria-describedby="ct-full-depth-reclamation-3-sum">
+<caption id="ct-full-depth-reclamation-3-cap">b. Weather Limitations. (table)</caption>
+<thead>
+<tr><th scope="col">TYPE OF STABILIZER</th><th scope="col">CLIMATIC LIMITATION FORCONSTRUCTION</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Lime, Fly Ash or Lime-Fly Ash</th><td>Do not perform work when reclaimed material couldbe frozen. Air temperature in the shade should be noless than 40°F and rising. Complete stabilization atleast one month before the first forecast temperaturedrop below freezing. Two weeks minimum of warm tohot weather is desirable after completing thestabilization work.</td></tr>
+<tr><th scope="row">Portland Cement, Portland Cement Slurry, orPortland Cement with Fly Ash</th><td>Do not perform work when reclaimed material couldbe frozen. Air temperature in shade should be no lessthan 40°F and rising. Complete stabilization should beat least one month before the first forecast temperaturedrop below freezing. Cement Slurry with acceleratingadmixtures can be used in periods of coolertemperatures with the written approval of theDME/DMM. Do not place cement slurry mixtures withaccelerating admixtures when the air temperature isanticipated to fall below 35° F within the first 24 hoursfollowing placement.</td></tr>
+<tr><th scope="row">Calcium Chloride</th><td>Do not perform work when reclaimed material couldbe frozen. Air temperature in shade should be no lessthan 40°F and rising. Complete stabilization should beat least one month before the first forecast temperaturedrop below freezing.</td></tr>
+<tr><th scope="row">Emulsified Asphalt</th><td>Do not perform work when reclaimed material could be frozen. Air temperature in the shade should be no less than 59°F and rising. The curing process for emulsified asphalt stabilization can be affected by very high humidity. Defer work when rain is imminent or when humidity is greater than 80%. Warm to hot, dry weather is preferred for all types of asphalt stabilization involving cold mixtures because of improved binder dispersion and curing.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-full-depth-reclamation-3-sum">Rows list types of stabilizers, columns give climatic limitations for construction.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 281.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

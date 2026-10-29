@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pavement Profile</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html" class="active" aria-current="page">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><a href="ride-quality.html">Ride Quality</a><span class="crumb-sep">›</span><span class="crumb-current">Pavement Profile</span></nav>
+<article><h1>Pavement Profile</h1>
+<div class="meta"><div class="part-of">Part of: <a href="ride-quality.html">Ride Quality</a> <span class="edge edge-taxonomic" title="Pavement Profile is a topic under Ride Quality.">is-subtopic-of</span></div><div class="edge-reading">Pavement Profile is a topic under Ride Quality.</div><div><a class="tag" href="index.html?q=profile">profile</a><a class="tag" href="index.html?q=profile-deficiency">profile-deficiency</a></div><div>Created 2026-10-28 · Updated 2026-10-28</div></div>
+<p>Pavement Profile is a field investigation that measures the concrete or asphalt surface elevation and cross‑slope against a reference grade—typically a string line positioned about one inch above the desired grade—to locate depressions, settlements, or slope irregularities that impair rideability and drainage [1][2]. The method employs gauge blocks (or calibrated profiling equipment) along with 12‑foot straightedge checks and transverse cross‑slope readings at 100‑foot intervals, generating raw elevation data, International Roughness Index (IRI) and Mean Roughness Index (MRI) values that serve as the design basis for slabjacking, diamond grinding, or other corrective actions [1][2]. Acceptance criteria are explicit: any deviation greater than ¼ inch over a 12‑foot length, ridges or valleys exceeding ⅛ inch (3 mm), bumps over ³⁄₁₆ inch, or post‑process IRI above 70 in/mi for speeds &gt;45 mph (or 90 in/mi ≤45 mph) must be corrected, and all measurements must be made with Department‑verified equipment calibrated daily [2].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-investigation-objectives">Purpose and investigation objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#existing-information-and-records">Existing information and records</a></li><li><a href="#visual-inspection-and-condition-assessment">Visual inspection and condition assessment</a></li><li><a href="#field-measurements-and-testing">Field measurements and testing</a></li><li><a href="#structural-and-functional-performance">Structural and functional performance</a></li><li><a href="#data-interpretation-and-diagnosis">Data interpretation and diagnosis</a></li><li><a href="#findings-confidence-and-next-actions">Findings, confidence, and next actions</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-investigation-objectives">Purpose and investigation objectives</h2>
+<p>The pavement profile investigation evaluates the concrete slab’s elevation and grade, looking for depressions or settlements that affect rideability. It should determine how far the existing slab deviates from the target line, which is a string line positioned about 1 inch above the desired grade, quantify the size or length of any depressed area, estimate the amount of correction required, and assess subgrade and drainage conditions as well as joint and crack locations that will govern hole pattern and grout selection. For concrete pavements the profile evaluation also confirms that a positive cross‑slope is provided for drainage and checks cross‑slope uniformity at 100‑foot intervals longitudinally. The investigation must correct all areas with deviations greater than 1/4 inch in 12 feet. It should verify that the post‑grind International Roughness Index does not exceed the maximum of 70 in/mile when posted speeds are greater than 45 mph or 90 in/mile when posted speeds are less than or equal to 45 mph, and answer whether these cross‑slope and IRI criteria are met before and after diamond grinding. When slabjacking the evaluation documents depressions and the longitudinal grade that must be achieved after the operation, and it must answer what the current profile grade is, what the proposed design grade should be, and what grade was actually attained by the grout jacking operation, with the resulting report used to determine if any additional injection is required before work acceptance. For concrete corrective action the investigation checks for transverse deviations such as ridges or valleys that exceed the allowable 1/8 inch, determines whether texture and cross‑slope are uniform enough to provide proper drainage, and decides whether corrective actions such as carbide grinding are required before depth testing. It should answer whether any measured deviation is greater than this limit and whether additional grinding or re‑coating is needed to bring the profile within specification. For asphalt pavements the surface profile is evaluated for ride‑quality by measuring roughness indices such as IRI and MRI on finished surfaces, including overlaid bridge approach slabs and decks, and the investigation must determine the ride quality of those surfaces, identify which construction operations are present in each lot, provide calibrated raw data and summary IRI/MRI results within 24 hours, and ensure that excluded areas are measured separately so they do not affect incentive payment. The asphalt profile examination also looks for transverse ridges or valleys that exceed 3 mm (1/8 inch) and individual bumps that exceed 3/16 inch when measured with a 12‑foot straightedge, assesses whether the lot’s Mean Roughness Index exceeds the maximum acceptable MRI listed in Table A of Section 404.4, and confirms that corrective work has produced a uniform texture and positive cross‑slope to allow drainage. The investigation should answer what the measured pavement surface profile is for each lot, whether profiling limits have been correctly identified and marked, and how excluded areas perform when tested in stages with a 12‑foot straightedge moved no more than 5 feet at a time. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 92–93); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 232–234), SECTION 500—RIGID PAVEMENTS (pp. 385–396), SECTION 600 INCIDENTAL CONSTRU… (pp. 597–598)</small></p>
+<p>The measured cross‑sectional profile obtained with a string line positioned about 1 inch above the target grade supplies the reference elevation that directs slabjacking activities, ensuring the lifted slab attains an acceptable profile for rideability and drainage (section 4.6 SLABJACKING) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By comparing the existing slab surface to this desired profile, engineers can determine where voids must be filled, how many lift points are required, and whether dowel‑bar retrofits should accompany the lift, thereby informing maintenance and rehabilitation planning [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The profile data also serve to limit over‑lifting because pumping is slowed as gauge blocks approach the string line, reducing the risk of cracking or faulting [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In SECTION 514—DIAMOND GRINDING OF CONCRETE PAVEMENT, cross‑slope measurements taken at 100‑foot intervals and longitudinal roughness tests before and after grinding provide the data used to verify that drainage and ride‑quality criteria are met, and any area showing a deviation greater than 1/4 inch in 12 feet must be corrected to restore a uniform positive cross slope [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Recorded International Roughness Index values that may not exceed a maximum of 70 in/mile for speeds over 45 mph or 90 in/mile for speeds at or below 45 mph become acceptance thresholds that guide planning for further maintenance, rehabilitation sequencing, and contract payment decisions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In SECTION 404—EVALUATION OF ASPHALT PAVEMENT RIDE QUALITY AND PAYMENT OF INCENTIVE, transverse profile measurements that reveal a ridge or valley exceeding 1/8 inch trigger corrective action, and any bump measured more than 3/16 inch with a 12‑foot straightedge must be ground or otherwise treated, directing engineers to select carbide grinding, diamond grinding, or removal and replacement of the surface course before depth testing and influencing incentive payment outcomes [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. SECTION 681—SLABJACKING requires a Roadway Profile Report that documents the existing grade, the proposed grade line, and the as‑built grade; the findings enable the Representative to verify that the raised pavement is within 0.02 foot of the string line grade, and if the measured profile shows an overjacking greater than 0.10 foot the specification mandates removal and replacement of the pavement, a remediation decision driven directly by the profile measurements [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In SECTION 507—EVALUATION OF CONCRETE PAVEMENT RIDE QUALITY AND PAYMENT OF INCENTIVE, a ridge or valley that exceeds 1/8 inch on the transverse profile triggers corrective action, prompting planners to schedule surface repairs before depth testing and allowing carbide grinding for sections up to 15 feet in length; by enforcing a uniform texture and positive cross slope, the profile findings inform rehabilitation specifications and help prevent further deterioration [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 92–93); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–234), SECTION 500—RIGID PAVEMENTS (pp. 386–396), SECTION 600 INCIDENTAL CONSTRU… (pp. 597–598)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Pavement Profile is required for rigid (concrete) pavements that are to be diamond‑ground and for any associated concrete repairs such as patching, spall repair, dowel retrofit, slab stabilization or slab jacking; the profile must verify that the original cross slope is restored and kept uniform, correcting all areas where the deviation exceeds 1/4 inch in a 12‑foot length, and it must confirm that longitudinal roughness does not exceed IRI limits of 70 in/mile when the posted speed limit is greater than 45 mph or 90 in/mile when the posted speed limit is 45 mph or less【2】. For rigid concrete pavements forming the main lane or ramp and at least 12 feet wide, Pavement Profile is also applied to full lots of 528 feet; lot type is defined as Type 1 when the speed limit exceeds 45 mph and Type 2 when it is 45 mph or less, while bridge decks, approach slabs and relief joints placed under another contract, ramps shorter than 1,500 feet, tapered pavements narrower than 12 feet, shoulders, medians, and any partial lot shorter than 100 feet are excluded【2】. When cement grout stabilization (slabjacking) is performed on concrete pavements—including continuously reinforced slabs, jointed slabs and bridge‑end slabs—a Pavement Profile drawing must show existing depressions and the proposed grade line; after jacking the achieved profile must be within 0.02 foot of a string‑line grade for continuously reinforced pavement or within 0.03 foot for jointed slabs, and if overjacking exceeds 0.10 foot the slab must be removed and replaced【2】. Pavement Profile is applied to flexible (asphalt) pavements constructed as full‑depth overlays that include profile milling, base, scratch, leveling, binder or wearing courses, as well as overlaid bridge approach slabs and decks; it is not used on pavement surfaces that are not full‑depth overlays such as vertical transition areas at paving limits or bridge approaches, on bridge decks unless they are overlaid, on ramps shorter than 1,500 feet, on tapered sections, shoulders, medians, pavement within five feet of appurtenances, partial lots under 100 feet, or any roadway whose posted speed limit is 40 mph or lower【2】. During ride‑quality acceptance for flexible asphalt pavements the surface‑course layer is evaluated with Pavement Profile and an individual bump measured with a 12‑foot straightedge must not exceed 3/16 inch, a ridge or valley on the transverse profile must not exceed 3 mm (1/8 inch), and the lot’s MRI must not exceed the maximum acceptable value in Table A; when these limits are exceeded corrective actions such as carbide grinding, diamond grinding, or removal and replacement of the surface course are prescribed【2】. For rigid concrete pavements the corrective‑action criteria focus on the transverse surface profile, requiring that a ridge or valley deviation not exceed 1/8 inch and that the pavement provide a uniform texture and positive cross slope for drainage; carbide grinding may be used to correct areas 15 feet in length or less, employing walk‑behind grinders with carbide‑tipped heads, limiting any single pass depth to 1/8 inch while creating parallel grooves between 3/32 inch and 1/4 inch wide【2】. Pavement Profile is appropriate for Portland cement concrete slabs that have depressions or other extensive profile deficiencies such as embankment settlement, where slabjacking can be used to fill voids beneath the slab and raise it to an acceptable grade with the desired elevation set by a string line positioned about 1 inch above the target grade【1】. The method should not be attempted when pavement temperature is high because the slabs will have expanded and joints may be in compression, although if the slab is already in compression correcting a large profile deficiency may be more successful【1】. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 92–93); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 232–234), SECTION 500—RIGID PAVEMENTS (pp. 385–396), SECTION 600 INCIDENTAL CONSTRU… (pp. 597–598)</small></p>
+<p>The pavement surface profile method defined in Section 404 is limited to ride‑quality lots that consist of a full lot of 528 feet in a single lane and are at least 12 feet wide. The method may not be applied to any excluded areas such as vertical transition zones, bridge decks that are not overlaid, ramps shorter than 1,500 feet, tapered pavements, shoulders, medians, pavement within 5 feet of appurtenances, partial lots under 100 feet, or roadways with a posted speed limit of 40 miles per hour or lower. When any of these conditions exist the profile measurement must be taken separate from the ride‑quality lot and the results are not used for incentive payment, indicating that an alternative or complementary investigation is required to evaluate those sections. In addition, measurements must be made in the presence of the Inspector using PTM No. 428 with calibration data provided before testing; if these procedural requirements cannot be satisfied a different evaluation method should be employed. The acceptance criteria in Section 404.3(c) are limited to detecting individual bumps only when the straight‑edge measurement exceeds three‑sixteenths inch and to preventing ridges or valleys greater than one‑eighth inch on the transverse profile; any condition beyond these limits triggers corrective action such as carbide grinding, diamond grinding, or removal and replacement as described in 404.3(d)–(e). When the measured MRI of a lot exceeds the maximum acceptable value in Table A of Section 404.4, or when smoothness verification testing performed with the Department’s inertial lightweight profiler shows that the verification MRI exceeds the acceptance MRI by more than 6.1 inches/mile on at least 90 percent of the 528‑ft lots, the profile data alone are insufficient and a complementary investigation—namely department‑conducted verification profiling and equipment recertification—is required before incentive payment can be made. The pavement surface profile method described in Section 507.1 is limited to continuous concrete lanes that are at least 12 feet wide and does not apply to bridge decks, approach slabs or relief joints placed under another contract, ramps shorter than 1,500 feet, tapered sections narrower than 12 feet, shoulders, medians, and any partial lot whose length is less than 100 feet; those features are measured separately and are omitted from the ride‑quality incentive calculation. When any of these conditions exist a different or complementary investigation must be used to evaluate surface roughness because the standard profile measurement cannot provide the required data. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 232–234), SECTION 500—RIGID PAVEMENTS (p. 385)</small></p>
+<h2 id="existing-information-and-records">Existing information and records</h2>
+<p>The Pavement Profile review should commence by collecting all existing cross‑slope test records that identify each measurement location and the greatest depth of depression or slope misalignment, with particular attention to any values exceeding 1/4 inch in 12 ft which must be corrected. In parallel, longitudinal roughness test results for the pavement surface should be obtained and submitted before any diamond grinding work begins. Pre‑grinding ride‑quality data expressed as an International Roughness Index (IRI) must be compared with post‑grinding IRI values to ensure they do not exceed the maximum IRI of 70 in/mile where posted speeds are greater than 45 mph, or 90 in/mile where posted speeds are less than or equal to 45 mph. Documentation of any prior concrete pavement rehabilitation—such as patching, spall repair, dowel retrofit, slab stabilization, or slab jacking—should also be reviewed so that profile measurements reflect a restored surface. Additionally, the review should begin with the existing roadway profiles for the contract‑specified areas, which must depict present depressions and the proposed grade line to be achieved. A Roadway Profile Report is required before work acceptance; it shall contain surveyed profile drawings of the stabilized sections showing the original profile grade, the intended (proposed) grade, and the grade actually attained after the slabjacking operation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 395–396), SECTION 600 INCIDENTAL CONSTRU… (pp. 597–598)</small></p>
+<p>The existing records often omit precise transverse‑profile measurements needed to confirm that no ridge or valley exceeds the 3 mm (1/8 inch) limit and may lack documented bump heights, so field investigation must verify whether any irregularity is greater than 3/16 inch when measured with a 12‑foot straightedge. Likewise, uncertainty remains about whether the recorded mean roughness index (MRI) for each lot stays within the maximum acceptable values in Table A, and whether the verification MRI stays within the 6.1 inches/mile tolerance relative to the acceptance MRI on at least 90 percent of the 528‑foot lots and in average across all lots. Because corrective action decisions depend on these thresholds, additional profile measurements are required to resolve inconsistencies between reported smoothness data and actual pavement geometry. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–234)</small></p>
+<h2 id="visual-inspection-and-condition-assessment">Visual inspection and condition assessment</h2>
+<p>When checking a pavement profile, visible signs to look for include cracking, tilting, or faulting of the slab that can develop if slabjacking is done improperly, any grout that extrudes from joints, cracks, or the pavement edge before the target elevation is reached, and broader profile deficiencies such as settlement of an embankment that depresses the surface. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 92–93)</small></p>
+<p>For concrete pavements covered by Section 514—Diamond Grinding of Concrete Pavement, cross‑slope deviations or slope misalignments are the classified types of pavement‑profile distress. Severity is judged by any deviation greater than 1/4 inch over a 12‑foot length and such areas must be corrected; uniformity is checked at 100‑foot intervals longitudinally. The measurement procedure records the maximum depth of depression or misalignment at each test point, and this information is documented for the Representative with the location of every cross‑slope test and its corresponding severity value. For asphalt pavements addressed in Section 404—Evaluation of Asphalt Pavement Ride Quality and Payment of Incentive, pavement‑profile distresses are classified by type as either an individual bump or a ridge/valley adjacent to another lot. Each is measured with the prescribed straightedge or transverse‑profile method; any individual bump that exceeds more than 3/16 inch when tested with a 12‑foot straightedge must be ground, and the surface adjacent to another ride‑quality lot must not produce a deviation such as a ridge or valley of more than 1/8 inch (3 mm) when measured on the transverse profile. Overall ride quality is judged by comparing the lot’s MRI to the maximum acceptable MRI in Table A of Section 404.4. Extent is recorded by noting the specific lot and any sufficient length of pavement that must be corrected, and location is documented as being within the lot or on the surface adjacent to another ride‑quality lot. All findings are entered into the acceptance record so the Representative can verify corrective action, retest the profile, and confirm compliance with the tolerances. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–234), SECTION 500—RIGID PAVEMENTS (pp. 395–396)</small></p>
+<h2 id="field-measurements-and-testing">Field measurements and testing</h2>
+<p>When establishing the pavement profile during slabjacking, an arrangement of string lines and gauge blocks is employed; the string line is typically set about 1 inch above the target grade to serve as a reference, while gauge blocks placed on the slab provide a visual indication of the slab’s current elevation relative to that reference, allowing operators to slow or stop pumping when the blocks touch the line. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Field evaluation of pavement profile shall be performed with Department‑verified profiling equipment that has been verified by the Department according to PTM No. 428, and the distance sensor must be calibrated and the profile system checked before each day’s testing. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A Department‑certified operator who carries a valid PennDOT certification card shall operate the system. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The profiler records raw surface elevation data which are processed to produce an International Roughness Index (IRI) that quantifies longitudinal roughness and ride quality, and a Mean Roughness Index (MRI) that the Representative uses to determine incentive payment for each lot. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] An inertial lightweight profiler may be employed to generate the MRI as a nondestructive smoothness metric that is compared with acceptance limits for ride‑quality verification and incentive payment. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Transverse cross‑slope shall be measured at 100‑foot intervals along the lane to confirm a uniform positive slope for drainage, and any deviation greater than 1/4 inch in 12 feet must be corrected. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A 12‑foot straightedge shall be used in the field to locate individual bumps or irregularities that exceed 3/16 inch, which triggers grinding. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Transverse‑profile measurements shall also be taken to confirm that ridges or valleys do not exceed 1/8 inch (3 mm) when measured across the pavement width. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For areas excluded from profiling, the surface profile shall be evaluated manually in stages using a 12‑foot straightedge held parallel to the roadway centerline and advanced no more than 5 feet between stages. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After diamond grinding of concrete pavement, longitudinal roughness shall be measured with the prescribed pavement surface profile equipment before grinding and again after grinding, and the resulting IRI must not exceed 70 in/mile when posted speeds are greater than 45 mph or 90 in/mile when posted speeds are 45 mph or less. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Following any corrective grinding, additional measurements of the pavement surface profile shall be taken as necessary so that the Representative can determine whether further correction is required; these measurements indicate surface smoothness and the presence of high or low points that could affect ride quality and water runoff. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For slab‑jacking work a surveyed roadway profile shall be obtained before and after stabilization; the survey must capture existing depressions, the proposed grade line, and the grade actually achieved, and the pavement must be raised to within 0.02 foot (±) of the string‑line grade for continuous reinforced concrete or within 0.03 foot (±) for jointed slabs. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 92–93); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 232–234), SECTION 500—RIGID PAVEMENTS (pp. 385–396), SECTION 600 INCIDENTAL CONSTRU… (pp. 597–598)</small></p>
+<p>For pavement profile testing the Department‑verified pavement surface profile measuring equipment shall be used, operated by a certified operator who holds a valid PennDOT certification card, and the distance sensor and profile system shall be calibrated before each day’s testing. When diamond grinding of concrete pavement is performed under Section 514, a power driven, self‑propelled machine equipped with diamond blades shall be employed for grinding, and the same pavement surface profile measuring equipment shall be used for ride‑quality evaluations both before any grinding and after the grinding is completed. Profiling for each lot shall be triggered by traffic cones with reflective tape and reflective tape placed on the pavement at the beginning and end of each lane and at excluded‑area boundaries, in accordance with PTM No. 428, and shall be performed in the presence of the Inspector. Excluded areas shall be surveyed using a 12‑foot straightedge held parallel to the centerline; the straightedge shall be advanced no more than five feet per stage. Cross‑slope uniformity shall be checked at 100‑foot intervals longitudinally along the lane, and any deviation greater than 1/4 inch in 12 feet must be corrected. Longitudinal roughness shall be tested in the longitudinal direction as prescribed in Section 507.3(a) and recorded prior to any grinding. The pavement surface profile shall therefore be determined for each lot before any diamond‑grinding work, and a re‑evaluation of ride quality shall be performed after completing the grinding operations using the same equipment and procedures. Grinding operations shall avoid the area within 2 feet of curbs, bridge barriers, or roadway barriers, and shall prevent slurry from entering traffic lanes or drainage facilities. No additional site or environmental conditions are specified for profiling under Sections 507 or 404. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 233), SECTION 500—RIGID PAVEMENTS (pp. 385–396)</small></p>
+<h2 id="structural-and-functional-performance">Structural and functional performance</h2>
+<p>The functional condition of a pavement is assessed by measuring its transverse cross‑slope at 100‑foot intervals and correcting any deviation greater than 1/4 inch over a 12‑ft length; ridge or valley deviations on the transverse profile must not exceed 1/8 inch, with excesses requiring corrective grinding to restore uniform texture and positive cross slope for drainage. Longitudinal surface‑roughness tests are performed before and after diamond grinding, and ride quality is quantified by the International Roughness Index, which shall not exceed 70 in/mile on facilities posted above 45 mph or 90 in/mile on facilities posted at 45 mph or less. For both asphalt and concrete pavements the surface profile shall be measured in accordance with PTM No. 428 while an Inspector is present; the raw unfiltered data together with a summary printout of IRI and Mean Roughness Index (MRI) values must be supplied for incentive determination, and the Representative uses the MRI to determine payment for each ride‑quality lot. On concrete pavement daily calibration results shall be recorded before any measurements are taken. For any excluded area the profile shall be measured with a 12‑foot straightedge held parallel to the centerline, advancing the test location along the roadway no more than 5 feet at a time (Section 507), and excluded areas are also profiled using a 12‑foot straightedge across the surface (Section 404). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 232–233), SECTION 500—RIGID PAVEMENTS (pp. 385–396)</small></p>
+<h2 id="data-interpretation-and-diagnosis">Data interpretation and diagnosis</h2>
+<p>The profile deficiency is most often caused by loss of support under the slab, manifested as voids that develop beneath the pavement structure or settlement of the underlying embankment, which create depressions requiring remedial action such as slabjacking [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Weak subgrade and poor drainage conditions can also contribute to the formation of these voids, further reducing support for the surface layer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Construction defects, including cracked joints that allow grout to escape before the target elevation is reached, are another indicator of inadequate support [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In concrete pavements, cross‑slope irregularities that exceed the allowed tolerance—specifically any deviation greater than ¼ inch in a 12 feet length—impair drainage and must be corrected [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A positive cross slope is required so the pavement drains; failure to provide it can lead to inadequate drainage conditions [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Construction defects such as spalling or joint damage caused by inappropriate grinding equipment, which may fracture the aggregate at the surface, also hinder proper drainage and must be avoided [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For asphalt pavements, a lot is considered defective when an individual bump exceeds 3/16 inch on a 12‑foot straightedge or when a ridge or valley between adjacent lots exceeds 1/8 inch, because such irregularities prevent the required uniform texture and positive cross slope that ensure drainage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 92–93); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–234), SECTION 500—RIGID PAVEMENTS (pp. 395–396)</small></p>
+<h2 id="findings-confidence-and-next-actions">Findings, confidence, and next actions</h2>
+<p>Using string lines positioned about 1 inch above the desired grade together with gauge blocks, slabjacking can reliably establish a target pavement profile while lifting; when the blocks contact the line the pumping is stopped, allowing the corrected elevation to be achieved. This method supports the conclusion that a defined profile can guide void‑filling and slab raising and may reduce or eliminate faulting when combined with dowel bar retrofits. The approach, however, is limited by temperature sensitivity because high temperatures make slabjacking usually impractical as slabs expand and joints are in compression. Additional risk of damage such as cracking, tilting, or faulting exists if the procedure is not performed correctly. The investigation requires that the pavement cross‑slope profile be restored to its original condition, with any deviation greater than 1/4 inch in a 12‑foot length corrected and a uniform cross‑slope verified at 100‑foot intervals, thereby providing a positive cross slope for drainage. Longitudinal profile is quantified by roughness tests before and after diamond grinding, and the post‑grinding ride quality must meet a maximum IRI of 70 in/mile on roads with speed limits over 45 mph or 90 in/mile where limits are 45 mph or less. Measured pavement surface profile taken with equipment calibrated to PTM No. 428 and reported as raw data plus IRI and MRI values within 24 hours can be used to assess ride quality and to calculate incentive payments for each ride‑quality lot based on the Mean Roughness Index, where a full lot is defined as 528 feet of a single lane and partial lots are evaluated proportionally when shorter. Any individual bump whose irregularity exceeds 3/16 inch on a 12‑foot straightedge must be ground, and a ridge or valley exceeding 1/8 inch in the transverse profile makes the lot defective. For incentive payment the verification MRI may not exceed the acceptance MRI by more than 6.1 inches/mile on at least 90 percent of the 528‑foot lots, the average verification MRI may not exceed the average acceptance MRI by more than 6.1 inches/mile, and length differences for all lots must be less than 0.2 percent. Surveyed roadway profiles that show existing, proposed and achieved grades are adequate to confirm whether slabjacking has raised the pavement to within the specified tolerances—within 0.02 foot for continuously reinforced concrete pavement or within 0.03 foot for jointed slabs—and if the profile grade report indicates otherwise additional grout injection may be required before work is accepted. A transverse‑profile deviation greater than 1/8 inch is considered unacceptable and must be corrected before pavement‑depth testing; corrective work may be performed with carbide grinding on sections up to 15 feet long, limiting any single pass to a depth of 1/8 inch while producing the required texture. The specifications address only these immediate measurements and tolerances, leaving uncertainty about long‑term profile stability, variability beyond the sampled intervals, and how the defined profile limits translate to overall pavement performance beyond the stated IRI thresholds. The analysis also excludes vertical transition areas, bridge decks unless overlaid, ramps shorter than 1 500 feet, tapered pavements, shoulders, medians, any pavement within five feet of appurtenances, and roadways with a posted speed limit of 40 miles per hour or lower, which limits the applicability of the profile results to those excluded segments. If the tolerances are not met, the Department will immediately review testing procedures, equipment and personnel, may require additional smoothness verification testing, and can suspend the contractor’s profiler certification until recertified, indicating uncertainty about measurement reliability when out‑of‑tolerance. The source provides no information on measurement accuracy, long‑term stability of the corrected profile, or other uncertainties inherent in the profiling process for slabjacking. Finally, the conclusions are limited to the specified corrective actions and length range; they do not address larger deviations, alternative repair methods, or the long‑term performance of the corrected surface. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 92–93); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 232–234), SECTION 500—RIGID PAVEMENTS (pp. 386–396), SECTION 600 INCIDENTAL CONSTRU… (pp. 597–598)</small></p>
+<p>When a pavement profile deficiency is identified, the first remedial step is slabjacking that is monitored by an arrangement of string lines positioned approximately one inch above the target grade and gauge blocks placed on the slab; pumping is reduced as the blocks approach the line and stopped when they touch it (source: Pavement Policy Manual, section 4.6 SLABJACKING) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The hole pattern for grout injection must be sized to the depressed area, the amount of correction required, subgrade and drainage conditions, and the locations of joints and cracks, and any grout that extrudes from joints, cracks, or edges before reaching the target elevation triggers additional slabjacking and new drill holes (source: Pavement Policy Manual, section 4.6 SLABJACKING) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. After achieving the desired profile, a dowel‑bar retrofit is typically applied to restore load transfer for slabs that have lost support (source: Pavement Policy Manual, section 4.6 SLABJACKING) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Following slabjacking, the contractor shall submit a Roadway Profile Report containing surveyed drawings of the existing grade, the proposed grade and the grade actually achieved; the Representative may then require additional grout injection based on that report (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The jacked pavement elevation shall be kept within 0.02 foot of the string‑line grade for continuously reinforced concrete or within 0.03 foot for jointed slabs, and any overjacking greater than 0.10 foot shall trigger removal and replacement of the pavement at no extra cost (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After a pavement profile assessment, cross‑slope must be checked at 100‑foot intervals along the length and any segment showing a deviation greater than 1/4 inch in 12 feet shall be corrected to restore a positive drainage slope (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Longitudinal roughness tests are required before grinding and again after grinding, with regrinding of any lot that fails the specified limits; ride‑quality IRI must be measured both pre‑ and post‑grind using the same profile equipment, ensuring the IRI does not exceed 70 in/mile where posted speeds exceed 45 mph or 90 in/mile where speeds are 45 mph or less (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When a pavement profile shows an irregularity greater than 3/16 inch on a 12‑foot straightedge or a ridge/valley exceeding 3 mm (1/8 inch) on the transverse profile, corrective grinding, diamond grinding, or removal and replacement shall be performed and the affected area retested to confirm that the surface meets uniform texture and cross‑slope requirements (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After correction, smoothness verification testing using an inertial lightweight profiler shall be conducted on at least 10 % of lane miles concurrently with acceptance testing; the verification MRI shall not exceed the acceptance MRI by more than 6.1 inches/mile for at least 90 percent of the 528‑foot lots and the average verification MRI shall not exceed the average acceptance MRI by more than 6.1 inches/mile, with lot‑length differences less than 0.2 percent (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If those tolerances are not met, the Department will review testing procedures and may use its verification results for incentive payment while suspending the contractor’s profiler certification until it is recertified within ten business days (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Following a profile inspection that shows a ridge or valley exceeding the allowable transverse deviation, the pavement shall be corrected so that no deviation greater than 1/8 inch remains; the affected length shall be ground and then retested to confirm compliance, and all corrective work shall be performed before any pavement‑depth testing (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If a protective coating was placed prior to grinding it must be reapplied after grinding (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For localized areas up to 15 feet long, carbide grinding with walk‑behind equipment is prescribed, using multiple passes that do not exceed a single‑pass depth of 1/8 inch and producing parallel grooves between 3/32 inch and 1/4 inch wide with land areas of 1/16 inch to 3/16 inch; additional profile measurements shall be taken as needed to verify a uniform texture and positive cross‑slope for drainage (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For all profiling activities, the contractor must use Department‑verified equipment per PTM No. 428 and a certified operator, calibrate the distance sensor each day, establish traffic control and lane markings before measuring the surface profile according to PTM No. 428, and submit the resulting IRI data and MRI values immediately to the Representative (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For any excluded areas the entire surface shall be tested in stages with a 12‑foot straightedge held parallel to the centerline and moved no more than five feet between successive positions, advancing the test location along the roadway centerline not more than five feet at each stage (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The same procedures apply when profiling asphalt pavement, with traffic control and debris removal required before profiler use and testing performed in the presence of the Inspector (source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 92–93); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–234), SECTION 500—RIGID PAVEMENTS (pp. 385–396), SECTION 600 INCIDENTAL CONSTRU… (pp. 597–598)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

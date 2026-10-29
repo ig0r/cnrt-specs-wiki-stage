@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18-kip ESAL</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html" class="active" aria-current="page">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">18-kip ESAL</span></nav>
+<article><h1>18-kip ESAL</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="18-kip ESAL is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">18-kip ESAL is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=18-kip-esals">18-kip-esals</a><a class="tag" href="index.html?q=18-kip-esal">18-kip-esal</a><a class="tag" href="index.html?q=esal-calculations">esal-calculations</a><a class="tag" href="index.html?q=equivalent-single-axle-loads">equivalent-single-axle-loads</a><a class="tag" href="index.html?q=equivalent-single-axle-loads">equivalent-single-axle-loads</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>The 18‑kip equivalent single axle load (ESAL) is a traffic‑loading metric that quantifies the cumulative damage caused by truck traffic over a pavement’s design period, allowing designers to size asphalt mixtures and structural layers so they can resist permanent deformation (rutting) and low‑temperature cracking throughout the intended service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Total 18‑kip ESALs are calculated for a 20‑year design life (or the specified performance period) using either the Rigorous or, where permitted, the Simple method, and the resulting figure is placed into one of five predefined ranges that drive binder selection, mixture proportions, and, when the estimate exceeds ten million, the requirement for a polymer‑modified PG 64E‑22 binder; values above five million may also justify omitting the subbase on non‑interstate sections [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Because the ESAL total is treated as a governing condition that must remain substantially unchanged when reusing a single pavement design analysis for adjacent projects, it serves as the primary constraint for Superpave paving courses, overlay designs, and both flexible and rigid pavement procedures [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>In the Superpave system the equivalent 18‑kip single axle load (ESAL) is used to quantify the traffic loading that a pavement must withstand so that the asphalt mixture can be designed to resist permanent deformation (rutting) and thermal cracking (low‑temperature cracking) over its design life, with the calculated 20‑year design‑life ESALs establishing the rate of loading expected by the paving course. The 18‑kip ESAL value is used in pavement design to represent the cumulative traffic loading that a structure must sustain; total 18‑kip ESALs for a project are listed as one of the key parameters that must remain substantially unchanged when applying a single design analysis to adjacent sections, and if this traffic load estimate varies a new design is required. The metric is used to quantify the cumulative damage caused by truck traffic over a pavement&rsquo;s performance period so that designers can size the structure to last until its terminal serviceability without premature failure or excessive cost, and by calculating total 18‑kip ESALs for the design life engineers determine whether simple methods are sufficient or if rigorous analysis is required to meet structural requirements and avoid exceeding minimum layer thicknesses. The engineering problem addressed includes the risk of under‑ or over‑estimating pavement damage on localized routes and industrial complex connections where heavy truck traffic predominates; because the standard 18‑kip ESAL factor may be incorrect for each vehicle type in these special cases districts must identify the affected routes, obtain detailed data on axle loads, truck volumes and growth, and carefully evaluate the daily 18‑kip ESALs to ensure pavement designs reflect the true loading conditions. In overlay designs the 18‑kip ESAL is used as the traffic‑loading metric when a pavement needs its ride quality improved, is suspected to be structurally inadequate, or has low friction values, providing the basis for sizing an overlay so the structure can meet the prescribed minimum 8‑year and maximum 20‑year design life under the expected truck traffic. For AC overlay of AC pavement the figure quantifies the cumulative traffic damage that the new pavement must be able to resist; the overlay must provide enough structural number so that the future‑traffic SN, based on those ESALs, exceeds the effective existing SN and thereby meets the required overlay design SN for adequate performance, using flexible pavement average initial truck factors from Table 7.1 for ESAL calculations, and subbase may be omitted when the design 18‑kip ESALs exceed 5,000,000 on all other roadways unless a subbase investigation has verified its quality and drainability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 6 (pp. 136–137), Ch. 7 (pp. 154–159), Ch. 10 (pp. 176–180)</small></p>
+<p>The Superpave design must use the 20‑year design life ESAL count to define the expected traffic loading rate for the pavement, and the resulting mixture is required to resist permanent deformation (rutting) and low‑temperature thermal cracking, thereby meeting the structural and durability objectives associated with the specified 18‑kip ESALs; functional performance is achieved by selecting an appropriate PG‑binder and ESAL range that reflect the anticipated traffic over the design period. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Within the Superpave portion of Chapter 5, 18‑kip equivalent single axle loads are used to size all asphalt concrete paving courses—including wearing, binder, and base—by calculating a 20‑year design life ESAL value for every project even when the intended service life is less than 20 years. The resulting 20‑year ESALs place the pavement into one of five ranges (&lt; 0.3 million; 0.3 to &lt; 3.0 million; 3.0 to &lt; 10.0 million; 10.0 to &lt; 30.0 million; ≥ 30.0 million) which then guide the selection of PG‑binder type and whether polymer‑modified binders or fiber‑modified mixes are required, for example specifying a PG 64E‑22 binder when the range exceeds 10 million ESALs. The same methodology also applies to pavement preservation projects and to Asphalt Rich Base Course material, which is limited to mix designs of &lt; 0.3 million ESALs.</p>
+<p>Under Chapter 7, Section 7.1, 18‑kip ESALs are calculated for any functional classification of highway using the Rigorous method; the Simple (short) method may be used on new construction or rehabilitation of collectors and local roads only when the resulting layer thicknesses do not exceed the minimum thicknesses for that roadway type, otherwise the Rigorous method must be applied, and the Simple method is expressly prohibited on any other roadways. For cross routes that interchange with limited‑access freeways a minimum design daily 18‑kip ESAL value from Table 7.3 is required, and if the projected ADT at the end of the design life exceeds 8,000 the Rigorous method must be used.</p>
+<p>When a project involves localized routes that carry heavy truck traffic—particularly connections to industrial complexes—the default 18‑kip ESAL factor may be inaccurate and a special calculation using Appendix C should be employed.</p>
+<p>In rigid pavement design the 18‑kip ESAL value is used as an input when applying the 1993 AASHTO Pavement Design Procedures to design structures with a Jointed Plain Concrete Pavement or Roller Compacted Concrete surface supported by typical layers such as subgrade, an aggregate subbase, and a base constructed of Asphalt Treated Permeable Base or Cement Treated Permeable Base.</p>
+<p>For any pavement overlay—whether the existing surface is asphalt concrete, Portland cement concrete, or a composite AC/PCC structure—the 18‑kip ESAL calculation is appropriate when the project is undertaken to improve ride quality, address suspected structural inadequacy, or correct low‑friction conditions. All such overlays are designed for a minimum 8‑year and a maximum 20‑year structural design life and require current ADT, projected traffic growth, and truck percentage; if the roadway is a collector or local road the Simple method may be used to compute the daily 18‑kip ESALs, and the determination must follow Chapter 7 procedures.</p>
+<p>When designing an asphalt concrete overlay over an existing AC pavement, the 18‑kip ESAL design approach is employed together with the Component or Non‑Destructive Testing method to determine the effective structural number and using flexible pavement average initial truck factors for the ESAL calculations. For Interstate projects the existing subbase may be excluded from the structural evaluation because it can be in poor condition, while on non‑Interstate roadways the subbase should be omitted when the design 18‑kip ESALs exceed 5,000,000 unless a subbase investigation confirms its quality and drainability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 7 (pp. 154–159), Ch. 8 (p. 160), Ch. 10 (pp. 176–180)</small></p>
+<p>When the projected 20‑year traffic exceeds ten million ESALs, the Superpave guidelines require abandoning the standard 18‑kip ESAL assumption and specifying a polymer‑modified PG 64E‑22 binder for wearing or leveling courses to avoid rutting. Conversely, when the estimate falls between 0.3 and less than 3.0 million ESALs, the district may reduce the ESAL specification to less than 0.3 million only for wearing and binder layers if regional cracking is a problem, average truck speed exceeds 30 mph, or rutting is not a concern; however, frequent stopping, intersections, or steep hills with slow trucks constitute reasons to retain the original approach. For mix designs involving quantities under 250 tons or under 1,000 square yards at 1½‑inch thickness, the ESAL range may be shifted up or down one bracket to limit the number of mix designs.</p>
+<p>A single pavement design analysis can be reused for adjacent projects only when total 18‑kip ESALs, the effective modulus of subgrade reaction or roadbed soil resilient modulus, initial and terminal serviceability, reliability level, estimated contract unit costs of materials, and the existing pavement section for rehabilitation do not change substantially; substantial changes in any of those parameters make a separate design approach preferable.</p>
+<p>For collector and local roads, the Simple (short) method may replace the rigorous 18‑kip ESAL calculation provided that the layer thicknesses derived from the Simple method do not exceed the minimum thicknesses prescribed for that roadway type and, for rehabilitation, the required structural capacity does not exceed the existing pavement’s capacity; the Simple method must not be used on any other functional classification. For cross routes that interchange with limited‑access freeways, designers may rely on the minimum design daily 18‑kip ESAL values only while the projected design‑year ADT remains at or below 8 000, otherwise the rigorous method must be applied.</p>
+<p>When traffic is concentrated on localized routes serving heavy‑truck operations or industrial complex connections, the standard 18‑kip ESAL factor for each vehicle type may be inaccurate; in those cases a different design method using axle‑load specific factors and the substitution format of Appendix C is preferred, requiring districts to identify such routes and obtain detailed truck‑type, axle‑load, volume and growth data from industry.</p>
+<p>When an overlay includes a bonded concrete layer over existing asphalt pavement—or over an AC/PCC composite pavement—the 1993 AASHTO design procedures that rely on 18‑kip ESALs are insufficient because they do not account for bonding; the design must therefore shift to the bonded concrete overlay mechanistic‑empirical (BCOA‑ME) procedure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 6 (pp. 136–137), Ch. 7 (pp. 154–159), Ch. 10 (pp. 176–177)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>For a pavement design that uses the 18‑kip ESAL metric, the analysis must include the total 18‑kip ESALs to represent traffic loading, the effective modulus of subgrade reaction or roadbed soil resilient modulus for geotechnical conditions, the initial and terminal serviceability levels as site performance criteria, the reliability level reflecting environmental uncertainty, the estimated contract unit costs of the pavement materials, and, when rehabilitating an existing roadway, the existing pavement section. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 136–137)</small></p>
+<p>Under the Superpave paving‑course guidelines (section 5.9), design ESALs shall be calculated using a 20‑year design life for all projects, including pavement preservation projects, and the resulting total is placed into one of five defined ranges (&lt; 0.3 million, 0.3 to &lt; 3.0 million, 3.0 to &lt; 10.0 million, 10.0 to &lt; 30.0 million, or ≥ 30.0 million ESALs). When the estimated range is greater than 10 million ESALs, the District should specify a polymer‑modified PG 64E‑22 binder for wearing courses; mix designs whose quantities are less than 250 tons or less than 1,000 square yards at 1½ inches may have the ESAL range shifted up or down by one range, and any larger adjustments require PDAU permission. In the Pavement Design Procedures (Chapter 6 Section 6.1 D), total 18‑kip ESALs constitute a governing condition that must not change substantially when a single pavement design analysis and type determination is reused for two or more adjacent projects on the same route, so the 18‑kip ESAL value itself serves as a project constraint for such reuse. The traffic analysis procedures in Chapter 7.1 govern the calculation of total 18‑kip ESALs; the Rigorous ESAL Calculation method in DARWin shall be used unless a project qualifies for the Simple Method, which may only be applied to collectors and local roads and only when the resulting pavement layer thicknesses do not exceed the minimum values given in Table 9.4. If those limits are exceeded or if a cross‑route interchange has a design‑year ADT that exceeds 8,000, the Rigorous method must be used. Input data shall come from Bureau of Planning and Research traffic counts, including two‑way ADT at opening, lane distribution factors (100 % for two‑lane highways, 90 % for four‑lane, 80 % for six or more), a directional factor of 50 % unless otherwise directed, vehicle classification percentages, uniform annual truck volume growth, and an average initial truck factor from Table 7.1 with a 0 % growth in truck factor unless justified; when classification counts are unavailable, default values may be used until a mechanical or manual count recorded on Form PS‑121 is obtained, and the compound growth rate calculation type must be selected in DARWin. Appendix C of Chapter 7 provides the prescribed 18‑kip ESAL values by axle load and vehicle type and supplies a general format to replace Item 4 when determining daily 18‑kip ESALs. The Districts are responsible for identifying routes that require special attention, obtaining from industry the truck‑type, axle‑load weight distribution, current volume and projected growth, and may need coordination with the BPR; care shall be taken because trucks entering and leaving are counted twice and axle‑load equivalents differ if a portion of the trucks return empty. For rigid pavement design (Chapter 8), the 1993 AASHTO Pavement Design Procedures for rigid pavements govern the use of an 18‑kip ESAL input, which is entered into AASHTOWare® DARWin® 3.01 together with required inputs such as initial and terminal serviceability, 28‑day mean PCC modulus of rupture, 28‑day mean elastic modulus of slab, mean effective k‑value, reliability level, overall standard deviation, load transfer coefficient (J), and overall drainage coefficient (Cd). For full‑depth flexible pavement design (Chapter 9), the procedures set forth in the 1993 AASHTO Guide for Design of Pavement Structures govern the use of 18‑kip ESALs over the initial performance period, requiring input values including initial serviceability, terminal serviceability, reliability level, overall standard deviation, roadbed soil resilient modulus and number of construction stages. For overlay designs (section 10.1 General), design daily 18‑kip ESALs shall be determined in accordance with Chapter 7; overlays must satisfy structural design life limits of a minimum 8 years and a maximum of 20 years. Adequate traffic data—including current ADT, projected growth, truck percentage and, unless the road is a collector or local road, a truck distribution—must be used; when such data are unavailable the District shall request them from the BPR and, if necessary, conduct counts following Appendix B. For each resurfacing or overlay design Form D‑4332 must be completed and submitted to PDAU for concurrence and FHWA approval as required, and the overlay design follows the 1993 AASHTO Pavement Design Procedures. For AC overlays (section 10.2), the flexible‑pavement Average Initial Truck Factors listed in Table 7.1 shall be used when calculating ESALs, and input guidance of Table 10.7 shall be followed for future traffic structural numbers. On Interstate projects the existing subbase is excluded from the structural evaluation because it may be in poor condition; on non‑Interstate routes the subbase may be omitted entirely, but if the design 18‑kip ESALs exceed 5,000,000 on any other roadway the subbase must not be included unless a specific investigation has verified its quality and drainability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=10a91d96 src=pub_242_change_10::tab:p155#1 -->
+<p>Table 7.1 provides the average initial truck factors by vehicle classification for rigid and flexible pavement ESAL calculations.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-18-kip-esal-1-cap" tabindex="0"><table class="ct-table" id="ct-18-kip-esal-1" aria-describedby="ct-18-kip-esal-1-sum">
+<caption id="ct-18-kip-esal-1-cap">TABLE 7.1 AVERAGE INITIAL TRUCK FACTORS (ESALs/TRUCK) BY VEHICLE CLASS</caption>
+<thead>
+<tr><th id="ct-18-kip-esal-1-h0-0" scope="col" colspan="3">VEHICLE CLASSIFICATION</th><th id="ct-18-kip-esal-1-h0-3" scope="col" colspan="2">ESALs</th></tr>
+<tr><th id="ct-18-kip-esal-1-h1-0" scope="col">LINE # INDARWIN® 3.01</th><th id="ct-18-kip-esal-1-h1-1" scope="col">FHWACLASS</th><th id="ct-18-kip-esal-1-h1-2" scope="col">CORRESPONDINGDEPARTMENTDESCRIPTION</th><th id="ct-18-kip-esal-1-h1-3" scope="col">RIGID</th><th id="ct-18-kip-esal-1-h1-4" scope="col">FLEXIBLE</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">1</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">1</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">Motorcycle</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">0*</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">0*</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">2</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">2</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">Passenger Cars</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">0*</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">0*</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">3</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">3</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">SUV/Pick-up</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">0*</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">0*</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">4</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">4</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">BUS Factor</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">0.24</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">0.24</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">5</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">5</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">2-axle, 6-tire</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">0.24</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">0.24</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">6</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">6</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">3-axle, single unit</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">1.15</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">0.82</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">7</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">7</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">4-axle, single unit</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">7.00</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">4.50</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">8</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">8</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">3-axle, single trailer</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">0.60</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">0.44</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">9</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">9</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">3-axle, multiple axle trailer</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">1.59</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">1.00</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">10</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">10</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">6-axle, single trailer</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">1.42</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">0.75</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">11</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">11</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">5-axle, multiple trailer</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">2.40</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">2.33</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">12</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">12</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">6-axle, multiple trailer</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">1.42</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">1.28</td></tr>
+<tr><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-0">13</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-1">13</td><td headers="ct-18-kip-esal-1-h0-0 ct-18-kip-esal-1-h1-2">7-axle, multiple trailer</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-3">1.42</td><td headers="ct-18-kip-esal-1-h0-3 ct-18-kip-esal-1-h1-4">1.28</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-18-kip-esal-1-sum">Rows list vehicle classifications by line number, FHWA class, and description. Columns provide corresponding ESALs factors for rigid and flexible pavement types.</p>
+<p class="ct-notes">Notes: *Note: Because motorcycles, passenger cars, and SUV/Pick-up trucks do not significantly contribute to the 18-kip ESALs they are considered negligible and an ESAL/truck factor of 0 is assigned. However, the percent of the ADT in this class must be input into DARWin because the Total Percentage must equal 100.00%. If there are any vehicles that are not large enough to be classified in any of the above classes, they should be grouped with the motorcycle percentage.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 155.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 6 (pp. 136–137), Ch. 7 (pp. 154–159), Ch. 8 (p. 160), Ch. 9 (p. 168), Ch. 10 (pp. 176–180)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>In the Superpave volumetric asphalt mixture design procedure, the 18‑kip ESAL value is incorporated by having the designer calculate a 20‑year design life ESAL total and then place that total into one of five predefined ESAL ranges (&lt; 0.3 million, 0.3 to &lt; 3.0 million, 3.0 to &lt; 10.0 million, 10.0 to &lt; 30.0 million, or ≥ 30.0 million); these ranges drive the selection of PG‑binder type and mixture proportions that are used by the producer to design a mix resistant to rutting and thermal cracking, with additional mixture analysis relying on advanced performance testing and performance prediction models. Pavement design analysis that incorporates the total 18‑kip ESAL figure shall be performed with DARWin software, where the axle‑load classification feeds into the type‑determination step described in Chapter 3, and when Total 18‑kip ESALs and other listed parameters remain unchanged for adjacent sections a single design may be applied. Total 18‑kip ESALs are calculated with the Rigorous ESAL Calculation method in DARWin, which uses a compound growth rate calculation and requires inputs such as performance period, two‑way ADT, number of lanes in the design direction, percent of trucks in the design lane and direction, vehicle‑class percentages, annual traffic‑volume growth, average initial truck factor (ESALs per truck) from Table 7.1, and a 0% annual growth in truck factor unless evidence suggests otherwise; for collectors and local roads the Simple Method may be used when the resulting pavement layer thicknesses do not exceed the minimum layer‑thickness limits for that roadway type, but if those limits are exceeded or the project is not a collector/local road, the Rigorous Method must be applied, and for cross routes that interchange with limited‑access freeways the Simple Method may be used only up to a design‑year ADT of 8 000, above which the Rigorous Method is required. In rigid pavement design, the 18‑kip ESAL value is treated as an input parameter in the 1993 AASHTO Pavement Design Procedures for rigid pavements, which are carried out with AASHTOWare® DARWin® 3.01 software; this procedure also requires accompanying inputs such as initial and terminal serviceability, concrete modulus of rupture, slab elastic modulus, effective k‑value, reliability level, overall standard deviation, load transfer coefficient, and drainage coefficient. In full‑depth flexible pavement design, the 18‑kip ESALs are incorporated into the method described in Chapter 9 that follows the procedures of the 1993 AASHTO Guide for Design of Pavement Structures; this method requires input values such as initial serviceability, terminal serviceability, reliability level, overall standard deviation, roadbed soil resilient modulus and number of construction stages to characterize traffic loading over the initial performance period. The design daily 18‑kip ESALs are obtained by following the procedures set out in Chapter 7, which require current Average Daily Traffic, projected traffic growth and truck percentage as input data; a truck distribution is also required unless the road is classified as a collector or local, in which case the simple method may be used to calculate the 18‑kip ESALs. For AC overlay design targeting 18‑kip ESALs, DARWin computes both the Future Traffic Structural Number and the Effective Existing Structural Number; future traffic SN uses input values from Table 10.7 while ESAL calculations draw on flexible pavement Average Initial Truck Factors from Table 7.1. The effective existing SN is obtained with either the Component Method or the Non‑Destructive Testing Method, which require entering layer depths and structural coefficients (from Table 9.3) into DARWin and applying the structural number equation given in Section 9.8 with drainage coefficients set to 1.0. Once the two SN values are known, DARWin calculates the required overlay SN and then performs a thickness design using either specified or optimized design options available on its Design tab. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 6 (pp. 136–137), Ch. 7 (pp. 154–157), Ch. 8 (p. 160), Ch. 9 (p. 168), Ch. 10 (pp. 176–180)</small></p>
+<p>In the Superpave paving‑course design, the number of equivalent 18‑kip single axle loads is required to be calculated on a 20‑year design life even when the anticipated service life is shorter because these ESALs define the expected loading rate for the paving course. The resulting 20‑year ESAL value must be placed into one of five predefined ranges (&lt; 0.3 million; 0.3 to &lt; 3.0 million; 3.0 to &lt; 10.0 million; 10.0 to &lt; 30.0 million; ≥ 30.0 million) and the corresponding range is specified in the item description. If the ESAL range exceeds 10 million, the district should specify a polymer‑modified PG 64E‑22 binder for wearing courses to mitigate rutting, while for mix design quantities less than 250 tons or less than 1,000 sq yd at 1½ in thickness the ESAL range may be shifted up or down by one range; larger adjustments require PDAU approval. The pavement design analysis may be used for two or more adjacent projects on the same route only when the total 18‑kip ESALs do not change substantially between the construction sections, and a significant difference would require a separate design. For a project the total 18‑kip ESALs for the performance period must be calculated with the Rigorous ESAL Calculation method using inputs such as the performance period, two‑way ADT at opening, number of lanes in the design direction, percent of trucks in the design lane (100 % for two‑lane highways, 90 % for four‑lane highways, and 80 % for six or more lanes) and a directional distribution factor that uses a default of 50 % unless the BPR directs otherwise or traffic data shows this not to be the case. The Simple Method may be used only on collectors and local roads and only when the pavement layer thicknesses determined with the Simple Method do not exceed the minimum layer thicknesss for that roadway type; if those limits are exceeded, the daily 18‑kip ESALs must be evaluated using the Rigorous Method. For cross routes that interchange with limited‑access freeways the minimum design daily 18‑kip ESALs from Table 7.3 apply and the Rigorous Method must be used whenever the projected ADT at the end of the design life exceeds 8,000. Annual truck volume growth is applied uniformly to all vehicle classes unless justified by evidence, while annual growth in truck factor should be set to 0 % unless historical or loading studies justify otherwise. In the 1993 AASHTO rigid‑pavement design procedure the 18‑kip ESALs Over Initial Performance Period must be supplied as an input together with a specified reliability level and other performance inputs such as initial and terminal serviceability, concrete modulus values, k‑value, load transfer coefficient and drainage coefficient; the method does not prescribe a numeric threshold for the 18‑kip ESALs themselves. The overlay design that employs the calculated daily 18‑kip ESALs shall be planned for a structural design life of at least eight years but not more than twenty years, and the ESAL calculation must follow the procedure set out in Chapter 7 using the best available traffic data. Required traffic inputs are the current Average Daily Traffic, projected growth rates, and truck percentage; a full truck‑type distribution is also required except on collector or local roads where the simple method may be used. If district traffic data are unavailable they must be obtained from the Bureau of Planning and Research or through new counts performed according to Appendix B. In an AC‑overlay design the traffic loading is expressed as 18‑kip ESALs and the analysis must follow the assumption that flexible pavement Average Initial Truck Factors from Table 7.1 are used for the ESAL computation; when the calculated design traffic exceeds 5,000,000 ESALs the subbase may be omitted from the structural evaluation of non‑interstate sections unless a specific investigation confirms its quality and drainability, and the overlay is considered structurally adequate only if the Calculated Structural Number is greater than the Overlay (Design) SN. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=74967202 src=pub_242_change_10::tab:p157#1 -->
+<p>Table 7.3 specifies the minimum design daily 18-kip ESALs for cross routes interchanging with limited-access freeways based on ADT.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-18-kip-esal-2-cap" tabindex="0"><table class="ct-table" id="ct-18-kip-esal-2" aria-describedby="ct-18-kip-esal-2-sum">
+<caption id="ct-18-kip-esal-2-cap">TABLE 7.318-KIP ESALs FOR CROSS ROUTES THATINTERCHANGE WITH LIMITED ACCESS FREEWAYS</caption>
+<thead>
+<tr><th id="ct-18-kip-esal-2-h0-0" scope="col" rowspan="2">DESIGN YEAR ADT(CROSS ROUTE)</th><th id="ct-18-kip-esal-2-h0-1" scope="col" colspan="2">ESALs</th></tr>
+<tr><th id="ct-18-kip-esal-2-h1-1" scope="col">RIGID</th><th id="ct-18-kip-esal-2-h1-2" scope="col">FLEXIBLE</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-18-kip-esal-2-h2-0" scope="row">0 - 1,000</th><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-1 ct-18-kip-esal-2-h2-0">20</td><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-2 ct-18-kip-esal-2-h2-0">10</td></tr>
+<tr><th id="ct-18-kip-esal-2-h3-0" scope="row">1,001 - 2,000</th><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-1 ct-18-kip-esal-2-h3-0">80</td><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-2 ct-18-kip-esal-2-h3-0">60</td></tr>
+<tr><th id="ct-18-kip-esal-2-h4-0" scope="row">2,001 - 3,000</th><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-1 ct-18-kip-esal-2-h4-0">140</td><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-2 ct-18-kip-esal-2-h4-0">100</td></tr>
+<tr><th id="ct-18-kip-esal-2-h5-0" scope="row">3,001 - 5,000</th><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-1 ct-18-kip-esal-2-h5-0">220</td><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-2 ct-18-kip-esal-2-h5-0">150</td></tr>
+<tr><th id="ct-18-kip-esal-2-h6-0" scope="row">5,001 - 8,000</th><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-1 ct-18-kip-esal-2-h6-0">360</td><td headers="ct-18-kip-esal-2-h0-1 ct-18-kip-esal-2-h1-2 ct-18-kip-esal-2-h6-0">250</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-18-kip-esal-2-sum">Rows list design year ADT ranges for cross routes. Columns give ESALs values categorized by rigid and flexible pavement types.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 157.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 111–113), Ch. 6 (pp. 136–137), Ch. 7 (pp. 154–157), Ch. 8 (p. 160), Ch. 10 (pp. 176–180)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>In the rigid‑pavement design procedure, the 18‑kip ESAL value is entered together with a set of material specifications: the pavement layers must be defined (subgrade, aggregate subbase, an ATPB or CTPB base, and a concrete surface such as JPCP or RCC), and the concrete properties required are the 28‑day mean PCC modulus of rupture, the 28‑day mean elastic modulus of the slab, and the mean effective k‑value. Additional design inputs include the load‑transfer coefficient (J), the overall drainage coefficient (Cd), the reliability level, the overall standard deviation, and the initial and terminal serviceability values. No explicit mixture proportions are called for in the source; only these material types and their performance properties are required alongside the 18‑kip ESAL input. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (p. 160)</small></p>
+<p>In Superpave paving courses the designer first selects a performance‑grade (PG) binder and specifies the number of equivalent 18‑kip single axle loads (ESALs) for a 20‑year design life; this ESAL value places the project into one of five ESAL ranges, which then drives the volumetric mixture design to achieve resistance to permanent deformation (rutting) and low‑temperature cracking. When the ESAL range exceeds ten million, the specification requires a polymer‑modified PG 64E‑22 binder for wearing or binder courses to avoid rutting, while lower ranges may use less severe binders. To aid constructability and cost, projects are limited to no more than three individual mix designs (five for major projects), and for quantities under 250 tons or 1 000 square yards at 1½ in thickness the ESAL range may be shifted by one range to reduce the number of mixes. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>In an AC overlay of an existing AC pavement the interface between the new overlay and the underlying layers is evaluated through the Structural Number (SN) for Future Traffic and the Effective Existing SN, which are obtained using the Component Method or Non‑Destructive Testing Method with layer depths and coefficients from Table 9.3 and all drainage coefficients set to 1.0; the calculated overlay SN must be greater than the design SN to ensure structural adequacy. Because the existing subbase may be in poor condition, it is omitted from the structural evaluation of Interstate overlays, and for non‑Interstate projects the subbase is also excluded when the design 18‑kip ESALs exceed 5,000,000 unless a specific investigation confirms its quality and drainability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 10 (p. 180)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=42af5827 src=pub_242_change_10::tab:p158#1 -->
+<p>The table below provides average initial truck factors for rigid and flexible pavement design. It relates to the section <a href="#design-inputs-and-requirements">Design inputs and requirements</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-18-kip-esal-3-cap" tabindex="0"><table class="ct-table" id="ct-18-kip-esal-3" aria-describedby="ct-18-kip-esal-3-sum">
+<caption id="ct-18-kip-esal-3-cap">TABLE 7.4 AVERAGE INITIAL TRUCK FACTORS (ESALs/TRUCK) BY VEHICLE CLASS</caption>
+<thead>
+<tr><th id="ct-18-kip-esal-3-h0-0" scope="col" colspan="3">VEHICLE CLASSIFICATION</th><th id="ct-18-kip-esal-3-h0-3" scope="col" colspan="2">ESALs</th></tr>
+<tr><th id="ct-18-kip-esal-3-h1-0" scope="col">LINE # INDARWin3.01</th><th id="ct-18-kip-esal-3-h1-1" scope="col">FHWACLASS</th><th id="ct-18-kip-esal-3-h1-2" scope="col">CORRESPONDINGDEPARTMENTDESCRIPTION</th><th id="ct-18-kip-esal-3-h1-3" scope="col">RIGID</th><th id="ct-18-kip-esal-3-h1-4" scope="col">FLEXIBLE</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-0">1</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-1">2</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-2">Passenger Cars</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-3">0*</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-4">0*</td></tr>
+<tr><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-0">2</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-1">5</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-2">2-axle, 6-tire</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-3">0.24</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-4">0.24</td></tr>
+<tr><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-0">3</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-1">6</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-2">3-axle, single unit</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-3">1.15</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-4">0.82</td></tr>
+<tr><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-0">4</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-1">7</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-2">4-axle, single unit</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-3">7.00</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-4">4.50</td></tr>
+<tr><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-0">5</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-1">8</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-2">3-axle, single trailer</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-3">0.43</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-4">0.44</td></tr>
+<tr><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-0">6</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-1">8</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-2">4-axle, single trailer</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-3">0.90</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-4">0.76</td></tr>
+<tr><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-0">7</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-1">9</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-2">5+-axle, single trailer</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-3">1.59</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-4">1.00</td></tr>
+<tr><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-0">8</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-1">11</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-2">5+-axle, twin trailer</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-3">2.40</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-4">2.33</td></tr>
+<tr><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-0">9</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-1">12</td><td headers="ct-18-kip-esal-3-h0-0 ct-18-kip-esal-3-h1-2">6-axle, twin trailer</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-3">1.42</td><td headers="ct-18-kip-esal-3-h0-3 ct-18-kip-esal-3-h1-4">1.28</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-18-kip-esal-3-sum">Rows list vehicle types by FHWA class and description, while columns provide average initial truck factors for rigid and flexible pavements.</p>
+<p class="ct-notes">Notes: *Note: Because passenger cars do not significantly contribute to the 18-kip ESALs they are considered negligible and an ESAL/truck factor of 0 is assigned. However, the percent of the ADT in this class must be inputted into DARWin because the Total Percentage must equal 100.00%. If there are any vehicles that are not large enough to be classified in any of the above classes, such as motorcycles, they should be grouped with the passenger car percentage.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 158.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

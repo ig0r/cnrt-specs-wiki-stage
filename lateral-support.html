@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lateral Support</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html" class="active" aria-current="page">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><a href="shoulder.html">Shoulder</a><span class="crumb-sep">›</span><span class="crumb-current">Lateral Support</span></nav>
+<article><h1>Lateral Support</h1>
+<div class="meta"><div class="part-of">Part of: <a href="shoulder.html">Shoulder</a> <span class="edge edge-taxonomic" title="Lateral Support is a topic under Shoulder.">is-subtopic-of</span></div><div class="edge-reading">Lateral Support is a topic under Shoulder.</div><div><a class="tag" href="index.html?q=lateral-support">lateral-support</a></div><div>Created 2026-10-28 · Updated 2026-10-28</div></div>
+<p>Lateral support is a design provision that supplies side restraint to pavements and adjacent structures so that edge loads are carried, edge stresses are markedly reduced, and damage such as edge cracking or lateral spreading is avoided.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In rigid‑pavement applications the support is typically provided by concrete shoulders whose joints must not exceed 20 ft spacing (or a minimum three‑foot width when only the first few feet are distressed), thereby stabilizing slab corners and keeping the load‑transfer coefficient J low; poor side restraint raises J and increases corner stresses.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The concept also governs flowable‑backfill design, where formwork must be sized to resist the full lateral fluid pressure of the unhardened material with at least a 1.3 factor of safety and backfill placed in lifts not exceeding four feet so that adjacent walls, foundations and utilities are protected from excessive pressure.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Lateral support is required to counteract edge loads on pavements, thereby lowering edge stresses that would otherwise develop and preventing damage such as edge cracking or lateral spreading.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Shoulders provide this support when edge loads are applied, significantly reducing the edge stresses that would occur without shoulder support and thus reducing the resulting damage consistent with the applied stress level.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When rehabilitating rigid pavements, the design may call for concrete shoulders so that the sides of the existing pavement receive lateral support, addressing the need to keep the pavement edges stable and prevent edge distress; for those concrete shoulders the joint spacing shall not exceed 20 ft, ensuring a continuous supportive element along the pavement side.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Lateral support is also needed to prevent excessive corner stresses and loss of load‑transfer efficiency at the edges of rigid pavement slabs; without adequate side restraint transverse joints cannot effectively share loads, leading to higher load‑transfer coefficients and potential performance degradation, so the design incorporates a load‑transfer coefficient J that increases when lateral support is poor.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In the context of flowable backfill, lateral support is intended to prevent excessive lateral pressure from destabilizing adjacent structures such as retaining walls, foundations, and utilities.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The specification requires designing forms to sustain lateral fluid pressure equal to the total weight of unhardened flowable backfill with a minimum 1.3 factor of safety, and it mandates placing the material in lifts so that lateral pressures do not exceed the resisting capacity of the structure; lifts must not exceed four feet unless approved.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–62), Ch. 8 (p. 163); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<p>In the general design, lateral support supplied by pavement shoulders must function to carry edge loads so that edge stresses are significantly reduced compared with an unsupported condition, thereby limiting damage in proportion to the applied stress level and helping preserve the structural capacity and serviceability of the pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For rigid pavements, the structural requirement is that concrete shoulder joints shall not exceed a spacing of 20 ft. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When only the first few feet adjacent to a distressed high‑type paved shoulder require repair, a minimum width of 3 ft of Type 6, 6‑F, 6‑S or 6‑SP shoulder may be placed and the remaining existing shoulder resurfaced with the same material. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For widening projects, the structure must extend into the shoulder by 2 ft when the current ADT is greater than 5 000 or the ADTT exceeds 500; a 1‑ft extension is permitted when those values are 5 000 or less and 500 or less respectively, thereby preserving edge stability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Recycled‑asphalt bases may be used for shoulders, but they must have a minimum depth of 5 in on arterials and 4 in on collectors and local roads to ensure durability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The lateral support system for flowable backfill must be capable of resisting the full weight of unhardened material, and the formwork shall be designed to sustain that lateral fluid pressure with at least a factor of safety of 1.3. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Backfill lifts shall not exceed four feet unless approved by the Representative, thereby preventing lateral pressures from exceeding the structure’s resisting capacity. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The design must also protect foundation drains, utilities and other existing structures from movement, floating or damage during placement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–62); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>In the design of Portland Cement Concrete (PCC) pavements, lateral support is appropriate when edge loads are present and the design calls for improving or providing shoulder structure; in that situation shoulders supply lateral support, which reduces edge stresses compared with an unsupported condition (Section 2.1). For rehabilitation of rigid pavements, lateral support may be provided by adding concrete shoulders, provided the joint spacing shall not exceed 20 ft (Section 2.6). On Interstates, other limited‑access freeways and arterials where excavation or scarifying of the existing shoulder is required, Type 6, 6‑F, 6‑S, or 6‑SP shoulders may be used, and a minimum width of three feet may be applied when only the first few feet of a high‑type paved shoulder are distressed. Where the existing paved shoulder merely needs cleaning and patching, a Type 7 shoulder is appropriate. For flexible pavements on collectors and local roads, shoulders may be constructed from the same surface material as the pavement structure or may be Type 1, 1‑F, 1‑S, or 1‑SP shoulders (Section 2.6). In widening projects, if the current average daily traffic exceeds 5 000 or the average daily truck traffic exceeds 500, the widening structure shall be extended into the shoulder by two feet; otherwise it shall be extended by one foot (Section 2.6). Lateral support is also accounted for in rigid‑pavement design through the load transfer coefficient J, which reflects side support at slab corners and is appropriate when transverse joints are dowelled or tied concrete shoulders are present because these features reduce corner stress (Section 8.9). The selected J value shall be lower when the subgrade modulus k is high or truck percentages are low, and higher when k is low or truck percentages are high, as indicated by past deflection testing of load‑transfer efficiency; this guidance applies to all Department designs that use the AASHTO Rigid Pavement Design Procedures (Section 8.9). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–62), Ch. 8 (p. 163)</small></p>
+<p>When rehabilitating a rigid‑pavement section, if the existing shoulder is already high‑type paved and distress is limited to the first few feet adjacent to the pavement, a minimum three‑foot width of a Type 6, 6‑F, 6‑S or 6‑SP shoulder may be provided instead of full concrete lateral support. When only cleaning and patching of an existing paved shoulder is required, a Type 7 shoulder is specified rather than providing concrete lateral support. For widening projects where the current average daily traffic does not exceed 5 000 vehicles (or the average daily truck traffic does not exceed 500), the extension of the new pavement into the shoulder may be limited to one foot, and on arterials with less than 5 000 ADT the extension can even be omitted if an optional shoulder type is used, providing another design alternative. When the required formwork cannot be designed to sustain the lateral fluid pressure of unhardened flowable backfill with at least a 1.3 factor of safety, the flowable‑backfill method is unsuitable and another design approach should be considered. When lift heights would need to exceed four feet without Representative approval, the flowable‑back-fill technique is inappropriate. When placement temperatures fall below the prescribed limits—material temperature under 50 °F or air/surface temperature at 40 °F or lower—the method is unsuitable and an alternative design should be used. Finally, when placement would occur through flowing water, the flowable‑backfill method is not appropriate and another design approach is recommended. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The Pavement Policy Manual (Publication 242) states that shoulders shall be provided and evaluated for PCC pavements and must be designed to supply lateral support when edge loads are applied, with the design following the relevant Publication 408 specifications and Federal‑aid Highway Program policy on pavement management. For rigid‑pavement rehabilitation projects, concrete shoulders may be provided to supply lateral support, and the joint spacing of those concrete shoulders shall not exceed 20 ft. The manual further requires Type 6, 6‑F, 6‑S, or 6‑SP shoulders on Interstate and other limited‑access freeways and arterials where excavation or scarifying of the existing shoulder is necessary, with a minimum width of three feet may be provided when only the first couple feet adjacent to the pavement are distressed; Type 7 shoulders are provided where only cleaning and patching of the existing paved shoulder is needed. When widening the pavement, if the current ADT is greater than 5 000 or the ADTT exceeds 500, the widening structure shall be extended two feet into the shoulder area; otherwise it shall be extended one foot, and this extension may be eliminated on arterials with less than 5 000 ADT or on collectors and local roads if an optional shoulder type is used or a Type 6, 6‑F, 6‑S, 6‑SP, 7, or recycled shoulder is provided for the full width. Reclaimed asphalt concrete material may be used in base courses of Type 6, 6‑F, 6‑S, or 7 shoulders, and a cold‑mixed recycled base course shall have a minimum depth of five inches on arterials and four inches on collectors and local roads. Lateral support for rigid pavements is governed by the AASHTO Rigid Pavement Design Procedures, which require a load‑transfer coefficient J to represent the support at slab corners; the applicable J values are taken from Table 8.2 that defines ranges for all Department designs, with selection within the range depending on observed load‑transfer efficiencies, using lower‑end values when efficiencies are good to normal and higher‑end values when efficiencies are low, and higher J‑values should be used for lower k‑values or higher truck percentages while lower J‑values apply for higher k‑values or lower truck percentages. The Commonwealth of Pennsylvania Department of Transportation Publication 408 specifications require that forms be designed to sustain the lateral fluid pressure equal to the total weight of unhardened flowable backfill with at least a factor of safety of 1.3, and they limit backfill placement to lifts no higher than 4‑foot unless the Representative approves a greater height so that lateral pressures do not exceed the resisting capacity of the structure. Formwork must be constructed as specified in Section 1001.3(a), and any deviation requires Representative approval. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–62), Ch. 8 (p. 163); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>In rigid pavement design the lateral support is quantified by the load transfer coefficient J, which is incorporated into the AASHTO Rigid Pavement Design Procedures to reflect the support at slab corners [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The appropriate J value is selected from the ranges given in Table 8.2, with a lower‑end selection when past deflection testing shows good to normal transverse joint load‑transfer efficiency and an upper‑end selection when that testing indicates low efficiency; poor estimated lateral support also calls for a higher J [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The chosen J should be increased for lower subgrade modulus (k) values or higher truck traffic percentages and decreased for higher k values or lower truck percentages [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For flowable backfill the design procedure requires that formwork be sized to resist lateral fluid pressure equal to the total weight of unhardened flowable backfill while providing at least a 1.3 factor of safety [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Flowable backfill must be placed in lifts so that the resulting lateral pressures do not exceed the resisting capacity of the adjacent structure, and lifts shall not exceed four feet unless the Representative approves a greater height [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 8 (p. 163); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<p>In designing concrete shoulders that serve as lateral support for a rehabilitated rigid pavement, the joint spacing shall not exceed 20 ft, which directly governs the effectiveness of the lateral‑support function. When a widening is contemplated, the required extension into the shoulder area depends on traffic levels; if the current average daily traffic (ADT) exceeds 5 000 or the average daily truck traffic (ADTT) exceeds 500, the widening structure must extend two feet into the shoulder, whereas if the ADT is 5 000 or less or the ADTT is 500 or less, the extension shall be one foot. For rigid‑pavement design, the load‑transfer coefficient J, which accounts for the lateral support provided to the pavement at slab corners, must be selected from the departmental ranges given in Table 8.2 and is guided by observed joint performance, with lower‑end values used when past deflection testing shows good to normal transfer efficiencies and higher‑end values used when efficiencies are low. Higher J‑values are applied for lower subgrade modulus (k) values or higher truck percentages, while lower J‑values are applied for higher k values or lower truck percentages. In the design of lateral support for flowable backfill, the formwork must be capable of sustaining the lateral fluid pressure generated by the total weight of the unhardened material with a minimum factor of safety of 1.3, as required in Section 220.3(b). To keep lateral pressures within the resisting capacity of the structure, flowable backfill shall be placed in lifts. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 8 (p. 163); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>Concrete shoulders that serve as lateral support may be provided, but their joint spacing shall not exceed 20 ft. When only the first few feet adjacent to the pavement are distressed, a minimum width of 3 feet for Type 6, 6‑F, 6‑S or 6‑SP shoulders may be used, with the remainder resurfaced in kind. For pavement widening, the structure shall extend into the shoulder by 1 foot when ADT is 5000 or less (or ADTT is 500 or less) and by 2 feet when ADT is greater than 5000 (or ADTT is greater than 500). Recycled‑material base courses on shoulders require a minimum depth of 5 inches on arterials and 4 inches on collectors and local roads. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62)</small></p>
+<p>For lateral support provided by shoulders, the joint spacing of concrete shoulders shall not exceed 20 ft; when a rigid‑pavement rehabilitation calls for concrete shoulders a minimum width of three feet of Type 6, 6‑F, 6‑S or 6‑SP may be used and the remaining shoulder is resurfaced with the same material. Recycled asphalt base courses are permitted on shoulders, but must have a minimum depth of five inches on arterials and four inches on collectors and local roads. The choice of shoulder type (e.g., Type 6, 6‑F, 6‑S, 6‑SP or Type 7) follows the project’s need for excavation, scarifying, or simple cleaning and patching. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>For rehabilitation of rigid pavement, concrete shoulders may be employed as lateral support and the joint spacing shall not exceed 20 ft [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When an existing high‑type paved shoulder is only partially distressed, a minimum width of three feet of Type 6, 6‑F, 6‑S or 6‑SP shoulder may be provided while the remaining portion is resurfaced with the same surfacing as the new shoulder [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Reclaimed asphalt concrete material is acceptable for recycled base courses on any shoulder type and may be used in an asphalt recycled base course for Type 6, 6‑F or 6‑S shoulders or in an asphalt surface course for Type 7 shoulders; if a cold‑mixed recycled base course is placed, the minimum depth shall be five inches on arterials and four inches on collectors and local roads [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The lateral support specifications for flowable backfill require the contractor to furnish the type of mix indicated in Table A and to avoid any contact with aluminized materials or compounds [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The mix may be adjusted in the field only if it continues to meet the Table A criteria [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For dikes, the mixture must use less water so that a minimum slump of three inches is achieved [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Forms shall be designed to sustain lateral fluid pressure equal to the total weight of unhardened flowable backfill with a minimum factor of safety of 1.3 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Lifts may not exceed four feet unless approved by the Representative [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Material temperature must not be below fifty degrees Fahrenheit and the air or surface temperature on which the material is placed must not be lower than forty degrees Fahrenheit [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Required material properties include slump tested in accordance with AASHTO T 119, air content per AASHTO T 152/T 196, yield per AASHTO T 121/ASTM C 136, and compressive strength of molded cylinders tested according to PTM No. 604, with testing performed at least once daily or every two hundred cubic yards [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 61–62); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<p>Lateral support design calls for careful selection and proportioning of shoulder materials on rigid pavements, where concrete shoulders may be provided but their joint spacing shall not exceed 20 ft [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If only the first couple feet adjacent to the pavement are distressed, a minimum 3‑feet width of Type 6, 6‑F, 6‑S or 6‑SP shoulder may be provided and the remaining existing shoulder resurfaced with the same surfacing used on the new shoulder [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. On Interstate and other limited‑access freeways where excavation or scarifying is necessary, Type 6, 6‑F, 6‑S or 6‑SP shoulders shall be provided, while Type 7 shoulders may be used when only cleaning and patching are required, and flexible‑pavement shoulders may be provided with the same surface material as the pavement structure or a Type 1, 1‑F, 1‑S or 1‑SP shoulder [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When widening a roadway, if the current ADT is greater than 5 000 or the ADTT is greater than 500 the widening structure shall be extended into the shoulder area by 2 feet; otherwise it shall be extended by 1 foot, and full‑width paving may be used in areas of heavy turning [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Reclaimed asphalt concrete material may be used in recycled base courses for Type 6, 6‑F, 6‑S or Type 7 shoulders with a minimum depth of 5 inches on arterials and 4 inches on collectors and local roads [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Materials for flowable backfill used as lateral support must be the type indicated in Table A and may be adjusted on‑site only if the resulting mix still meets all Table A criteria, including the specified slump, air content, yield and compressive strength verified through daily testing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Forms that retain the backfill shall be designed to sustain lateral fluid pressure equal to the total weight of the unhardened material with a minimum factor of safety of 1.3 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Lifts of flowable backfill shall not exceed 4 feet unless expressly approved, and placement temperature must be at least 50 °F for the material while the air or surface temperature may not be below 40 °F [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The contractor must maintain these conditions while monitoring flowability and strength to ensure structural integrity, durability, constructability and performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 61–62); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>In the 3R resurfacing, restoration, and rehabilitation procedures described in section 2.6 (Shoulders) of the Pavement Policy Manual, concrete shoulders that are used to provide lateral support shall be laid with joint spacing that does not exceed 20 ft [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual permits a minimum shoulder width of 3 ft for Type 6, 6‑F, 6‑S, or 6‑SP configurations [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. No reinforcement, load‑transfer systems, or other connection details are prescribed for those shoulders in the 3R process [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For the slab‑corner region addressed in section 8.9 (Load Transfer Coefficient, J) of the same manual, lateral support is provided primarily by dowelled transverse joints and, when present, tied concrete shoulders, both of which improve load transfer and keep the load‑transfer coefficient J low [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If dowelling or tied shoulders are lacking, indicating poor lateral support, the J value will increase to reflect higher corner stresses, with higher J values used for lower k values or higher truck percentages and lower J values applied when k values are high or truck percentages are low [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Section 220.3 of the Pennsylvania Department of Transportation specifications, formwork that retains unhardened flowable backfill must be designed to sustain the lateral fluid pressure of the material with at least a minimum factor of safety of 1.3 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Backfill lifts shall not exceed 4 ft unless an exception is approved by the Representative [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Foundation drains must be protected by installing a separation membrane of Class 4, Type A geotextile and a pre‑formed drain no more than 2 in thick placed between any wall and the flowable fill, with outlet openings spaced at not more than 15 ft through the wall [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Pipe bedding and utility trenches require adequate support, surrounding Class 4, Type A geotextile, and floating must be prevented by placing backfill in lifts or using sandbags or other weights until the lift sets [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 8 (p. 163); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<p>For rigid pavement rehabilitation, concrete shoulders are provided to supply lateral support and the joint spacing of those shoulders shall not exceed 20 ft [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When widening a flexible pavement on collectors or local roads, the new structure shall be extended into the shoulder by 2 ft if the current ADT is greater than 5 000 or ADTT is greater than 500, otherwise it shall be extended by 1 ft; the entire shoulder may be paved with the same material at the District Executive’s discretion [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Reclaimed asphalt concrete may be used in base courses for Type 6, 6‑F, 6‑S shoulders or as a surface course for Type 7 shoulders, and a cold‑mixed recycled base on arterials must have a minimum depth of 5 inches (4 inches on collectors and local roads) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Lateral support at slab corners is accounted for by selecting an appropriate load transfer coefficient J in the AASHTO rigid‑pavement design procedures; dowelled transverse joints and tied concrete shoulders reduce corner stress and are reflected in the chosen J value [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When poor lateral support is estimated, the J value will increase, so designers use a value toward the lower end of the prescribed ranges if past deflection testing shows good to normal load‑transfer efficiency and a value toward the upper end if testing indicates low efficiency [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The chosen J should also reflect pavement stiffness and traffic composition, with higher J‑values used for lower k‑values or higher truck percentages and lower J‑values used for higher k‑values or lower truck percentages [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For flowable backfill adjacent to pavement structures, formwork shall be sized to sustain the lateral fluid pressure equal to the total weight of unhardened backfill with at least a 1.3 factor of safety [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Lifts of flowable backfill shall not exceed 4 ft unless approved by the Representative [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A separation membrane of Class 4, Type A geotextile shall be placed to protect structure foundation drains from intrusion and contamination by the flowable backfill [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A preformed drain no more than 2 inches thick shall be installed between any wall and the flowable fill, with outlet openings spaced at not more than 15 feet through the wall to control pressures [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 8 (p. 163); [2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>In designing lateral support, drainage must be integrated by keeping base drain outlets clear of flowable backfill and installing a preformed drain no more than 2 inches thick between the wall and the fill with outlet pipes spaced at not more than 15 feet through the wall. Moisture control requires that flowable backfill never be placed through flowing water, that any material damaged by rain or runoff be removed and replaced, and that additional lifts are delayed until surface bleed water has dissipated or the prior lift has hardened sufficiently. Climate considerations are addressed by prohibiting placement when the material temperature is below 50 °F or when air or surface temperatures are 40 °F or lower, and by maintaining the in‑place backfill at no less than 50 °F for at least 24 hours, while protecting the finished surface from frost, erosion and damage with approved covers. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<p>In rehabilitating rigid pavements without widening, concrete shoulders may be used to provide lateral support but the joint spacing shall not exceed 20 ft; where only the first couple feet adjacent to the pavement are distressed a minimum width of 3 feet of Type 6, 6‑F, 6‑S or 6‑SP shoulder may be provided and the remainder resurfaced with the same material as the new shoulder. When widening is required, the extension of the new structure into the existing shoulder depends on traffic: if the current ADT is greater than 5000 or the ADTT exceeds 500, the structure shall be extended 2 feet into the shoulder, otherwise it shall be extended 1 foot, and full out‑to‑out paving is strongly recommended in areas of heavy turning movement. These geometric dimensions and traffic‑based thresholds constitute the accessibility, safety and user considerations that must be incorporated into any lateral support provision. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed lateral support is verified by first submitting the sequence of operations at least four weeks before work begins and designing the formwork to resist the lateral fluid pressure of the unhardened flowable backfill with a minimum 1.3 factor of safety; lifts are limited to four‑foot unless the Representative approves a greater height, and all placement follows the specified forms and protective measures. During construction the contractor conducts daily slump and yield tests (or at least one test per 200 cubic yards) and molds compressive‑strength cylinders that are witnessed by the Inspector, removing any material that does not meet the Table A strength criteria. Test results are recorded and submitted to the Representative for acceptance, and any non‑conforming fill may be retained in place only with liquidated damages assessed at $25 per cubic yard. Traffic is allowed onto Type B or C backfill only after one hour following surface bleed water dissipation, ensuring performance aligns with project requirements. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 183–184)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

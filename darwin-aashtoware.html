@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DARWin / AASHTOWare</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html" class="active" aria-current="page">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">DARWin / AASHTOWare</span></nav>
+<article><h1>DARWin / AASHTOWare</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="DARWin / AASHTOWare is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">DARWin / AASHTOWare is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=darwin-pavement-design-analysis">darwin-pavement-design-analysis</a><a class="tag" href="index.html?q=darwin-pavement-design-software">darwin-pavement-design-software</a><a class="tag" href="index.html?q=darwin-pavement-design">darwin-pavement-design</a><a class="tag" href="index.html?q=aashtoware">aashtoware</a><a class="tag" href="index.html?q=aashtoware-pavement-me">aashtoware-pavement-me</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>DARWin (AASHTOWare® DARWin® 3.01) is the agency‑mandated software that PennDOT engineers must use to perform pavement‑design analyses for new, reconstruction or rehabilitation projects whose continuous paved length exceeds 500 ft on divided roadways, 1,000 ft on undivided roadways, or bridge approaches totaling more than 1,000 ft, implementing the 1993 AASHTO Pavement Design Procedures as amended by PennDOT and producing structural design calculations, traffic and geotechnical inputs, and Life‑Cycle Cost Analysis printouts for Central Office submittal [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The program supports both flexible and rigid alternatives—including full‑depth asphalt, full‑depth concrete, reclamation sections, structural overlays, and fiber‑reinforced concrete overlays—by requiring detailed project‑specific data such as ADT, truck percentages, CBR or assumed resilient modulus, ESALs, serviceability indices, concrete modulus of rupture, elastic modulus, subgrade k‑value, reliability, standard deviation, load‑transfer and drainage coefficients, then processing these inputs through mechanistic‑empirical calculations to determine layer thicknesses and compositions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Certified project‑management engineers must complete five distinct DARWin designs covering each structural type, update the analysis whenever the design year differs by more than three years from the approved model, and submit the resulting printouts, traffic summaries, geotechnical tables, and LCCA results as part of the formal design package [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-intended-use">Purpose and intended use</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#key-content-and-structure">Key content and structure</a></li><li><a href="#required-inputs-and-assumptions">Required inputs and assumptions</a></li><li><a href="#method-and-workflow">Method and workflow</a></li><li><a href="#criteria-outputs-and-interpretation">Criteria, outputs, and interpretation</a></li><li><a href="#authority-and-technical-basis">Authority and technical basis</a></li><li><a href="#practical-application-and-case-studies">Practical application and case studies</a></li><li><a href="#limitations-and-cautions">Limitations and cautions</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-intended-use">Purpose and intended use</h2>
+<p>DARWin is employed to carry out the mandated pavement‑design analysis for PennDOT projects that exceed specified length thresholds—more than 500 ft continuous on divided roadways, more than 1,000 ft continuous on undivided roadways, or bridge approaches where paving on both sides exceeds 1,000 ft—and to produce the structural design calculations, traffic and geotechnical inputs, and Life‑Cycle Cost Analysis printouts required for Central Office submission. The software implements the 1993 AASHTO Pavement Design Procedures as amended by PennDOT, allowing engineers to compare alternative designs, generate screen printouts, and update the analysis when the design year differs by more than three years from that used in the approved analysis, thereby ensuring that traffic data, resilient‑modulus assumptions, CBR values, and LCCA results are assembled for review. Certified PME/PMs must complete five DARWin‑based designs—including at least one full‑depth asphalt, one full‑depth concrete, one full‑depth reclamation, a structural asphalt overlay, and a concrete overlay—so that they can recommend approval of Federal or PennDOT Oversight pavement designs through Form D‑4332 in accordance with sound engineering principles and the Pavement Policy Manual. For rigid pavement design, DARWin requires the user to supply key inputs such as 18‑kip ESALs over the initial performance period, initial and terminal serviceability values, 28‑day mean PCC modulus of rupture and elastic modulus of slab, mean effective k‑value, reliability level, overall standard deviation, load transfer coefficient (J) and drainage coefficient (Cd); by processing these inputs the program assists engineers in determining the appropriate thickness and composition of subgrade, subbase, base and concrete surface layers for jointed plain or roller‑compacted concrete pavements. In the case of fiber‑reinforced concrete overlays, DARWin performs mechanistic‑empirical structural design using the effective flexural strength (feff), which combines plain‑concrete MOR and residual fiber strength f150, as an input to calculate the required bonded overlay thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (p. 160), Ch. 10 (pp. 186–188)</small></p>
+<p>The DARWin/AASHTOWare software is intended for Pennsylvania Department of Transportation engineers who prepare pavement designs, and its use is mandated throughout the pavement‑design analysis phase. It must be employed when performing a DARWin pavement design analysis for new construction, reconstruction or rehabilitation projects that exceed the length thresholds—more than 500 continuous feet on divided roadways, more than 1,000 continuous feet on undivided roadways, or bridge approaches over 1,000 feet—and can also support a preliminary design before geotechnical data are available by assuming a resilient modulus. The resulting analysis and printouts become part of the design package submitted for Central Office review and final design approval. DARWin is meant for individual Project Management Engineers or Project Managers (PME/PM) who are pursuing PennDOT certification; they must use the tool to produce the five required pavement design packages—full‑depth asphalt, full‑depth concrete, full‑depth reclamation, structural asphalt overlay and a concrete overlay—when completing the pavement design analysis and submittal for PennDOT Oversight or Federal Oversight projects. The tool is aimed at pavement engineers who are performing the structural design of a bonded concrete overlay on an existing asphalt surface; it is used after evaluating the existing pavement and estimating the residual flexural strength of the fiber‑reinforced concrete, so that the effective flexural strength can be entered into a mechanistic‑empirical design program such as AASHTOWare Pavement ME to compute the required overlay thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 10 (pp. 186–188)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Under the 1993 AASHTO Pavement Design Procedures DARWin (AASHTOWare® DARWin® 3.01) is used for all new construction, reconstruction, rehabilitation and preservation projects that exceed length thresholds—more than 500 ft continuous on divided roadways, more than 1,000 ft continuous on undivided roadways, or bridge approaches where the total paving of both sides exceeds 1,000 ft—and it generates structural design calculations, traffic summaries (ADT and truck percentages) and geotechnical inputs such as CBR, FWD data and assumed resilient modulus. When a geotechnical report is unavailable a preliminary design may be prepared by assuming a resilient modulus, allowing the project to proceed without delaying schedule. The software supports evaluation of both rigid and flexible alternatives, composite pavements that exceed minimum thicknesses, and temporary crossovers, and it produces full DARWin printouts, LCCA results and supporting documentation for submission to the Pavement Design and Analysis Unit. In PennDOT oversight DARWin is used to produce design packages for several full‑depth pavement structures, requiring at least one model of each: a full‑depth asphalt layer, a full‑depth concrete slab, a full‑depth reclamation section, a structural asphalt overlay, and a concrete overlay placed on either existing concrete or asphalt. The tool also supports the design of pervious pavements for trails and parking lots when those projects follow the procedures in Appendix K. For rigid pavement design DARWin focuses on Jointed Plain Concrete Pavement (JPCP) and Roller Compacted Concrete (RCC) surfaces that rest on subbase aggregates for drainage and base layers of Asphalt Treated Permeable Base (ATPB) or Cement Treated Permeable Base (CTPB), and it requires inputs such as 18‑kip ESALs over initial performance period, initial and terminal serviceability, 28‑day mean PCC modulus of rupture, 28‑day mean elastic modulus of slab, mean effective k‑value, reliability level, overall standard deviation, load transfer coefficient (J) and overall drainage coefficient (Cd). The resource addresses fiber‑reinforced concrete (FRC) overlays applied to asphalt‑surfaced or composite pavements, describing how the AASHTOWare Pavement ME design program can be used for bonded concrete overlay designs that incorporate synthetic or steel macrofibers. It covers conditions ranging from fair‑to‑good existing asphalt, which permits a bonded overlay, to poor and deteriorated pavement where an unbonded overlay is more appropriate, and it targets engineering problems such as insufficient structural capacity, excessive crack widths, loss of joint load transfer efficiency, slab movement, misalignment, plastic shrinkage cracking and reduced service life. The design process incorporates residual‑strength estimation (f150) from ASTM C1609, uses the Residual Strength Estimator spreadsheet, and may follow BCOA‑ME or ACPA Pavement Designer methodologies alongside AASHTOWare. Material specifications for FRC overlays include macrofibers of 0.2% to 0.5% by volume, lengths of 1 to 2.5 in., aspect ratios of 30 to 100 and residual strength values typically between 100 and 225 psi. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (p. 160), Ch. 10 (pp. 186–188)</small></p>
+<p>DARWin analysis is limited to projects whose paved length exceeds the thresholds of more than 500 continuous feet on divided roadways, more than 1,000 continuous feet on undivided roadways, or bridge approaches where the total paving on both sides exceeds 1,000 feet; shorter sections are exempt unless directed and must otherwise conform to existing pavement thickness tables. A preliminary pavement design may be developed prior to receiving the geotechnical report or soils findings by assuming a resilient modulus. Furthermore, if the design year of the project changes by more than three years from the design year used in the approved pavement design and Life‑Cycle Cost Analysis (LCCA), a new design and LCCA (if required) shall be performed. DARWin is required only when a PennDOT Oversight design is being used to obtain certification, and the PME/PM must submit five designs using DARWin that include at least one of each full‑depth asphalt, full‑depth concrete, full‑depth reclamation, structural asphalt overlay and concrete overlay. Pavement Preservation projects are exempt because they are deemed cost‑effective and do not require a pavement design analysis. For PennDOT Oversight projects whose mainline pavement surface work is less than 30,000 square yards, the type‑determination procedure may be omitted but a documented justification for the selected pavement type must still be provided. Reconstruction projects fall outside the sole use of DARWin because they also require detailed soils reports as specified elsewhere in the manual. DARWin is limited to designing rigid pavements that follow the 1993 AASHTO Pavement Design Procedures and therefore requires the specific set of inputs listed (ESALs, serviceability values, modulus of rupture, elastic modulus, k‑value, reliability, standard deviation, load transfer coefficient, drainage coefficient). The method assumes the pavement surface will be Jointed Plain Concrete Pavement or Roller Compacted Concrete; designs for Jointed Reinforced Concrete Pavement and Continuously Reinforced Concrete Pavement are seldom performed. It also presumes a conventional pavement structure of subgrade, subbase, base and surface with a functional drainage system, even though drainage is not part of the structural layers. RCC pavement designs for local and collector roads with an ADT ≤ 2000 are excluded from the DARWin software; instead they must be generated with ACPA StreetPave12 using a 20‑year design life, a 1.0 % traffic growth rate, a 6‑inch unbound granular subbase, standard PennDOT PCC inputs and an allowance that up to 15 % of slabs may crack at the end of service. The tables for those designs assume a supported edge reduces required thickness by one inch, apply reliability of 90 % with terminal serviceability of 2.5 for collector roads and reliability of 85 % with terminal serviceability of 2.0 for local roads. Consequently DARWin cannot be used for these RCC designs and its applicability is limited to other pavement types that follow the standard PennDOT design procedures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (pp. 160–167)</small></p>
+<h2 id="key-content-and-structure">Key content and structure</h2>
+<p>DARWin (AASHTOWare® DARWin® 3.01) is required for every PennDOT pavement design that follows the 1993 AASHTO procedures and a DARWin analysis must be performed whenever the continuous pavement length exceeds 500 ft on divided roadways or 1,000 ft on undivided roadways (or bridge approaches over 1,000 ft). For short sections where a DARWin analysis is not required, the existing pavement must meet minimum thickness criteria, but a DARWin study may still be ordered by the District Pavement Management Engineer when structural adequacy or cost effectiveness cannot be assured. The software generates full design printouts, screen captures and structural calculations that become part of the submission package together with traffic summaries (ADT and truck percentages), geotechnical data such as CBR tables and FWD results, and Life‑Cycle Cost Analysis outputs; these items are compared to a Central Office ME design before final approval. For PennDOT Oversight certification a professional must complete five pavement designs using DARWin covering the full range of structural types, with at least one design each of full‑depth asphalt, full‑depth concrete, full‑depth reclamation, a structural asphalt overlay and a concrete overlay on either concrete or asphalt, and these reports are submitted with Form D‑4332 for district approval. The District PME shall maintain a list of all DARWin designs for annual QA review by PDAU staff to ensure compliance with the Pavement Policy Manual. When designing rigid pavements, DARWin implements the 1993 AASHTO Pavement Design Procedures and requires the user to supply a defined set of performance and material inputs that include 18‑kip ESALs over the initial performance period, initial and terminal serviceability levels, the 28‑day mean PCC modulus of rupture and elastic modulus of slab, the mean effective k‑value, reliability level, overall standard deviation, load transfer coefficient (J) and overall drainage coefficient (Cd); sections 8.1 through 8.10 provide guidance on these variables and the software uses Portland Cement Concrete terminology throughout. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (p. 160)</small></p>
+<p>The DARWin content is structured as a step‑by‑step manual divided into chapters and subsections that walk the user through the 1993 AASHTO design method, with Chapters 6–10 providing the basic theory and input guidance; key decision points are illustrated by Figure 6.1, a flowchart of the PennDOT approval process, while quantitative limits such as “more than 500 continuous feet on divided roadways and 1,000 continuous feet on undivided roadways” trigger the required DARWin analysis and minimum‑thickness criteria are referenced in Tables 8.3 and 9.4. The submission portion is organized as a checklist that enumerates each deliverable in a prescribed order—cover letter, Form D‑4332, typical section drawing, location map, full DARWin printouts, structural calculations, traffic summary tables, geotechnical tables, LCCA printouts, etc.—and specifies copy requirements for Federal versus PennDOT oversight. This combination of narrative chapters, tabular references, a decision‑tree flowchart, and an ordered document checklist guides users through data entry, analysis, and report generation within the DARWin software environment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–136)</small></p>
+<h2 id="required-inputs-and-assumptions">Required inputs and assumptions</h2>
+<p>The user must supply detailed traffic inputs—average daily traffic and truck‑percentage values together with the full traffic breakdown—to feed DARWin, and must also provide geotechnical inputs that include a CBR summary table, all Falling Weight Deflectometer data or soils test results, and the required frost‑heave probability; when a geotechnical report is not yet available a resilient modulus may be assumed for a preliminary design. In addition, the project’s existing pavement history from RMS and any material property assumptions such as the resilient modulus are provided to support the structural calculations. For any reconstruction design the user must provide a detailed soils report, because all reconstruction projects need detailed soils reports as outlined in Section 2.2. On PennDOT Oversight projects with less than 30,000 square yards of mainline pavement surface work the type‑determination procedure is not required, but sufficient justification for the selected pavement type and proposed work must be documented in the project file. To meet certification requirements a PME/PM must submit five DARWin designs that include at least one each of full‑depth asphalt, full‑depth concrete, full‑depth reclamation, structural asphalt overlay, and a concrete overlay on either concrete or asphalt. When using AASHTOWare DARWin 3.01 for the 1993 AASHTO rigid‑pavement design the user must provide a set of project‑specific inputs that describe traffic loading, desired performance, material strengths and structural characteristics, as well as reliability and drainage assumptions; specifically the required data are the 18‑kip equivalent single axle loads (ESALs) for the initial performance period, the initial serviceability index, the terminal serviceability index, the 28‑day mean Portland cement concrete modulus of rupture and elastic modulus of the slab, the mean effective subgrade k‑value, the chosen reliability level, the overall standard deviation, the load‑transfer coefficient J, and the overall drainage coefficient Cd. For a DARWin or AASHTOWare concrete overlay analysis the engineer must first assess the existing asphalt pavement—core testing is required to verify that stripping is not prevalent and to decide whether a bonded overlay (fair‑to‑good condition) or an unbonded overlay (poor condition) is appropriate. The user then supplies the residual strength value f150, which typically ranges between 100 and 225 psi, and adds it to the plain concrete modulus of rupture to obtain the effective flexural strength feff that feeds the mechanistic‑empirical design software; in addition, the desired overlay thickness (commonly 3 to 6 in.) and the specified fiber content, which typically ranges from 0.2% to 0.5% by volume, are entered as design parameters. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (p. 160), Ch. 10 (pp. 186–188)</small></p>
+<p>DARWin is required for all PennDOT pavement designs that follow the 1993 AASHTO procedures and its use is assumed throughout Chapters 6‑10. The software must be applied whenever a new, reconstructed or rehabilitated section exceeds 500 continuous feet on divided roadways, exceeds 1,000 continuous feet on undivided roadways, or when bridge approaches total more than 1,000 feet of paving; shorter sections are limited to matching existing minimum thicknesses unless directed otherwise. A preliminary design may be generated before a geotechnical report by assuming a resilient modulus, but if the project’s design year differs by more than three years from that used in the approved pavement design and life‑cycle cost analysis, a new DARWin analysis (and LCCA) shall be performed. DARWin is assumed to be used only for PennDOT Oversight pavement designs, and certification requires that a PME/PM submit five DARWin designs covering at least one full‑depth asphalt, one full‑depth concrete, one full‑depth reclamation, one structural asphalt overlay, and one concrete overlay on either concrete or asphalt. Projects with less than 30,000 square yards of mainline pavement surface work may skip the type‑determination step but must still provide documented justification for the selected type. All reconstruction projects require detailed soils reports as outlined in Section 2.2, and preservation treatments are excluded from DARWin analysis unless an exception is granted. When applied to rigid pavements, DARWin operates under the 1993 AASHTO rigid‑pavement design procedures and therefore assumes that all designs follow those guidelines. The analysis requires a specific set of input parameters as boundary conditions: 18‑kip ESALs over the initial performance period, an initial serviceability, a terminal serviceability, a 28‑day mean PCC modulus of rupture, a 28‑day mean elastic modulus of slab, a mean effective k‑value, a reliability level, an overall standard deviation, a load transfer coefficient (J), and an overall drainage coefficient (Cd). The tool is limited to designing Jointed Plain Concrete Pavement or Roller Compacted Concrete surfaces; Jointed Reinforced Concrete Pavement and Continuously Reinforced Concrete Pavement are noted as seldom designed. For RCC pavement designs on local and collector roads with ADT ≤ 2000, the report specifies that StreetPave12 rather than DARWin is used, and every design assumes a 20‑year service life, a 1.0 % annual traffic growth rate and a fixed 6‑inch unbound granular subbase. The analysis permits up to 15 % of slabs to crack by the end of the design period and presents only minimum thickness values for pavements without a supported edge, subtracting one inch when a curb‑and‑gutter or widened lane is provided; alternative designs that would reduce those minimum depths are not allowed. Collector road calculations use a one‑way ADTT with subgrade resilient modulus MRSG = 1500×CBR, a terminal serviceability of 2.5 and a reliability of 90 %, while local roads use the same MRSG but a terminal serviceability of 2.0 and a reliability of 85 %. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=0b773746 src=pub_242_change_10::tab:p167#1 -->
+<p>The table below specifies minimum depths for Roller Compacted Concrete on local roads based on subgrade resilient modulus and traffic.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-darwin-aashtoware-1-cap" tabindex="0"><table class="ct-table" id="ct-darwin-aashtoware-1" aria-describedby="ct-darwin-aashtoware-1-sum">
+<caption id="ct-darwin-aashtoware-1-cap">Minimum Depths for RCC on Local Roads (inches)</caption>
+<thead>
+<tr><td></td><th id="ct-darwin-aashtoware-1-h0-1" scope="col" colspan="6">Subgrade Resilient Modulus, MrsG (psi)</th></tr>
+<tr><th id="ct-darwin-aashtoware-1-h1-0" scope="col">Number of one-way ADTT</th><th id="ct-darwin-aashtoware-1-h1-1" scope="col">7,500</th><th id="ct-darwin-aashtoware-1-h1-2" scope="col">9,000</th><th id="ct-darwin-aashtoware-1-h1-3" scope="col">10,500</th><th id="ct-darwin-aashtoware-1-h1-4" scope="col">12,000</th><th id="ct-darwin-aashtoware-1-h1-5" scope="col">13,500</th><th id="ct-darwin-aashtoware-1-h1-6" scope="col">15,000</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-darwin-aashtoware-1-h2-0" scope="row">1</th><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-1 ct-darwin-aashtoware-1-h2-0">5.0</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-2 ct-darwin-aashtoware-1-h2-0">4.5*</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-3 ct-darwin-aashtoware-1-h2-0">4.5*</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-4 ct-darwin-aashtoware-1-h2-0">4.5*</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-5 ct-darwin-aashtoware-1-h2-0">4.5*</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-6 ct-darwin-aashtoware-1-h2-0">4.5*</td></tr>
+<tr><th id="ct-darwin-aashtoware-1-h3-0" scope="row">2</th><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-1 ct-darwin-aashtoware-1-h3-0">5.0</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-2 ct-darwin-aashtoware-1-h3-0">5.0</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-3 ct-darwin-aashtoware-1-h3-0">5.0</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-4 ct-darwin-aashtoware-1-h3-0">4.5*</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-5 ct-darwin-aashtoware-1-h3-0">4.5*</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-6 ct-darwin-aashtoware-1-h3-0">4.5*</td></tr>
+<tr><th id="ct-darwin-aashtoware-1-h4-0" scope="row">3</th><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-1 ct-darwin-aashtoware-1-h4-0">5.0*</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-2 ct-darwin-aashtoware-1-h4-0">5.0*</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-3 ct-darwin-aashtoware-1-h4-0">5.0</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-4 ct-darwin-aashtoware-1-h4-0">5.0</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-5 ct-darwin-aashtoware-1-h4-0">4.5*</td><td headers="ct-darwin-aashtoware-1-h0-1 ct-darwin-aashtoware-1-h1-6 ct-darwin-aashtoware-1-h4-0">4.5*</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-darwin-aashtoware-1-sum">Rows list the Number of one-way ADTT, columns give Subgrade Resilient Modulus values for Minimum Depths.</p>
+<p class="ct-notes">Notes: *When using a supported edge, subtract 1 inch except when marked with an *, then only subtract 0.5 inch.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), Table 8.5.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (pp. 160–167)</small></p>
+<h2 id="method-and-workflow">Method and workflow</h2>
+<p>The first step is to verify that the project triggers a DARWin analysis by checking whether the new or rehabilitated pavement length exceeds 500 continuous feet on divided roadways, 1,000 continuous feet on undivided roadways, or, for bridge approaches, whether the total paving on both sides of the structure exceeds 1,000 feet; if so, the designer runs the AASHTOWare® DARWin® 3.01 software using the input values prescribed in Chapters 6‑10 of this manual and generates a full set of printouts that are then compared to the Central Office ME design. After the analysis, the designer prepares the submission package in the required order—cover letter, Form D‑4332, typical section drawing, location map, complete DARWin printouts, structural calculations with screen captures, traffic summary tables, geotechnical summaries, temporary pavement plans, LCCA printouts and any special provisions—and submits it to the appropriate PennDOT or Federal oversight office. If the design year differs by more than 3 years from that used in the approved design or LCCA, a new DARWin analysis and LCCA must be performed before resubmission. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–136)</small></p>
+<p>In DARWin analyses (section 6.1 PAVEMENT DESIGN ANALYSIS/SUBMITTAL) the user must exercise professional judgment when selecting design alternatives and, for PennDOT Oversight projects with less than 30,000 sq yd, must document engineering judgment for pavement type selection. If geotechnical data are not yet available, the user may assume a resilient modulus for a preliminary design; that assumption is confirmed by using the assumed modulus until actual soil results are obtained. Certified PME/PMs must base approval recommendations on sound engineering principles and any deviation from the Manual requires a waiver to BODD. All design packages—whether for PennDOT or Federal oversight—must be submitted to BODD for review and approval, and pervious pavement designs as well as Pavement Preservation projects that exceed the 15‑month limit must be sent to the District PME for review and approval. Field verification is required for all estimated rehabilitation item quantities during the final‑design phase and again whenever a new field view is needed because pavement conditions have changed, to ensure the designed section remains adequate. The completed DARWin design undergoes several review and approval steps: short‑section designs need District Executive approval recorded on the project file; full designs are compared with Central Office’s AASHTOWare ME design and receive preliminary and final sign‑off from the HDD Chief after a 3‑week comment period; and the final design is formally reviewed and approved before construction. In addition, QA visits by PDAU staff provide an annual review of DARWin designs. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139)</small></p>
+<h2 id="criteria-outputs-and-interpretation">Criteria, outputs, and interpretation</h2>
+<p>DARWin is required for any PennDOT pavement design that exceeds the length thresholds set in Section 6.1.A—continuous pavement segments longer than 500 ft on divided roadways, longer than 1,000 ft on undivided roadways, or bridge‑approach paving whose two sides total more than 1,000 ft must be analyzed with DARWin; a new DARWin analysis and Life‑Cycle Cost Analysis shall be performed whenever the design year used differs by more than three years from the year of the approved design. For short pavement sections that do not meet those length criteria, the proposed pavement must match the existing structure where it meets the minimum thickness requirements in Tables 8.3 and 9.4, and where the existing thickness is below those minima the new pavement must meet the minimum thickness criteria. DARWin is also used to classify pavement work into three types—Reconstruction, which replaces or re‑establishes the entire existing pavement structure; Rehabilitation, defined as resurfacing, restoration, and structural enhancements that extend service life; and Pavement Preservation, a long‑term strategy employing cost‑effective treatments. For PennDOT Oversight certification a PME/PM must submit five DARWin designs that include at least one full depth asphalt, one full depth concrete, one full depth reclamation, one structural asphalt overlay, and one concrete overlay on either concrete or asphalt; other oversight designs are reviewed on a certification basis. The type‑determination procedure is not required for PennDOT Oversight projects with less than 30,000 square yards of mainline pavement surface work, but sufficient justification for the selected type must be documented; reconstruction projects additionally require detailed soils reports, and Pavement Preservation projects must be let within fifteen months of the Pavement Type Selection approval date or else a re‑verification by the District PME/PM is required. In the rigid‑pavement design context DARWin implements the 1993 AASHTO rigid‑pavement design procedures and requires as input the 18‑kip equivalent single axle loads over the initial performance period, the initial and terminal serviceability indices, the 28‑day mean Portland cement concrete modulus of rupture and elastic modulus of the slab, the mean effective k‑value, the chosen reliability level, the overall standard deviation, the load‑transfer coefficient J, and the overall drainage coefficient Cd. These inputs define the relationships and rules that DARWin uses to compute pavement thickness and layer composition for a jointed plain concrete or roller‑compacted concrete surface. For PennDOT Oversight projects, considering one rigid and one flexible design alternative is suggested. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (p. 160)</small></p>
+<h2 id="authority-and-technical-basis">Authority and technical basis</h2>
+<p>The PennDOT Pavement Design Manual treats AASHTOWare® DARWin® 3.01 as the required software for pavement design analyses, mandating its use for all new construction, reconstruction and rehabilitation projects that meet the specified length thresholds and requiring DARWin printouts in the submittal package; because this guidance is issued by a state agency as part of its procedural handbook, DARWin functions as an agency manual rather than a governing specification, standard test method, advisory guide, research report, manufacturer recommendation, or illustrative case study. The same manual further specifies that certified engineers must perform and submit five pavement designs using DARWin, and that the District PME shall maintain a list of projects with a DARWin pavement design for review, reinforcing its role as an agency‑mandated analysis tool. Chapter 8 on rigid‑pavement design also presents the 1993 AASHTO Pavement Design Procedures together with required inputs—such as 18‑kip ESALs, initial and terminal serviceability, 28‑day mean PCC modulus of rupture, elastic modulus, effective k‑value, reliability level, overall standard deviation, load transfer coefficient, and drainage coefficient—and indicates that DARWin is used to compute the pavement structure according to those procedures, confirming its status as an agency manual. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (p. 160)</small></p>
+<p>DARWin is required for all Pennsylvania Department of Transportation pavement designs to follow the 1993 AASHTO Pavement Design Procedures as amended by the department, and the use of AASHTOWare® DARWin® 3.01 software is mandatory. Designs are performed with DARWin using the input values described in Chapters 6‑10 and are compared to a Central Office ME design; a preliminary pavement design may be developed before receiving geotechnical or soils data by assuming a resilient modulus. A DARWin analysis shall be done when the construction/reconstruction length exceeds 500 continuous feet on divided roadways, more than 1,000 continuous feet on undivided roadways, or bridge approach paving exceeds 1,000 ft, and if the design year changes by more than three years a new design and life‑cycle cost analysis shall be performed. The procedure incorporates test methods such as CBR testing, Falling Weight Deflectometer data, soils testing results, traffic ADT and truck percentages, and frost‑heave probability calculations to produce structural design calculations and life‑cycle cost analysis. DARWin is also mandated as the analysis tool for PennDOT Oversight pavement‑design certification; a candidate must submit five DARWin designs that together cover at least one full‑depth asphalt, one full‑depth concrete, one full‑depth reclamation, one structural asphalt overlay and one concrete overlay on either concrete or asphalt. Those designs are evaluated for sound engineering principles and conformance to Publication 242, Pavement Policy Manual before approval via Form D‑4332. For rigid pavements the DARWin capability follows the 1993 AASHTO Pavement Design Procedures for rigid pavements and requires calibrated input parameters that reflect material properties and performance criteria. Required inputs include 18‑kip ESALs over the initial performance period, the initial and terminal serviceability levels, the 28‑day mean PCC modulus of rupture and elastic modulus of slab, the mean effective k‑value, reliability level, overall standard deviation, load transfer coefficient (J) and overall drainage coefficient (Cd). These variables are defined in Sections 8.1 through 8.10 and provide guidance on subgrade, subbase, base, surface layers and functional drainage as engineering principles governing long‑term rigid pavement performance. For thin bonded concrete overlays Publication 408 Section 541 mandates the use of fibers and relies on ASTM C1609 to determine the residual strength (f150), which typically ranges between 100 and 225 psi; this value is added to the plain‑concrete MOR to obtain an effective flexural strength that feeds into mechanistic‑empirical programs such as AASHTOWare Pavement ME. Design inputs include macrofiber content generally from 0.2% to 0.5% by volume, fiber lengths of 1 to 2.5 in. with aspect ratios of 30 to 100, and allowances for up to a 4‑in. (100 mm) slump reduction, while the expected increase in load transfer efficiency is about 30% and crack widths are reduced, findings that stem from multiple laboratory slab tests showing higher flexural capacity and LTE for fiber‑reinforced concrete versus plain concrete. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (p. 160), Ch. 10 (pp. 186–188)</small></p>
+<h2 id="practical-application-and-case-studies">Practical application and case studies</h2>
+<p>In the PennDOT Oversight certification process, a project‑management engineer or manager must use DARWin to prepare five pavement designs—covering at least one full‑depth asphalt, one full‑depth concrete, one full‑depth reclamation, one structural asphalt overlay, and one concrete overlay on either concrete or asphalt—and submit them to the PDAU; once those five DARWin designs are approved, BODD issues written certification, after which the certified engineer can recommend approval of subsequent PennDOT or Federal Oversight pavement designs with Form D‑4332 without further PDAU review. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 137–139)</small></p>
+<h2 id="limitations-and-cautions">Limitations and cautions</h2>
+<p>When using DARWin, designers should be aware that a preliminary design can be created before geotechnical data are available by assuming a resilient modulus, which introduces uncertainty into the structural inputs; the software is required only when the pavement length exceeds more than 500 continuous feet on divided roadways or 1,000 continuous feet on undivided roadways, establishing a clear boundary for its application, and if the design year shifts by more than 3 years from that used in the approved design and LCCA, a new DARWin analysis must be performed, so applying an older model would be misuse; likewise, short sections that are required merely to match existing minimum thicknesses should not be forced through DARWin unless directed, because using the tool outside its mandated scope can lead to unnecessary effort or inappropriate designs. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–136)</small></p>
+<p>In Section 6.1 PAVEMENT DESIGN ANALYSIS/SUBMITTAL, if the paving length is greater than 500 continuous feet on divided roadways or greater than 1,000 continuous feet on undivided roadways a DARWin analysis is required; however when the length is less than or equal to those thresholds the design may rely on matching the existing pavement and meeting the minimum thickness tables, except that a District Pavement Management Engineer must direct a DARWin analysis whenever the existing pavement is a composite that well‑exceeds the minima or contains elements that are not reasonable to replicate such as crack‑and‑seat, and also whenever a new field view reveals changed pavement conditions that require updated traffic data. In the same section under Pavement Type Definitions, for PennDOT Oversight projects with less than 30,000 square yards of mainline pavement surface work the type‑determination step in Chapter 3 is omitted, but the designer must still document sufficient justification for the selected pavement type using engineering judgment, experience, existing conditions or adjacent pavement type, and any reconstruction effort must be supported by a detailed soils report as required by Section 2.2, meaning testing and analysis beyond what DARWin/AASHTOWare provides are mandatory. In Section 8.16 ROLLER COMPACTED CONCRETE DESIGN FOR LOCAL AND COLLECTOR ROADS WITH AN ADT ≤ 2000, because DARWin does not support roller‑compacted concrete designs, the engineer must use the ACPA StreetPave12 software with the standard PennDOT inputs and then perform additional engineering analysis, verification, or reference to the StreetPave12 outputs before finalizing the pavement thickness. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–139), Ch. 8 (pp. 166–167)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=a5a0c103 src=pub_242_change_10::tab:p166#1 -->
+<p>The table below specifies minimum depths for Roller Compacted Concrete on collector roads based on subgrade resilient modulus and traffic. It relates to the section <a href="#required-inputs-and-assumptions">Required inputs and assumptions</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-darwin-aashtoware-2-cap" tabindex="0"><table class="ct-table" id="ct-darwin-aashtoware-2" aria-describedby="ct-darwin-aashtoware-2-sum">
+<caption id="ct-darwin-aashtoware-2-cap">Minimum Depths for RCC on Collector Roads (inches)</caption>
+<thead>
+<tr><td></td><th id="ct-darwin-aashtoware-2-h0-1" scope="col" colspan="6">Subgrade Resilient Modulus, MRSG (psi)</th></tr>
+<tr><th id="ct-darwin-aashtoware-2-h1-0" scope="col">Number of one-way ADTT</th><th id="ct-darwin-aashtoware-2-h1-1" scope="col">7,500</th><th id="ct-darwin-aashtoware-2-h1-2" scope="col">9,000</th><th id="ct-darwin-aashtoware-2-h1-3" scope="col">10,500</th><th id="ct-darwin-aashtoware-2-h1-4" scope="col">12,000</th><th id="ct-darwin-aashtoware-2-h1-5" scope="col">13,500</th><th id="ct-darwin-aashtoware-2-h1-6" scope="col">15,000</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-darwin-aashtoware-2-h2-0" scope="row">30</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h2-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h2-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h2-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h2-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h2-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h2-0">5.5*</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h3-0" scope="row">40</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h3-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h3-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h3-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h3-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h3-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h3-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h4-0" scope="row">50</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h4-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h4-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h4-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h4-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h4-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h4-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h5-0" scope="row">60</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h5-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h5-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h5-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h5-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h5-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h5-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h6-0" scope="row">70</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h6-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h6-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h6-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h6-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h6-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h6-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h7-0" scope="row">80</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h7-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h7-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h7-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h7-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h7-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h7-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h8-0" scope="row">90</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h8-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h8-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h8-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h8-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h8-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h8-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h9-0" scope="row">100</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h9-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h9-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h9-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h9-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h9-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h9-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h10-0" scope="row">110</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h10-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h10-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h10-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h10-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h10-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h10-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h11-0" scope="row">120</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h11-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h11-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h11-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h11-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h11-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h11-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h12-0" scope="row">130</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h12-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h12-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h12-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h12-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h12-0">6.0</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h12-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h13-0" scope="row">140</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h13-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h13-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h13-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h13-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h13-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h13-0">6.0</td></tr>
+<tr><th id="ct-darwin-aashtoware-2-h14-0" scope="row">150</th><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-1 ct-darwin-aashtoware-2-h14-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-2 ct-darwin-aashtoware-2-h14-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-3 ct-darwin-aashtoware-2-h14-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-4 ct-darwin-aashtoware-2-h14-0">6.5</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-5 ct-darwin-aashtoware-2-h14-0">6.0*</td><td headers="ct-darwin-aashtoware-2-h0-1 ct-darwin-aashtoware-2-h1-6 ct-darwin-aashtoware-2-h14-0">6.0</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-darwin-aashtoware-2-sum">Rows list the Number of one-way ADTT, columns give Subgrade Resilient Modulus values for Minimum Depths for RCC on Collector Roads.</p>
+<p class="ct-notes">Notes: *When using a supported edge, subtract 1 inch except when marked with an *, then only subtract 0.5 inch.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), Table 8.4.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

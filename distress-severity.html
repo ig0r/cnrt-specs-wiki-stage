@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distress Severity</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html" class="active" aria-current="page">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><a href="distress.html">Distress</a><span class="crumb-sep">›</span><span class="crumb-current">Distress Severity</span></nav>
+<article><h1>Distress Severity</h1>
+<div class="meta"><div class="part-of">Part of: <a href="distress.html">Distress</a> <span class="edge edge-taxonomic" title="Distress Severity is a topic under Distress.">is-subtopic-of</span></div><div class="edge-reading">Distress Severity is a topic under Distress.</div><div><a class="tag" href="index.html?q=severity-of-distress">severity-of-distress</a><a class="tag" href="index.html?q=severity-of-distress">severity-of-distress</a><a class="tag" href="index.html?q=medium-severity">medium-severity</a></div><div>Created 2026-10-28 · Updated 2026-10-28</div></div>
+<p>Distress Severity is a field‑based assessment used during pavement inspections and warranty reviews to characterize the type and magnitude of visible surface defects—such as rutting, cracking, raveling, potholes and drainage problems—and to quantify their severity against prescribed performance thresholds [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The process relies on recent condition surveys conducted per Publication 336/343 (or equivalent automated methods), manual verification of key items like rut depth with a 12‑foot straight edge, and the calculation of area‑based percentages that trigger specific remedial actions (e.g., microsurfacing when ≥30 % of a segment contains two or more low‑severity distresses, or full replacement when combined deviations exceed 20 % of the surface) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By linking observed distress levels to treatment decisions and warranty obligations, Distress Severity provides planners with a concise, quantifiable snapshot of pavement condition while flagging the need for additional investigations—such as in‑situ testing or core sampling—to resolve underlying causes that are not evident from visual inspection alone [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-investigation-objectives">Purpose and investigation objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#existing-information-and-records">Existing information and records</a></li><li><a href="#visual-inspection-and-condition-assessment">Visual inspection and condition assessment</a></li><li><a href="#field-measurements-and-testing">Field measurements and testing</a></li><li><a href="#sampling-and-laboratory-investigation">Sampling and laboratory investigation</a></li><li><a href="#structural-and-functional-performance">Structural and functional performance</a></li><li><a href="#data-interpretation-and-diagnosis">Data interpretation and diagnosis</a></li><li><a href="#findings-confidence-and-next-actions">Findings, confidence, and next actions</a></li><li><a href="#severity-levels-and-rating">Severity levels and rating</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-investigation-objectives">Purpose and investigation objectives</h2>
+<p>Within field inspection and pavement warranty review, Distress Severity is employed to evaluate the overall condition of a pavement by characterising distress types and judging severity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The investigation must identify which distress types exist, quantify their severity, note whether any distress appears premature, and gather related condition metrics such as International Roughness Index (IRI) and estimated patching percentages to support treatment decisions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For full‑depth reclamation project selection, Distress Severity is used to evaluate the condition of existing pavement surface distresses—specifically rutting, cracking, raveling, potholes and associated drainage problems [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The investigation should quantify the current level of each of those distresses, identify the underlying damage mechanisms that produced them, determine whether excess moisture or drainage deficiencies are contributing, and assess if those conditions make full‑depth reclamation an appropriate rehabilitation option [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the context of a 60‑month warranty for asphalt concrete pavement, Distress Severity evaluates the condition of the pavement surface by identifying, measuring and rating distresses such as flushing, potholes, cracks and rut depth [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The study must determine whether the proportion of a segment’s area that contains two or more low‑severity distresses reaches the 30 % limit that triggers microsurfacing or other approved treatment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. It also must assess whether the combined deviations from all distress limits exceed the 20 % surface‑area threshold that requires removal and replacement of the entire segment, with medium‑severity cracks counted as a deviation affecting six inches on either side of the crack for its full length [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Additionally, the investigation needs to verify the spacing between repair areas—if less than 100 feet, one continuous repair is required—and confirm that measured rut depths meet the severity criteria [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 1 (p. 50), Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<p>During the required field inspection, the scoping team records pavement condition data that includes distress types and severity, noting any premature distress; this information is reviewed before the Scoping Field View and gives planners a clear picture of which distresses exist and how severe they are, allowing them to select the most cost‑effective treatment strategy, shape design parameters, prioritize maintenance or rehabilitation actions, and enhance safety while complying with Pavement Preservation Guidelines. The distress survey then provides a summary report that documents the level of each observed damage—rutting, cracking, raveling, potholes and drainage problems—and also gives insight into their causes; because the severity of these distresses should be specifically considered, engineers can determine if full‑depth reclamation is suitable, set appropriate layer thicknesses, correct underlying water issues, and select the proper stabilization technique, directly guiding project selection, design decisions, and maintenance or rehabilitation actions. Distress‑severity survey results also drive warranty‑based planning and rehabilitation decisions; when a year‑5 performance survey shows that 30 % of a segment’s area contains two or more low‑severity distresses, the Department must require microsurfacing or another approved treatment. If deviations beyond Table A limits affect greater than 20 % of a segment’s surface (with medium‑severity cracks counted as a six‑inch influence zone), the entire segment must be removed and replaced. These quantified thresholds enable annual performance analyses, trigger additional surveys when needed, and determine whether localized patches, continuous repairs (when repair areas are less than 100 ft apart), or full reconstruction are appropriate, thereby guiding design choices, maintenance timing, and resource allocation throughout the warranty period. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 50), Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Distress Severity is applied when a recent pavement condition survey—conducted according to Publication 336 for asphalt concrete or Publication 343 for continuously reinforced concrete and unpaved roads—is performed to evaluate the existing surface type, and its results are used to gauge the severity of rutting, cracking, raveling, potholes, and drainage issues as part of the rehabilitation strategy. In the context of full‑depth reclamation, Distress Severity is especially relevant for assessing support‑layer conditions and subgrade moisture problems that must be addressed before reconstruction, because FDR is indicated for situations where improvement of the support layers is required rather than purely surface‑related distress. For asphalt‑concrete flexible pavements covered by the 60‑month warranty, Distress Severity is applied using automated or manual surveys of the surface layer to rate flushing, potholes, rut depth, and crack types. Under the same warranty provision, if the year‑5 performance survey determines that 30 % of a segment’s area has two or more low‑severity distresses, remedial action by microsurfacing is required. Should deviations beyond the threshold levels indicated in Table A in combination total a remedial‑action area greater than 20 % of the surface area of any segment, the entire segment must be removed and replaced. Rut depth is measured with a 12‑foot straight edge across the lane width to assess severity and extent. Medium‑severity cracks are considered deviations affecting six inches on either side of the crack for the entire length of the crack. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<p>The Pavement Policy Manual notes that distress severity surveys provide only a snapshot of visible damage such as rutting, cracking, raveling, potholes, and drainage problems, but they do not by themselves reveal the underlying mechanisms or the structural capacity of the support layers; consequently, relying solely on severity can mislead the selection of a rehabilitation method. It further states that when the observed distress is primarily surface‑related or when it is unclear whether the subgrade or base has sufficient strength, additional investigations such as in‑situ testing (e.g., Falling Weight Deflectometer, dynamic cone penetrometer, light weight deflectometer) and material sampling should be employed to confirm causes and guide the appropriate treatment. The Commonwealth of Pennsylvania Department of Transportation specifications describe the Distress Severity assessment used in the 60‑month warranty as being based on automated or manual surveys that classify surface defects and trigger remediation only when prescribed area‑based limits are exceeded, for example a year‑5 survey showing 30 % of a segment with two or more low‑severity distresses mandates microsurfacing. The same specification adds that combined deviations that total greater than 20 % of the segment’s surface area require full removal and replacement, and a medium‑severity crack is treated as affecting 6 inches on either side for its entire length. Because this method evaluates only visible distress levels, it cannot identify underlying causes such as base failure or excessive traffic loading; when fatigue cracking suggests an unacceptable base condition, the specification calls for drilling 6‑inch cores and laboratory testing according to PTM No. 715 and AASHTO T‑209, and nondestructive testing may also be requested to confirm structural performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<h2 id="existing-information-and-records">Existing information and records</h2>
+<p>When undertaking a Distress Severity review, the scoping team should first define the project limits (segments or mileposts) and collect pavement history data for the corridor [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Comprehensive pavement condition information must be assembled, including International Roughness Index values, identified distress types and their severity, and an indication of any premature distress [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Estimated patching percentages and the treatment strategy from the State of the Interstate report with justification for alternatives should also be recorded together with forecasts from the Pavement Asset Management System, crash‑cluster information, cross‑slope measurements, and traffic data such as average daily traffic and truck percentage [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The review should obtain a reliable estimate of future traffic loading before rehabilitation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A recent pavement condition survey—such as those defined in Publication 336 or 343 or using MicroPaver—should be collected to document the current severity of rutting, cracking, raveling, potholes and drainage issues and to note observations on distress causes [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In‑situ testing results, including Falling Weight Deflectometer measurements as well as dynamic cone penetrometer and light weight deflectometer data, must be compiled to assess subgrade strength before rehabilitation, and detailed sampling information—including number of samples, locations, material size, depth of sampling and handling procedures—must also be gathered to support design decisions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Distress Severity review must examine the automated survey data that identify, measure, and rate each pavement distress together with any manual surveys performed for flushing or potholes [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. These results are compared to segment‑specific performance limits defined in Table A; for example, a 30 % of segment area threshold for low‑severity distresses triggers microsurfacing, while a 20 % surface‑area limit mandates full replacement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Annual performance analysis reports and any additional surveys issued when criteria are not being met should be incorporated into the review [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Rut‑depth measurements verified with a 12‑foot straight edge must also be considered [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Traffic classification count records used to verify that ESAL estimates remain within projected values must be reviewed, along with the Department’s compiled traffic‑count results provided to the Contractor [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Finally, any documented remediation actions, emergency repairs, or prior maintenance notifications referenced in the performance survey and traffic‑count files should be included to establish the full history of distress and response [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 1 (p. 50), Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<p>According to the Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10) in Section 1.1 Field Inspection and Pavement Warranty Review, information from the Roadway Management System cannot be used to develop quantities for a detailed pavement design, so any recorded distress types and severity must be verified on site; consequently the project scoping team must use field inspection to confirm whether documented distress severity—particularly indications of premature distress—is accurate and complete because the existing records may contain gaps or outdated observations that only a walk‑through can resolve before the Scoping Field View. The same manual, in Section 5.15 Full Depth Reclamation Techniques &gt; B. Selection of Projects, identifies additional record gaps that field investigation must address, including the absence of a recent pavement condition survey, uncertainty about damage mechanisms that are only hinted at by visual observations, missing in‑situ subgrade strength data such as Falling Weight Deflectometer or cone penetrometer results, and incomplete sampling information regarding the number, locations, depths, and handling of material samples; all of these uncertainties require on‑site verification to produce a reliable severity rating. The Pennsylvania Department of Transportation Specification 408/2020, in SECTION 496—ASPHALT CONCRETE PAVEMENT, 60‑MONTH WARRANTY &gt; 496.3 Construction – (c) Warranty, states that Distress Severity must resolve record gaps where automated performance surveys flag threshold exceedances—for example when a year‑5 survey shows 30 % of a segment with two or more low‑severity distresses or when combined deviations exceed the remedial‑action area greater than 20 % of a segment—but the underlying cause is uncertain, so field investigation is required to verify actual severity. Field verification in that context includes measuring rut depth with a 12‑ft straight edge across the lane width and treating a medium‑severity crack as a 6‑inch deviation on each side, and it must also determine whether the distress originates from base failure—necessitating 6‑inch core drilling and laboratory testing—or from traffic overload—requiring confirmation of ESAL counts. Additional field surveys are required when manual versus automated results differ or when the Department disputes survey findings, prompting dispute resolution and possibly a third‑party appraisal. Finally, on‑site verification of repair spacing less than 100 ft is needed to combine patches into a continuous repair. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 50), Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<h2 id="visual-inspection-and-condition-assessment">Visual inspection and condition assessment</h2>
+<p>According to the Pavement Policy Manual, Distress Severity should focus on the visible pavement distresses identified in the distress survey, specifically evaluating the severity of rutting, cracking, raveling, potholes, and any drainage issues that may be present, and these items are highlighted as key observations to document when determining the appropriate rehabilitation strategy. The Commonwealth of Pennsylvania Department of Transportation specifications require that visible flushing and potholes be identified by manual surveys as part of Distress Severity assessment. Under the same specification, low‑severity distress clusters trigger remedial action when they occupy at least 30% of a segment’s area with two or more occurrences, as determined by the year‑5 performance survey. Medium‑severity cracks are treated as deviations that affect six inches on either side of the crack for its full length. Rutting is evaluated by measuring rut depth with a twelve‑foot straight edge across the lane width to determine severity and extent when needed. Fatigue cracking is also noted as an indicator of possible base condition problems. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<p>After a distress survey is conducted using the procedures outlined in Publication 336, Publication 343, MicroPaver™ or similar, the observed pavement defects are first grouped into the defined types such as rutting, cracking, raveling, potholes and drainage issues. For each listed distress the severity is evaluated and recorded, and the overall level of distress together with any observations on cause are entered into a summary report that serves as documentation for the rehabilitation strategy. Distress severity is determined through automated surveys, or manual when required, which identify each distress type and apply the rating and extent‑estimation procedures of Publication 336. The identified distresses are measured and reported using the survey techniques, rating procedures, and extent‑estimation procedures in accordance with Publication 336. For every half‑mile segment the survey reports the distress’s type, its severity category (e.g., low or medium), the percentage of the segment area affected, such as the 30% threshold for two or more low‑severity distresses that triggers remediation. Medium‑severity cracks are counted as a deviation extending six inches on either side of the crack along its full length, and any repair areas spaced less than 100 feet apart are treated as a single continuous repair. The results are documented per segment, indicating whether performance limits are met or exceeded, and the Department notifies the Contractor within fourteen days with the segment identifier and the specific performance criterion. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<h2 id="field-measurements-and-testing">Field measurements and testing</h2>
+<p>In accordance with the Pavement Policy Manual, a mandatory field inspection that must be performed by walking the entire project is required because visual “windshield” surveys are not adequate; during this walk‑through the inspector records pavement condition data such as observed distress types, assigns a severity rating, and captures the International Roughness Index (IRI), which quantifies surface roughness as part of the overall condition assessment. The same manual further specifies that Distress Severity is quantified through a pavement condition survey that follows the criteria of Publication 336 or Publication 343—or, where appropriate, the MicroPaver™ distress evaluation—providing a documented level of rutting, cracking, raveling, potholes and drainage issues together with insight into their causes. Complementary nondestructive tests recommended in that manual include Falling Weight Deflectometer (FWD) measurements that indicate the stiffness of existing or newly placed pavement layers, and subgrade assessments using the dynamic cone penetrometer (DCP) and the light‑weight deflectometer (LWD), both of which evaluate subgrade strength or stiffness. The Department of Transportation specifications state that Distress Severity is evaluated through automated pavement surveys that locate, size, and rate each distress in accordance with Publication 336; flushing and potholes are addressed by manual surveys, while rut depth is quantified using a 12‑foot straight edge across the lane width to determine severity and extent. The specifications also require traffic classification counts to verify that ESAL estimates remain within projected values. When fatigue cracking suggests base problems, the contractor may also employ nondestructive testing after notifying the district, and 6‑inch diameter cores are drilled within the distress area and tested for void content, asphalt percentage, and gradation to assess whether the condition is beyond the contractor’s control. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 1 (p. 50), Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<p>Under the asphalt concrete pavement warranty, distress severity is assessed each year by automated or manual surveys conducted in accordance with Publication 336, with rut depth verified using a 12 foot straight edge across the lane width and traffic classification counts used to confirm ESAL estimates; when required, 6‑inch diameter cores may be taken in distressed zones for laboratory testing. The surveys are performed on segments defined as approximately one‑half mile sections of the State Route, and additional surveys may be scheduled if performance criteria appear unmet. Repair areas spaced less than 100 feet apart are treated as a single continuous repair, and all testing must occur under normal weather conditions, with inclement weather delaying remedial work but not the annual survey schedule. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<h2 id="sampling-and-laboratory-investigation">Sampling and laboratory investigation</h2>
+<p>For pavements that are candidates for full‑depth reclamation, the distress‑severity assessment calls for sampling every pavement layer that appears in the depth‑of‑sampling plan. The number of samples to be taken, their specific locations, the size of each material specimen, the sampling technique to be employed, and the procedures for handling the specimens are all prescribed by the criteria set out in Appendix J, sections J.2.D.1 through J.2.D.5, which address sample count and placement as well as depth of sampling and layer identification; no fixed quantities or survey frequencies are stipulated, the determination being left to those subsections. Under the Pennsylvania Department of Transportation 60‑month warranty, an annual performance survey must be performed on each half‑mile segment of asphalt concrete pavement in order to locate and rate surface distresses, with additional surveys allowed when performance criteria are not satisfied. When fatigue cracking or other base‑related distress is observed during a survey, the Department directs that a series of 6‑inch diameter cores be drilled within the distressed area; each core’s depth is recorded and the extracted samples are tested in accordance with PTM No. 715, AASHTO T‑209, PTM No. 702 and PTM No. 739 to determine void content, asphalt binder content and aggregate gradation. Rut severity may be confirmed as required by measuring rut depth with a 12‑foot straight edge placed across the lane width, and the locations for core drilling are limited to the defined half‑mile segments unless the Department specifies additional points; the frequency of the core sampling follows the annual survey schedule unless more frequent checks are ordered. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<p>To evaluate distress severity related to base condition, the warranty specifies that when surveys detect fatigue cracking or other indications of an unacceptable base, 6‑inch diameter cores shall be extracted from the distressed area and sent to the laboratory. The cores are tested according to PTM No. 715 and AASHTO T‑209 to quantify the percent of unfilled voids, by PTM No. 702 (or another approved method) to measure the percent asphalt, and by PTM No. 739 to determine aggregate gradation; these properties reveal the extent of base deterioration that may be causing the observed distresses. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<h2 id="structural-and-functional-performance">Structural and functional performance</h2>
+<p>In the context of selecting projects for full‑depth reclamation, Distress Severity evaluation of a pavement’s structural capacity and functional condition relies on in‑situ testing such as Falling Weight Deflectometer measurements that reveal pavement deflection and stiffness, complemented by subgrade strength tests like the dynamic cone penetrometer or light weight deflector, and also requires a quantified determination of each layer’s thickness together with associated drainage conditions. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Under the 60‑month warranty for asphalt concrete pavements, severity of distress is assessed primarily through rut depth checks performed with a 12 foot straight edge across the lane width, core drilling to verify that the pavement meets the specified minimum thickness and that density exceeds &gt; 92% of theoretical maximum, and laboratory analysis of the cores for void content, asphalt percent and gradation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The warranty specification also calls for traffic classification counts so that Equivalent Single Axle Load estimates can be compared with the projected contract values, while explicitly stating that measurements such as deflection, load‑transfer efficiency, roughness, friction, ride quality or bearing strength are not required for distress severity assessment. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<p>Measured distress severity is judged against explicit performance thresholds: a segment in which 30 % of its area contains two or more low‑severity distresses triggers microsurfacing, while any combination of deviations that exceeds 20 % of the segment’s surface area requires full removal and replacement. The Department also verifies that traffic loading stays within the projected design ESAL values; if cumulative ESALs surpass 100 % of the estimated 20‑year design life, the contractor is relieved of responsibility for rutting or base‑condition repairs, indicating that the remaining service‑life assessment depends on both the observed distress levels and whether actual loads have exceeded the original design assumptions. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<h2 id="data-interpretation-and-diagnosis">Data interpretation and diagnosis</h2>
+<p>Visual distress surveys capture the pavement’s current condition and the mechanisms behind visible damage, and a summary report should document the level of distress and corresponding observations. The severity of rutting, cracking, raveling, potholes, and drainage issues must be specifically considered in formulating an appropriate rehabilitation strategy for full‑depth reclamation projects. Beyond this visual survey, in‑situ testing such as Falling Weight Deflectometer, dynamic cone penetrometer or light weight deflectometer assesses subgrade strength that will support the rehabilitated pavement structure. Properly collected samples are evaluated in the laboratory to determine material properties for stabilization, providing lab‑derived strengths that are integrated with the documented severity of each distress. For asphalt concrete pavements covered by the 60‑month warranty, Distress Severity is evaluated by integrating visual observations from automated or manual surveys that identify, measure and rate each distress according to Publication 336. Field measurements such as rut‑depth checks are verified using a 12 foot straight edge across the lane width to determine severity and extent. Laboratory analysis of 6‑inch diameter core samples for voids, asphalt content and gradation is performed with PTM No. 715, PTM No. 702, PTM No. 739 and AASHTO T‑209, providing quantitative material properties that are combined with the visual and field data. Performance data from annual surveys and traffic classification counts that confirm ESAL estimates are incorporated, allowing comparison against the limits in Table A. When the integrated assessment shows that 30 % of a segment area has two or more low‑severity distresses, microsurfacing or another Department‑approved treatment is required; if deviations beyond threshold levels affect greater than 20 % of a segment, full‑depth replacement is triggered and the Department notifies the Contractor to perform the prescribed remediation within the specified time frames. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<p>In the context of full‑depth reclamation project selection, the observed distress severity is most likely tied to inadequate drainage that allows excess moisture to compromise material integrity and weaken the pavement’s structural capacity, as well as weak subgrade support revealed by in‑situ testing; these conditions promote material deterioration manifested as rutting, cracking, raveling and potholes, which the distress survey specifically calls out for consideration in any rehabilitation strategy. In the 60‑month warranty provision for asphalt concrete pavement, weak support—characterized as an unacceptable base condition—is identified as a probable cause when fatigue cracking or other distresses are detected, and excessive traffic loading is cited when estimated cumulative ESALs have exceeded 100 % of the estimated 20‑year design life ESALs as another likely driver of rutting or base failures. The same warranty specification also lists uncontrolled forces of nature such as floods, earthquakes, tornadoes, landslides, sinkholes, or other natural disasters as causes beyond the contractor’s control that can produce distress, and notes that any distress attributable to defective work may be considered a construction defect under the dispute‑resolution process. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<h2 id="findings-confidence-and-next-actions">Findings, confidence, and next actions</h2>
+<p>Distress severity data from pavement condition surveys can characterize the current state of the pavement and infer underlying damage mechanisms, thereby supporting decisions about whether full‑depth reclamation is appropriate and identifying which specific distress types—rutting, cracking, raveling, potholes or drainage problems—must be addressed in the rehabilitation design. The same severity information also serves as the quantitative basis for triggering warranty‑related remedial actions, such that a year‑5 survey showing that 30 % of a segment’s area contains two or more low‑severity distresses mandates microsurfacing, while any combination of deviations whose total remedial‑action area exceeds 20 % of the segment (with medium‑severity cracks counted with a six‑inch buffer on each side) requires full removal and replacement of the segment; repair areas spaced less than 100 ft apart are combined into one continuous repair. Because the condition survey is visual, its conclusions are limited by the need for additional information such as in‑situ strength tests (FWD, DCP, LWD) and representative material samples to confirm subgrade conditions and hidden water issues, introducing uncertainty into severity‑based assessments. The warranty‑related severity assessments are further constrained by survey accuracy, the possibility of disputed results that must be resolved through the Conflict Resolution Team, and the explicit exclusion of distresses attributed to base condition failures, traffic overloads, routine Department maintenance, destructive procedures, natural forces or accidents, all of which create uncertainty about responsibility and the reliability of the severity‑based thresholds. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<p>According to the Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), after a distress severity assessment a detailed pavement condition survey should be completed and a summary report documenting the level of distress—including rutting, cracking, raveling, potholes, and drainage issues—must be prepared to guide the rehabilitation strategy. The same manual states that in‑situ testing such as Falling Weight Deflectometer testing before rehabilitation, followed by dynamic cone penetrometer or light weight deflectometer tests, should then be performed to quantify subgrade stiffness. It further requires proper sampling of existing materials according to the prescribed sections to support accurate layer‑thickness design and drainage corrections. Finally, the applicability of full‑depth reclamation should be evaluated against the identified surface distresses before selecting a stabilization method. The Commonwealth of Pennsylvania Department of Transportation (Publication 408/2020 Specifications) requires that following a distress‑severity survey the Department shall perform annual automated performance analyses using Publication 336 techniques and, when needed, manual surveys for flushing and potholes. Under this warranty, rut depth shall be verified with a 12 foot straight edge across the lane width. Traffic classification counts shall confirm that ESAL estimates remain within the projected values. If the year‑5 performance survey determines that 30 % of a segment’s area has two or more distresses with low severity, remedial action by microsurfacing—or another Department‑approved treatment—shall be required. When any combination of deviations totals greater than 20 % of a segment’s surface, treating a medium‑severity crack as affecting six inches on either side for its full length, removal and replacement of the entire segment shall be mandated. Repairs spaced less than 100 feet apart shall be merged into one continuous repair and all work must meet the surface tolerance specified in Section 413.3(l). When base‑condition distress is indicated, the Department may direct drilling of six‑inch cores within the affected area and testing according to PTM No. 715, AASHTO T‑209, PTM No. 702 and PTM No. 739, with results submitted for review before any remedial action. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 124–126); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<h2 id="severity-levels-and-rating">Severity levels and rating</h2>
+<p>In the Ultra‑Thin Bonded Wearing Course (section 5.5 Conditions for Use), acceptable distress is limited to low‑severity cracking or raveling, infrequent corrugations, settlements, heaves or slippage cracks, and medium‑severity rutting, where “low” and “medium” denote relative intensity and “infrequent” describes occurrence frequency [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For Hot‑In‑Place Recycled (HIR) mixtures (section 5.19 Characteristics of HIR Mixtures), the manual quantifies low‑ to medium‑severity limits by stating that rutting severity shall be less than 1½ inches, transverse and miscellaneous cracking depth shall be less than 1.0 inch with an average crack width not exceeding the Medium Rating of ≤ ½ inch, raveling or weathering shall not exceed the Medium Rating described as a rough, pitted surface that may have loose particles, and minor corrugation, shoving or slippage are permissible provided their average depth is less than 1½ inches [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Under the 60‑month asphalt concrete pavement warranty (section 496.3(c)), a low‑severity level is defined such that if the year‑5 performance survey identifies at least two distresses of this class occupying 30 % of a segment’s area, remedial microsurfacing is required [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The same warranty specification treats medium‑severity cracks as deviations extending six inches on each side of the crack along its full length when evaluating exceedance of the Table A thresholds [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If the aggregate of such deviations exceeds the Table A limits over more than 20 % of a segment’s surface, the entire segment must be removed and replaced, and any individual distress type that surpasses its Table A limit triggers the remediation actions prescribed in the table [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 107–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 346–351)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

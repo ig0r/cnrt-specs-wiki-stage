@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subgrade Drain</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html" class="active" aria-current="page">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="subsurface-drainage.html">Subsurface Drainage</a><span class="crumb-sep">›</span><span class="crumb-current">Subgrade Drain</span></nav>
+<article><h1>Subgrade Drain</h1>
+<div class="meta"><div class="part-of">Part of: <a href="subsurface-drainage.html">Subsurface Drainage</a> <span class="edge edge-taxonomic" title="Subgrade Drain is a topic under Subsurface Drainage.">is-subtopic-of</span></div><div class="edge-reading">Subgrade Drain is a topic under Subsurface Drainage.</div><div><a class="tag" href="index.html?q=subgrade-drains">subgrade-drains</a><a class="tag" href="index.html?q=lateral-drains">lateral-drains</a><a class="tag" href="index.html?q=lateral-underdrains">lateral-underdrains</a><a class="tag" href="index.html?q=vertical-subdrain">vertical-subdrain</a><a class="tag" href="index.html?q=subdrainage">subdrainage</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>Subgrade drains are engineered drainage systems placed adjacent to the pavement edge and beneath the subbase to remove excess moisture that accumulates in or under pavement layers[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. By providing positive gravity flow through a perforated pipe installed in a trench sloped at least ¼ inch per foot, protected by a Class 1 geotextile and backfilled with hydraulically‑compacted fine‑aggregate Type A lifts, the system preserves subgrade support, reduces traffic‑induced deflection and frost‑heave, and limits moisture‑related distresses that would otherwise shorten pavement life[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The drain length is extended sufficiently to dewater the wet area, pipe fittings are limited to 45° deflection and sealed to prevent soil intrusion, and outlet structures are protected from crushing or plugging, ensuring continuous, unrestricted drainage throughout construction and service[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Subgrade drains are installed to combat excessive moisture that accumulates within or beneath pavement layers. By removing water from the subgrade, the system preserves the support capacity of the base, reduces traffic‑induced deflections and frost‑heave, and limits other moisture‑related distresses, thereby extending pavement life and promoting more uniform performance. The Subgrade Drain is also intended to prevent water that would otherwise accumulate in the pavement subgrade from causing moisture‑related deterioration by establishing positive drainage soon after trenching so that soil does not intrude into the drainage core or outlet piping and continuous flow is maintained. To keep a wet area from becoming saturated, the design calls for extending the drains a length sufficient to adequately drain that area and for maintaining a minimum slope of 1/4 inch per foot on the trench bottom through both pavement and shoulder zones. During construction the approach mitigates water accumulation that could saturate and weaken the supporting soil and jeopardize pavement performance by requiring excavations to be graded to drain, sealed with smooth‑wheeled compaction equipment, and, when necessary, temporary drainage structures or channels may be required. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (p. 139), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–512)</small></p>
+<p>A subgrade drain must remove water beneath the pavement so that loss of subgrade support is reduced and the aggregate base gains greater resistance to traffic‑induced deflection, thereby increasing pavement life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It also must limit moisture‑related deterioration of aggregates, freezing‑thawing effects, and fine‑material pumping or rearrangement, which together promote more uniform performance and help prevent non‑uniform frost heave [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Its outlets must be protected from crushing or plugging to keep the drainage system functioning properly [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The subgrade drain must be installed so that it provides positive gravity flow and prevents soil intrusion by installing all fittings and connections to preclude soil entry and to provide continuity of drainage flow (SECTION 610—PIPE UNDERDRAIN AND PAVEMENT BASE DRAIN) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The design must ensure adequate drainage by extending the drain a length sufficient to remove water from the wet area and by being installed at a minimum slope of 1/4 inch per foot on the trench bottom through both pavement and shoulder zones (SECTION 612—SUBGRADE DRAINS) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Structural integrity is achieved by excavating a trench that extends at least 2 inches into the subgrade, backfilling with fine aggregate Type A in hydraulically compacted lifts not exceeding 9 inches, spraying each lift with water at 1.0 gallon per linear foot, and providing a minimum of 6 inches of Class 1 geotextile overlap between sections (SECTION 610) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Durability is addressed by sealing pipe ends to prevent foreign material entry, using fittings with deflection angles of 45 degrees or less, not leaving trenches greater than 2 inches deep open overnight, and barricading trenches according to code (SECTION 610); exposure of the geotextile shall be limited to no more than two weeks without aggregate cover (SECTION 212—GEOTEXTILES) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Safety considerations prohibit direct loads on the fabric, restrict rock drops to less than one foot height, require the fabric to be protected from puncture by overlapping rolls an amount equal to the trench width, and forbid traffic or construction equipment contact until the fabric is fully covered (SECTION 212) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Serviceability is maintained by completing outlet installations within 24 hours of trenching, keeping outlet ends open throughout construction and until shoulders receive final acceptance, ensuring smooth non‑restricting transitions in the drainage system, and compacting backfill as indicated to prevent damage to the fabric (SECTION 610) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 168–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–512)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Subgrade Drain may be employed on both Interstate and non‑Interstate roadway projects when the existing pavement shows evidence of water damage or contains sag areas, and it is especially recommended in wet subgrade locations such as cut‑to‑fill transitions; the guidance strongly encourages using lateral underdrains in these wet subgrade areas and at all transitions from cut to fill cross sections. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The system is intended for roadway pavements where a drain is installed adjacent to the pavement edge, with the pipe underdrain placed after fine grading has been completed and the pavement base drain placed after the adjacent roadway pavement has been constructed, except when it is placed under curb sections or other special locations, and trenching is performed without disturbing the subbase. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Installation requires a Class 1 geotextile for all base‑drain work and, when indicated, for pipe underdrain construction; the trench must have smooth side and bottom surfaces so that the fabric will not bridge depressions or be damaged by rock projections. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The geotextile is laid flat in the prepared trench without stretching, overlapped across the top of the backfill by at least one trench width, and it must not remain exposed for more than 2 weeks without being covered with aggregate. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A perforated pipe is installed with its perforations facing down and oriented semicircularly; the trench depth extends at least 2 inches into the subgrade. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The backfill consists of fine‑aggregate Type A placed in lifts not exceeding 9 inches, hydraulically compacted while being sprayed with water at a rate of 1.0 gallon per linear foot. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All pipe fittings shall have deflection angles of 45 degrees or less and shall be sealed to prevent soil intrusion. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 168–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>According to the Pavement Policy Manual (Publication 242, Change No. 10) design of subgrade drainage is governed by PennDOT publications that prescribe both layout and protection requirements for drains [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Continuous pavement base drains are required along the outside edge of the pavement, on the low side of superelevated sections, and on median sides where subsurface water is a problem as illustrated in Publication 72M (Roadway Construction Standards, RC‑30M) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Base drain outlets must be protected from crushing or plugging with appropriate headwalls as indicated in Publication 72M to ensure proper system function [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The sizing and outlet spacing of pavement base drains shall follow the method described in Publication 13M (Design Manual Part 2, Highway Design, Chapter 10, Section 10.3.D) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Lateral underdrains are strongly encouraged at wet subgrade areas and at all cut‑to‑fill transitions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Section 610.3 of the 2020 Specifications, pipe underdrain and pavement base drain installations must be executed in accordance with the Standard Drawings and shall incorporate a Class 1 geotextile as required by Section 212.3(b) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The trench for these drains shall extend at least 2 inches into the subgrade and its width shall follow the dimensions shown on the drawings [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Backfill material shall be fine‑aggregate Type A placed in hydraulically compacted lifts not exceeding 9 inches, each lift being sprayed with water at a rate of 1.0 gallon per linear foot [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Trenches may not be left open greater than 2 inches deep overnight and shall be barricaded in accordance with Chapter 203 of the Pennsylvania Code [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All pipe fittings shall have deflection angles of 45 degrees or less, perforated‑pipe openings shall face down unless otherwise directed, and connections must follow the manufacturer’s approved details with a minimum geotextile overlap of 6 inches to prevent soil intrusion [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 612.3 requires that Subgrade Drain design adhere to the Standard Drawings referenced in Section 612, apply a Class 1 geotextile when indicated, comply with any shoulder‑restoration specifications, and meet a minimum trench‑bottom slope of 1/4 inch per foot through both pavement and shoulder areas [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Under Section 212.3 the trench side and bottom surfaces shall be smooth to avoid fabric bridging or damage from rock projections; the geotextile shall be laid flat without stretching, adjacent rolls shall be overlapped an amount equal to the trench width, and a minimum overlap across the backfill at the trench top shall be provided as shown on the Standard Drawings [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Backfill aggregate must be placed and compacted up to the pipe invert level before continuing to fill the remainder of the trench while protecting the fabric, and the geotextile may not remain exposed for more than 2 weeks without covering with aggregate; all laps and overlaps shall follow the Standard Drawings for the specific subsurface drain type [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 203.3 governs excavation for Class 1, 1A, and 1C work by requiring that the excavation be kept graded to drain and sealed each day with smooth‑wheeled compaction equipment so that the subgrade does not become saturated; temporary drainage structures or channels may be required as directed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=75284f46 src=408_2020_11::tab:p169#1 -->
+<p>The table below specifies pin spacing along overlaps based on slope steepness.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-subgrade-drain-1-cap" tabindex="0"><table class="ct-table" id="ct-subgrade-drain-1">
+<caption id="ct-subgrade-drain-1-cap">TABLE ASecuring Pin Spacing</caption>
+<tbody>
+<tr><th id="ct-subgrade-drain-1-h0-0" scope="row" rowspan="2">Slope</th><td headers="ct-subgrade-drain-1-h0-0">Steeper Than</td><td headers="ct-subgrade-drain-1-h0-0" rowspan="2">3:1 to 4:1</td><td headers="ct-subgrade-drain-1-h0-0">Flatter Than</td></tr>
+<tr><td headers="ct-subgrade-drain-1-h0-0">3:1</td><td headers="ct-subgrade-drain-1-h0-0">4:1</td></tr>
+<tr><th id="ct-subgrade-drain-1-h2-0" scope="row">Pin Spacing along Overlaps</th><td headers="ct-subgrade-drain-1-h2-0">2 feet</td><td headers="ct-subgrade-drain-1-h2-0">3 feet</td><td headers="ct-subgrade-drain-1-h2-0">5 feet</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 169.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 139–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–512)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The subgrade‑drain design follows the procedure outlined in Publication 13M, Design Manual Part 2 (Highway Design) Chapter 10 Section 10.3.D for sizing base drains and determining outlet spacing [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. PennDOT uses gradation as an indicator of permeability and requires that all outlets located in mowable areas be protected with headwalls as specified in Publication 72M Roadway Construction Standards [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The design also incorporates basic drainage principles, including gravity removal of water, capillary water control, lowering intersecting water tables, intercepting seepage from cuts, and the use of lateral underdrains where needed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p>Subgrade‑drain installation begins with fine grading, after which the pipe underdrain is placed and the pavement base drain is installed only after the adjacent roadway pavement has been constructed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Trenches for the base drain are excavated without disturbing the subbase and must extend at least 2 inches into the subgrade [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The pipe is laid with perforations facing down unless directed otherwise, and semicircular pipe is positioned with the smooth circular portion at the bottom; fittings used shall have deflection angles of 45 degrees or less, and the upstream end is sealed to keep out foreign material [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Backfill is placed in hydraulically compacted lifts of fine aggregate Type A not exceeding 9 inches in thickness, each lift being sprayed with water at a rate of 1.0 gallon per linear foot [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A Class 1 geotextile is installed, providing at least 6 inches of overlap, and any tears are repaired according to the manufacturer’s recommendation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Connections are made with approved splice connectors that do not restrict flow, and outlet pipes equipped with galvanized wire mesh shields are installed to achieve positive gravity flow within 24 hours of trenching [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<p>The subgrade drain system must be designed to remove free water by gravity, intercept capillary water that cannot drain naturally, and lower any intersecting water tables [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. This design requirement calls for the use of highly permeable base and subbase materials so that water can flow readily through them [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The slope of subbase layers should be maximized to increase the rate of gravity drainage within the granular materials [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Outlets located in mow‑able areas shall be protected from crushing or plugging with appropriate headwalls as specified in Publication 72M [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The sizing and spacing of drains shall follow the method shown in Publication 13M, and outlet spacing should be kept small to increase the rate of water removal [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Lateral underdrains are strongly encouraged in wet subgrade zones and at all cut‑to‑fill transitions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Subgrade drains shall be installed according to Section 610.3, requiring trench widths shown on the Standard Drawings and a depth extending at least 2 inches into the subgrade [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Class 1 geotextile must be used with a minimum overlap of 6 inches between sections [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Pipe joints and fittings are limited to deflection angles of 45 degrees or less, perforations shall be placed down, and the upgrade end must be sealed to prevent entry of foreign material [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Backfill shall consist of fine aggregate Type A placed in hydraulically compacted lifts not exceeding 9 inches maximum, each lift sprayed with water at a rate of 1.0 gallon per linear foot [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Trenches greater than 2 inches in depth shall not be left open overnight, and outlet pipe and fittings must be installed within 24 hours of trenching to provide positive drainage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Subgrade drains must be provided with a minimum slope of 1/4 inch per foot on the trench bottom through pavement and shoulder areas [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The drain length shall be extended sufficiently to adequately drain the wet area [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Drains are to be placed under the subbase after the subgrade is completed but before the subbase is laid, and shall be constructed at right angles to the roadway centerline or skewed as directed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For a Class 1 subsurface drainage system the trench side and bottom surfaces shall be smooth so that the geotextile does not bridge depressions or become damaged by rock projections [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The fabric shall be laid flat in the prepared trench without stretching, overlapped at the trench top with a width sufficient to achieve a minimum trench‑width overlap across the backfill, and adjacent roll ends shall be overlapped an amount equal to the trench width as shown on the Standard Drawings [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The geotextile may not remain exposed for more than 2 weeks without being covered with aggregate, and all placement and backfilling steps are designed to prevent damage to the fabric [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The excavation shall be graded so that it drains naturally; any temporary drainage structures or channels required shall be provided, and the excavated surface must be sealed each day with smooth‑wheeled compaction equipment to keep the subgrade from becoming saturated [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 139–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–512)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>For the pavement base drain portion of a subgrade drain, the trench must be sized to the width shown on the Standard Drawings and extend at least 2 inches into the subgrade; backfill is placed in hydraulically compacted lifts not exceeding 9 inches thick with each lift sprayed at a rate of 1.0 gallon per linear foot, and the surrounding geotextile must overlap adjacent sections by a minimum of 6 inches. If shoulder restoration is indicated, it shall follow the applicable contract specifications, but no specific shoulder dimension is prescribed in this section. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>According to the Pavement Policy Manual, a Subgrade Drain specification shall require that the base and subbase layers consist of highly permeable material so that water can be removed rapidly by gravity, with permeability judged primarily by the gradation (particle‑size distribution) of the granular fill [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual further states that the design should provide sufficient slope in the subbase to enhance gravity drainage, while allowing some reduction in drainability if needed to achieve a stable construction platform; no explicit mixture proportions or exact material types are prescribed beyond the high‑permeability and appropriate gradation requirement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania Department of Transportation specifications for Subgrade Drains (Section 612) require that any geotextile used be Class 1 as defined in Section 212.3(b), and that the trench be backfilled and adequately tamped, with the trench bottom maintaining a minimum slope of 1/4 inch per foot through the pavement and shoulder areas [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In addition, the Pennsylvania specifications (Section 212) mandate that the Class 1 subsurface‑drainage geotextile be placed in a trench having smooth side and bottom surfaces, laid flat without stretching, overlapped at roll ends by an amount equal to the trench width and overlapped across the backfill at the trench top to provide at least one trench‑width of coverage, and that it may not remain exposed for more than two weeks without being covered with aggregate [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For pipe underdrain and pavement base drain components (Section 610), the specifications call for fine‑aggregate Type A backfill placed in lifts not exceeding nine inches, each lift to be hydraulically compacted and sprayed with water at a rate of one gallon per linear foot, while the pipe shall have perforations facing down, be semicircular with its smooth circular side at the bottom, and all fittings must have deflection angles of forty‑five degrees or less; pipe ends must be sealed and outlet pipes provided with galvanized wire‑mesh shields [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 168–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–512)</small></p>
+<p>Selection of subgrade drain materials and mixtures is guided by the need for high permeability so that gravity‑drainable water is removed rapidly, protecting structural support and durability; therefore base and subbase materials should be highly permeable [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. High permeability may be sacrificed to provide a more stable work platform while the pavement layers are being built, using gradation as an indicator test for permeability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The slope of the subbase layers should be maximized to increase the rate of gravity drainage within the granular materials, and pipe spacing should be reduced to further enhance water removal, balancing constructability costs with performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Material type, size, location, and shape are all part of the drainage system design, and outlets must be protected from crushing or plugging [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For construction, Class 1 geotextile shall be used for all base‑drain installations [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The trench is backfilled with fine aggregate Type A placed in hydraulically compacted lifts not exceeding 9 inches, each lift being sprayed with water at 1.0 gallon per linear foot to ensure proper moisture content [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The trench must be excavated to a width shown on the Standard Drawings and to a depth that extends at least 2 inches into the subgrade, and all joints and connections shall be sealed according to manufacturer recommendations to prevent soil intrusion [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>In accordance with Section 610.3, the subgrade drain must be assembled using pipe joints that follow the manufacturer’s recommendations and must employ fittings whose deflection does not exceed 45 degrees. Splice connectors are to be installed so they do not restrict flow, and each joint shall be sealed at the upgrade end to keep foreign material out. The geotextile surrounding the drain must provide a minimum overlap of 6 inches between sections, and all fittings and outlet pipe connections must be detailed to preclude soil intrusion and to maintain continuity of smooth, non‑restricting flow; outlet pipes shall be provided with galvanized wire mesh shields as shown on the standard drawings. Subgrade drains are installed by excavating a trench, backfilling it and adequately tamping the fill, and the outlet ends must remain open during construction and until the shoulders are finally accepted. The drains shall be placed under the subbase after the subgrade has been completed but before the subbase is laid, positioned at right angles to the roadway centerline or skewed as directed, and extended far enough to drain the wet area with a minimum trench‑bottom slope of 1/4 inch per foot through both pavement and shoulder zones. Where specified, a Class 1 geotextile may be placed in accordance with Section 212.3(b), and any required shoulder restoration shall follow the applicable contract specifications. For a Subgrade Drain classified as Class 1 subsurface drainage, the trench shall have smooth side and bottom surfaces so that the geotextile does not bridge depressions or become damaged by rock projections, and the fabric shall be laid flat in the prepared trench without stretching. The fabric width shall be sufficient to provide at least a trench‑width overlap across the backfill at the trench top, and adjacent rolls shall be overlapped an amount equal to the trench width as shown on the Standard Drawings. Aggregate backfill shall be placed and compacted up to the pipe invert level before installing the pipe, after which the remainder of the trench shall be filled with compacted aggregate in a manner that prevents damage to the fabric, and traffic or construction equipment shall not be allowed directly on the exposed fabric. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 168–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–512)</small></p>
+<p>In subgrade drain design the interfaces between base, subbase and subgrade are treated by using highly permeable granular materials so that gravity‑drainable water is removed rapidly and capillary rise is minimized. The subbase layer is given the maximum practical slope to speed drainage. Pipe and outlet spacing is kept as small as practicable to increase removal rates. Lateral underdrains are installed at wet subgrade zones and at every cut‑to‑fill transition to intercept seepage. Continuous edge drains run along the pavement’s outer edge, on the low side of superelevated sections, and on median sections where subsurface water problems exist. All base drain outlets located in mowable areas must be protected from crushing or plugging by appropriate headwalls. In SECTION 610—PIPE UNDERDRAIN AND PAVEMENT BASE DRAIN the subgrade drain should be joined to new or existing drainage structures with satisfactory connections and fittings that do not exceed a deflection angle of 45 degrees, providing smooth non‑restricting transitions; pipe joints must follow the manufacturer’s recommendations, with perforations placed down, the semicircular pipe positioned so the smooth circular portion is at the bottom, and the upstream end sealed to keep foreign material out. Geotextile must be installed with at least a 6‑inch overlap between sections and repaired if torn. For a Class 1 subgrade‑drain installation the side and bottom trench surfaces are prepared so the geotextile does not bridge depressions or become damaged by rock projections, the fabric is laid flat in the trench without stretching, adjacent roll ends are overlapped by an amount equal to the trench width while ensuring the fabric width provides at least a trench‑width overlap across the backfill at the trench top, and the fabric must be covered with aggregate within two weeks of placement to prevent prolonged exposure. Backfill is placed in fine aggregate Type A lifts compacted hydraulically to a maximum of 9 inches, each lift sprayed with water at 1.0 gallon per linear foot, and the trench kept no more than 2 inches open overnight. All connections, fittings, and outlet pipes must be installed to preclude soil intrusion and provide continuity of drainage flow. In SECTION 612—SUBGRADE DRAINS subgrade drains are installed beneath the subbase after the subgrade has been completed but before the subbase is placed. The drain trench is run at right angles to the roadway centerline or as directed, and the trench bottom must be kept on a minimum slope of 1/4 inch per foot across both pavement and shoulder areas. The drain length should be sufficient to adequately drain the wet area while keeping outlet ends open until final shoulder acceptance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 168–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–512)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>The Pavement Policy Manual specifies that subgrade drains must be designed to remove free water by gravity and to lower intersecting water tables, with lateral underdrains strongly encouraged in wet subgrade areas and at all cut‑to‑fill transitions to intercept seepage from excavation sides; the base and subbase materials should be highly permeable so capillary water is minimized, subbase slopes should be maximized, and outlet pipes must be protected from crushing or plugging with appropriate headwalls. This drainage approach mitigates moisture‑related climate effects such as frost heave, freezing of trapped water under joints, and loss of support during thaw, thereby preserving pavement performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Commonwealth of Pennsylvania Department of Transportation specifications dictate that subgrade drain installation follows the sequence in Section 610‑3, whereby after fine grading the pipe underdrain is placed and the trench is never left open during precipitation or overnight to prevent water infiltration. The ends of the pipe are sealed to keep foreign material out, a Class 1 geotextile is required for all base drains, and backfill is placed in hydraulically compacted lifts of fine aggregate with water sprayed on each lift to control moisture. Drainage materials must be shipped and stored on an elevated platform protected from weather and ultraviolet exposure, and any damaged material must be rejected so that environmental conditions do not compromise the drain’s performance. For a Class 1 subsurface drain, smooth side and bottom trench surfaces are required so that the geotextile does not bridge depressions or become damaged by rock projections; the fabric is laid flat without stretching, overlapped at least the trench width, and covered with compacted aggregate within two weeks to protect against moisture, while a positive slope is maintained to promote drainage. During construction the subgrade excavation must be kept graded to drain and sealed with smooth‑wheeled compaction equipment so that the subgrade does not become saturated; the surface should be sealed at the end of each workday, and temporary drainage structures or channels may be required to manage water [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 139–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–510)</small></p>
+<p>The Subgrade Drain design must include protection for all base‑drain outlets against crushing or plugging.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Any outlet located in a mowable area shall be shielded with the appropriate headwalls specified in Publication 72M.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Lateral underdrains are recommended in wet subgrade zones and at every cut‑to‑fill transition to intercept seepage.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The slope of the subbase should be maximized to promote gravity drainage within the granular materials.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Pipe and outlet spacing should be kept as small as practicable so that water removal rates are increased, following the sizing and spacing procedures of Publication 13M.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Fittings with deflection angles of 45 degrees or less shall be used for pipe underdrains and pavement base drains.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The trench shall have a width as shown on the Standard Drawings and a depth extending at least 2 inches into the subgrade.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Backfill lifts shall be hydraulically compacted to no more than 9 inches with fine aggregate Type A, each lift being sprayed with water at a rate of 1.0 gallon per linear foot.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Geotextile overlaps must be at least 6 inches.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Trenches greater than 2 inches in depth shall not be left open overnight, and barricade trenches at all times according to the requirements of 67 PA Code, Chapter 203.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] All connections and outlet fittings shall be installed to prevent soil intrusion and inspected before backfilling is completed.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] During construction the subgrade drain shall be installed in a trench that is excavated, backfilled and tamped, with the outlet ends left open until the shoulders are finally accepted.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The drains shall be placed at right angles to the roadway centerline, or skewed as directed, and shall be extended far enough to adequately drain the wet area, including any additional extension along the roadway needed for a suitable outlet.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A minimum slope of 1/4 inch per foot must be maintained on the trench bottom through both pavement and shoulder sections.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For a Class 1 subsurface drain the trench must have smooth side and bottom surfaces so the fabric does not bridge depressions in the soil and is not damaged by rock projections.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The geotextile shall be laid flat in the prepared trench without stretching, overlapped according to the standard drawings, and backfilled with compacted aggregate up to the pipe invert before installing the pipe, then continued to the top of the trench.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Traffic or construction equipment shall not be placed directly on the fabric.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The fabric shall not remain exposed for more than 2 weeks without covering with aggregate.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Rocks shall not be dropped onto the fabric from a height greater than 1 foot, and at least a six‑inch bedding layer shall be provided when larger rock is used.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59); [2] — SECTION 200 EARTHWORK (pp. 168–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–512)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed Subgrade Drain is checked for compliance, constructability, performance and consistency with the project requirements through a sequence of inspections defined in Sections 610, 612 and 212. In accordance with SECTION 610—PIPE UNDERDRAIN AND PAVEMENT BASE DRAIN, the Inspector‑in‑Charge inspects the pipe after backfilling, confirming that all joints follow the manufacturer’s recommendations and that perforated pipe is placed with perforations down; splice connectors must be fitted so they do not restrict flow, geotextile must overlap at least six inches between sections, and ends are sealed to prevent foreign material entry. Backfill must be placed in fine‑aggregate Type A lifts no more than nine inches thick, each lift hydraulically compacted and sprayed with one gallon of water per linear foot, and trenches may not remain open greater than two inches deep overnight. All fittings and connections must preclude soil intrusion and provide continuous, unrestricted drainage as shown on the Standard Drawings. Under SECTION 612—SUBGRADE DRAINS, inspectors confirm that the trench was excavated, backfilled and adequately tamped, that the outlet ends remained open throughout construction until final acceptance of shoulders, that the drain extends far enough to drain the wet area and reaches an appropriate outlet, that it was installed under the subbase after the subgrade was completed but before the subbase is placed, that its alignment follows the required right‑angle or directed skew, and that the trench bottom maintains at least a 1/4 inch per foot slope through both pavement and shoulder zones; any specified Class 1 geotextile must be present and shoulder restoration must follow the contract specifications. According to SECTION 212—GEOTEXTILES, the inspector should first confirm that the trench side and bottom surfaces are smooth so the geotextile will not bridge depressions or be damaged by rock projections, then verify that the fabric was laid flat in the trench without any stretch and that its top edge was folded back on the sides before backfilling. The aggregate must have been placed and compacted up to the pipe invert level with the drainage pipe installed, and the remainder of the trench filled with properly compacted aggregate as indicated. Overlap of the geotextile should follow the standard drawings, with adjacent roll ends overlapped by an amount equal to the trench width, and no portion of the fabric may remain exposed for more than two weeks without aggregate cover. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 200 EARTHWORK (pp. 168–169), SECTION 600 INCIDENTAL CONSTRU… (pp. 509–512)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

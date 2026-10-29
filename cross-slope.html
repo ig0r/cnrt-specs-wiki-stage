@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cross-Slope</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html" class="active" aria-current="page">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Cross-Slope</span></nav>
+<article><h1>Cross-Slope</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Cross-Slope is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Cross-Slope is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=cross-slope">cross-slope</a><a class="tag" href="index.html?q=cross-slope">cross-slope</a><a class="tag" href="index.html?q=cross-slopes">cross-slopes</a><a class="tag" href="index.html?q=superelevation">superelevation</a><a class="tag" href="index.html?q=superelevations">superelevations</a></div><div>Created 2026-10-28 · Updated 2026-10-28</div></div>
+<p>Cross‑slope is the deliberately provided positive transverse grade on a roadway surface and its shoulders that forces water to drain off rather than accumulate, thereby reducing the risk of skidding, hydroplaning, and wet‑weather crashes while preserving pavement serviceability [1][2]. It is achieved by designing a minimum cross‑slope—typically expressed as a fraction of an inch per foot—and constructing the surface with equipment capable of maintaining that slope within tight tolerances (no more than 1⁄8 inch deviation over any 12‑foot span) so that drainage performance remains consistent [1][2]. The requirement applies to new construction, reconstruction, 3R projects and pavement‑preservation activities such as profile milling and diamond grinding, all of which must deliver a uniform, positive cross‑slope to meet functional drainage, safety, and durability objectives.</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>Cross‑slope is provided to create a positive transverse grade that enables water on the pavement and shoulder to drain away, thereby preventing water accumulation that can lead to skidding, hydroplaning, and wet‑weather crashes [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same positive transverse inclination also addresses the broader need for effective roadway drainage by preventing ponding, pooling, or moisture‑related deterioration that could impair safety and performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In subgrade construction a continuous positive transverse grade is maintained to direct surface water away from the pavement, promoting drainage and minimizing infiltration that could compromise structural integrity and safety [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During profile milling of asphalt the milling equipment must be equipped with automatic transverse controls that set and maintain the specified cross‑slope, and the finished surface must conform to that slope within tight tolerances so that the pavement drains as intended [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For diamond grinding of concrete the process is used to restore the original pavement cross‑slope and provide a positive cross‑slope so the pavement drains [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In next‑generation concrete surface work a feather pass must be made to preserve a consistent cross‑slope toward shoulders and ramps, and any deviation of the slope greater than 1/8 inch over a 12‑foot span is prohibited; maintaining this cross‑slope prevents water accumulation that could compromise safety and pavement performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Corrective actions for concrete ride quality require surfaces to be made uniform in texture and given a positive cross‑slope so the pavement drains, with deviations not to exceed 1/8 inch on the transverse profile [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Acceptance criteria for asphalt ride quality similarly require correcting surfaces to provide a uniform texture and positive cross‑slope so moisture can run off rather than pool on the road [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 93–94); [2] — SECTION 200 EARTHWORK (pp. 166–167), SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–343), SECTION 500—RIGID PAVEMENTS (pp. 386–396)</small></p>
+<p>The design must provide for new construction, reconstruction, and 3R projects that the finished roadway surface provides at least the minimum cross‑slope prescribed in Publication 13, Design Manual Part 2, and this cross‑slope must be provided as a positive slope so that pavement and shoulder areas drain as necessary, thereby restoring transverse drainage and allowing water to escape from the surface. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Superelevations in curved sections should be checked and corrected if necessary, and any shoulder reconstruction should conform to the same Publication 13 cross‑slope requirements; when the design criteria for cross‑slopes cannot be met a design‑exception request must be prepared. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] By ensuring adequate drainage, the cross‑slope supports safety by reducing the likelihood of skidding, hydroplaning, and wet‑weather crashes, and it contributes to serviceability by maintaining friction and preventing moisture‑related deterioration, which also enhances durability of the pavement structure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Cross‑slope must be established as a positive slope that enables pavement drainage, and the milled surface must match the specified cross‑slope within 1/8 inch over any 12‑foot length. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The milling equipment shall be capable of automatically controlling transverse cross‑slope at a given rate, and the resulting surface must be free from grooves, ridges, gouges or other irregularities that could impair safe vehicle operation, thereby satisfying functional drainage, safety, and serviceability objectives. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Inspections are to be performed at 100‑foot intervals along the length of the lane; any segment where the cross‑slope deviates by more than 1/4 inch over a 12‑foot distance must be corrected. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Under Section 509.3(b) the cross‑slope must meet a functional drainage objective by preserving the existing roadway slope and providing a feather pass of at least two feet into adjacent shoulders, gore areas, auxiliary lanes or ramp lanes to direct water off the pavement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] It also satisfies a safety objective because any depression or misalignment greater than 1/8 inch over a 12‑foot straightedge measured perpendicular to the centerline is prohibited, preventing water pooling that could cause hydroplaning. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] As a serviceability requirement the tolerance of no more than 1/8 inch deviation in 12 feet ensures the surface remains true to grade for consistent ride quality. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Section 344.3(e) requires that the reclaimed base be shaped so that its cross‑slope irregularity does not exceed 1 ½‑inch relative to the existing centerline, grades or cross‑slope of the proposed roadway, thereby meeting serviceability and safety goals. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Section 344.3(e) also specifies a minimum final surface cross slope of ¼‑inch per foot (or as otherwise required by the project design), satisfying functional drainage and overall performance objectives. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Corrective work must avoid creating any ridge or valley in the transverse profile that exceeds 1/8 inch, ensuring the cross‑slope remains within the acceptable deviation limits and preserving a uniform texture and ride quality. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 4 (pp. 93–94); [2] — SECTION 300 BASE COURSES (pp. 222–224), SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–343), SECTION 500—RIGID PAVEMENTS (pp. 386–396)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>For new construction, reconstruction, and 3R roadway projects—including any shoulder reconstruction—cross‑slope shall be provided to meet the minimum requirements of Publication 13, Design Manual Part 2, and a design exception is required when those criteria cannot be satisfied [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Pavement preservation work should also follow the cross‑slope guidance in Publication 13 Chapter 4 Section 4.3 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Diamond grinding or grooving on Portland cement concrete pavements—specifically jointed plain concrete pavement (JPCP), jointed reinforced concrete pavement (JRCP), continuously reinforced concrete pavement (CRCP), post‑tensioned slab (PCPS) and roller‑compacted concrete pavement (RCCP)—is an appropriate situation for applying cross‑slope to restore drainage, friction or macrotexture; a positive cross‑slope is required so that the pavement and shoulder area drain as necessary, and the method may be used on new or in‑service concrete pavements [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For flexible asphalt pavement surfaces that are being profiled under Section 492—Profile Milling—a self‑propelled milling machine capable of up to a 12‑foot lane width in one pass and equipped with an automatic grade control system shall set both the longitudinal profile and the transverse cross‑slope, and the finished surface must have a positive cross‑slope matching the specified value within 1/8 inch in 12 feet [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Rigid concrete pavements that undergo diamond grinding under Section 514—Diamond Grinding shall have their original cross‑slope restored and a uniform transverse slope maintained; cross‑slope uniformity is checked at 100‑foot longitudinal intervals and any deviation greater than 1/4 inch in 12 feet must be corrected, providing a positive cross‑slope for drainage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When concrete pavements receive the Next Generation Concrete Surface treatment under Section 509—NGCS, cross‑slope is applied during diamond grinding and grooving by performing a feather pass that extends at least 2 feet onto adjacent shoulders, gore areas, auxiliary lanes or ramp lanes and has a minimum length of 100 feet; depressions or misalignment greater than 1/8 inch in 12 feet are not permitted, thereby preserving the existing roadway cross‑slope and ensuring drainage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In full‑depth reclamation projects covered by Section 344—Full Depth Reclamation, cross‑slope is used for base courses—including chemically or asphalt‑stabilized mixes—to shape the reclaimed surface so that the final cross‑slope is at least 1/4‑inch per foot unless the project design specifies a different value, and irregularities shall not exceed 1½ inches from existing centerline grades or proposed cross‑slope [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For corrective actions on rigid concrete pavements addressed in Section 507—Evaluation of Concrete Pavement Ride Quality, cross‑slope is employed when transverse profile deviation exceeds more than 1/8 inch; carbide grinding corrects areas up to 15 feet in length so that a uniform texture and positive cross‑slope are achieved without ridges or valleys greater than 1/8 inch, thereby providing proper drainage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 4 (pp. 93–94); [2] — SECTION 300 BASE COURSES (pp. 222–224), SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 386–396)</small></p>
+<p>When the cross‑slope design criteria cannot be satisfied for new‑construction, reconstruction, or 3R projects, a design‑exception request must be prepared rather than forcing the required slope, and pavement‑preservation work follows separate guidance so that the standard cross‑slope requirements are not applied and an alternative design may be used. Additionally, although cross‑slope provides the basic means for water to run off a concrete pavement, designers may opt for diamond grooving when additional skid resistance is needed; transverse grooving should only be considered where braking traction is required because it provides a shorter drainage path, whereas longitudinal grooving is generally preferred because it is less time‑consuming and more economical for most applications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 4 (pp. 93–94)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>For new construction, reconstruction, and 3R projects the minimum cross‑slope values that must be applied are those prescribed in Publication 13, Design Manual Part 2, Contextual Roadway Design, Chapters 3 and 4 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Shoulder work on the same projects is required to conform to the same chapters together with the provisions of Section 2.6 of the Pavement Policy Manual [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When a project involves pavement preservation, the cross‑slope design is governed by the guidance in Publication 13, Design Manual Part 2, Contextual Roadway Design, Chapter 4, Section 4.3 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For concrete pavements the cross‑slope must be provided as a positive slope to permit drainage of both pavement and shoulder, a requirement that is referenced in Publication 408, Specifications, Section 514 for diamond grinding [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Water removal from diamond‑grooved surfaces is achieved by the prescribed pavement cross‑slope according to FHWA TA 5040.36 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Superelevations on curves shall be checked and, if necessary, corrected; where the prescribed criteria cannot be satisfied a design‑exception request must be prepared in accordance with Publication 10X, Appendix P [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Profile milling work must be performed with a milling machine equipped with an automatic transverse control system that can produce either a variable or constant cross‑slope as shown on the plans and that is capable of controlling the slope at a given rate [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The finished milled surface shall provide a positive cross‑slope for drainage and the actual cross‑slope must conform to the specified value within 1/8 inch over a 12‑foot length as required by Section 492.3(d) Surface Tolerances [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During diamond grinding of concrete pavement the original cross‑slope shall be restored and maintained uniformly, with the contractor checking uniformity at 100‑foot intervals along the pavement and correcting any area where the deviation exceeds 1/4 inch over a 12‑foot length while also providing a positive slope for drainage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Documentation of each test location together with the maximum depth of depression or slope misalignment must be supplied to the Representative [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Cross‑slope control for subgrade is governed by Section 210.3(c) and (d), which require verification of grade and slope using a taut transverse string line measured at intervals not more than 25 feet (or up to 50 feet when an automatic grading machine is used and up to 500 feet when GPS/laser control is employed) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When visual inspection suggests a deficiency, a template equipped with a leveling device may be used to check cross‑slope, and any surface irregularity exceeding 1/2 inch must be corrected by loosening, adding or removing material and re‑compacting [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A machine‑control grading QC Plan submitted at least one week before the preconstruction conference, with construction stakes set at right angles on tangents and radial offsets at 500‑foot intervals (and a minimum of two stakes on each ramp or intersecting roadway), provides the procedural framework for maintaining the required cross‑slope [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For next‑generation concrete surfaces the existing cross‑slope of the roadway must be retained, and any measured deviation using a 12‑foot straightedge placed perpendicular to the centerline may not exceed 1/8 inch over a 12‑foot length [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. To achieve proper drainage and keep the cross‑slope consistent, a feather pass shall be made onto adjacent shoulders or ramps for at least 2 feet [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In full‑depth reclamation the reclaimed base must meet the Surface Tolerance provision of Section 344.3(e)6 of the Section 300 Base Courses specifications, which requires a minimum final surface cross‑slope of 1/4‑inch per foot unless the project design specifies otherwise [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For full‑depth precast or prestressed concrete pavement slabs the bedding material shall be graded with a screeding device that can be adjusted to the required cross‑slope and must meet the tolerance that the surface grade does not vary from the theoretical plane by more than 1/8 inch over the length of each slab [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When corrective action is required for concrete pavement ride quality, the pavement must be corrected to provide a uniform texture and a positive cross‑slope so that drainage is achieved, and any ridge or valley measured on the transverse profile may not exceed 1/8 inch [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Corrective work may employ carbide grinding of areas up to 15 feet in length using walk‑behind grinders with carbide‑tipped heads, producing parallel grooves between 3/32 inch and 1/4 inch wide separated by land areas of 1/16 inch to 3/16 inch, and each grinding pass shall not exceed a depth of 1/8 inch [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For ride‑quality acceptance of asphalt pavement any pavement must be corrected so that it provides a uniform texture and a positive cross‑slope to ensure drainage, with the transverse profile prohibited from containing a ridge or valley exceeding three millimetres (1/8 inch) and any individual bump greater than 3/16 inch when tested with a twelve‑foot straightedge must be ground, diamond‑grinded, or removed before smoothness testing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 4 (pp. 93–94); [2] — SECTION 200 EARTHWORK (pp. 166–167), SECTION 300 BASE COURSES (pp. 222–224), SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–343), SECTION 500—RIGID PAVEMENTS (pp. 386–435)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>The design of cross‑slope for new construction, reconstruction and 3R projects follows the minimum values set out in Publication 13, Design Manual Part 2, Contextual Roadway Design, Chapters 3 and 4. Superelevations in curved sections shall be checked and corrected if necessary, which may involve adding leveling material or removing surface material. When the required cross‑slope cannot be achieved for those projects, a design‑exception request must be prepared according to Publication 10X, Appendix P. Pavement‑preservation work follows the guidance in Publication 13, Chapter 4, Section 4.3. In profile milling, cross‑slope is set by a self‑propelled mill equipped with an automatic grade control system that governs both the longitudinal profile and the transverse cross‑slope, and the transverse controls operate automatically at a given rate to produce either a variable or constant cross‑slope as shown on the plans. Longitudinal references such as a string line, ski (minimum 30 ft), mobile string line (minimum 30 ft) or matching shoe may be used for grade reference, and the finished surface is required to conform to the specified cross‑slope within 1/8 inch in 12 feet. During diamond grinding, the original pavement cross‑slope shall be restored and must be kept uniform by inspecting it at 100‑foot intervals along the lane; any segment that shows a deviation greater than 1/4 inch in 12 feet must be corrected, a positive cross‑slope shall be provided so water can drain from the surface, and the contractor must supply documentation of each test location together with the maximum depth of depression or slope misalignment observed. For subgrade work, cross‑slope is verified by stretching a string line transversely between reference grade lines, measuring the vertical distance from the string to the finished grade at multiple points across the width, and using a template cut to the required cross‑section equipped with a leveling device; longitudinal irregularities are checked with a 10‑foot straightedge held parallel to the centerline while moving side‑to‑side. When grading is performed with automatic machines the interval for these checks may be increased to not more than 50 feet, and when GPS or laser‑controlled equipment is used the interval may be extended to not more than 500 feet provided the QC plan requirements are met; all measured irregularities that exceed 1/2 inch must be corrected by loosening, adding or removing material and then re‑compacting before acceptance. The Next Generation Concrete Surface specifications preserve cross‑slope by performing a feather pass along shoulders, gore areas, auxiliary lanes or ramp lanes to provide proper drainage and keep the slope consistent with the existing roadway, and the cross‑slope condition is verified with a 12‑foot straightedge placed perpendicular to the centerline, where any depression or misalignment greater than 1/8 inch in 12 feet is not allowed. In full‑depth precast/prestressed concrete pavement slab installation, cross‑slope is accommodated by using a laser‑controlled or otherwise mechanically controlled screeding device that can be set to the required cross‑slope and tolerance for each slab; no specific equations, models, empirical relationships, or additional design tools are detailed. Corrective action for achieving a uniform texture and positive cross‑slope requires that any ridge or valley deviation not exceed 1/8 inch on the transverse profile, with correction performed before pavement depth testing; when the affected length is 15 feet or less carbide grinding with walk‑behind equipment having locking depth control is used, the grinder may make multiple passes but each pass must not cut deeper than 1/8 inch, and the resulting surface texture shall consist of parallel grooves between 3/32 inch and 1/4 inch wide with a land area between grooves of 1/16 inch to 3/16 inch. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60); [2] — SECTION 200 EARTHWORK (pp. 166–167), SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 386–396)</small></p>
+<p>For new construction, reconstruction, and 3R projects the finished roadway surface must provide at least the minimum cross‑slope specified in Publication 13, Design Manual Part 2, Contextual Roadway Design, Chapters 3 and 4, and this requirement also applies to shoulder reconstruction which shall conform to the same cross‑slope requirements set out in Publication 13 and Section 2.6; the cross‑slope must be a positive slope so that both pavement and shoulder areas can drain as necessary, thereby ensuring adequate water runoff from the surface. Any superelevations on curves shall be checked and corrected if necessary, which may require adding or removing material. When the design criteria for cross‑slopes cannot be satisfied for new construction, reconstruction, or 3R projects, a design‑exception request must be prepared in accordance with Publication 10X, Appendix P; pavement preservation work should follow the guidance given in Publication 13, Chapter 4, Section 4.3. In profile milling of asphalt pavement surfaces (Section 492) the milling equipment shall be fitted with an automatic transverse control that can set the cross‑slope at a prescribed rate and may produce either a variable or constant cross‑slope as required by the plans; the finished milled surface shall provide a positive cross‑slope for drainage and shall match the specified cross‑slope within 1/8 inch in 12 feet. In diamond grinding of concrete pavement (Section 514) the cross‑slope shall be restored to the original pavement condition and kept uniform, with its uniformity inspected at 100‑foot longitudinal intervals; any transverse deviation greater than ¼ inch over a 12‑ft length shall be corrected, and a positive cross‑slope shall be provided so that the pavement drains. For subgrade work (Section 210) the cross‑slope must be established within a tolerance such that any surface irregularity measured with a template and leveling device does not exceed 1/2 inch; if an irregularity exceeds this limit it must be corrected before further work, and the required checks are performed at transverse intervals using a string line or template, after which the corrected area is re‑compacted and rechecked to confirm compliance. In next generation concrete surface construction (Section 509) the existing cross‑slope shall be preserved, and any deviation from that slope is limited to no more than 1/8 inch over a 12‑foot span measured with a straightedge placed perpendicular to the centreline; a feather pass extending at least 2 feet onto shoulders or ramps is required to keep drainage consistent. For full depth reclamation (Section 344) the finished surface shall be shaped so that its irregularity does not exceed 1½‑inch relative to the existing centreline, grades or cross‑slope, and a minimum final surface cross‑slope of ¼‑inch per foot shall be provided unless the project design specifies a different value. Under the corrective‑action provisions of Section 507 any ridge or valley deviation measured on the transverse profile must not exceed 1/8 inch; after correction the pavement surface shall provide a uniform texture and a positive cross slope so that water can drain from the slab. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 4 (pp. 93–94); [2] — SECTION 200 EARTHWORK (pp. 166–167), SECTION 300 BASE COURSES (pp. 222–224), SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 386–396)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>During NGCS construction the cross‑slope must be preserved by grinding so that the differential between adjacent sides of joints and cracks does not exceed 1/16 inch. Any slope deviation measured with a 12‑foot straightedge placed perpendicular to the centreline may not be greater than 1/8 inch in 12 feet, and straightedge tolerances are not required across longitudinal joints. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 389–390)</small></p>
+<p>Cross‑Slope shall be kept uniform at pavement edges by performing a feather pass that extends at least 2 feet into adjacent shoulders, gore areas, auxiliary lanes or ramp lanes and provides proper drainage; any slope deviation measured with a 12‑foot straightedge placed perpendicular to the centreline may not exceed 1/8 inch over a 12‑foot span, thereby preserving the existing roadway cross‑slope at these interfaces. During installation of full‑depth precast or prestressed concrete pavement slabs, the bedding material beneath each slab shall be fine‑graded with a laser‑controlled screeding device that must be capable of grading fully compacted bedding material and of being adjusted to the required cross‑slope and tolerance for that slab; this graded bed serves as grade control so that the slab‑subbase interface conforms to the designed slope without further adjustment after placement. When treating the interface between adjacent pavement sections or features, the design must avoid creating a ridge or valley that exceeds 1/8 inch on the transverse profile; any deviation greater than this limit requires corrective action to restore a uniform surface texture and a positive cross‑slope so that water can drain properly. Likewise, when treating the interface between adjacent pavement lots, corrective work must avoid producing a ridge or valley that exceeds three millimeters (1/8 inch) on the transverse profile, and any existing ridge or valley greater than one‑eighth inch shall be corrected; the repaired surface should provide a uniform texture and a positive cross slope so the pavement drains. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–234), SECTION 500—RIGID PAVEMENTS (pp. 386–435)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>Both the Pavement Policy Manual and the Pennsylvania Department of Transportation specifications state that a positive cross‑slope should be provided so that water drains from both the pavement surface and shoulder area, thereby preventing accumulation of moisture on the roadway [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The Pennsylvania specifications require profile milling equipment to have automatic transverse control capable of producing either a variable or constant cross‑slope, and the milled surface must achieve the specified positive cross‑slope within 1/8 inch over a 12‑foot length [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During diamond grinding, the original pavement cross‑slope shall be restored and kept uniform; its consistency is to be verified at 100‑foot longitudinal intervals, and any segment where the cross‑slope deviates more than 1/4 inch over a 12‑foot length must be corrected [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For full‑depth reclamation, a minimum final surface cross‑slope of 1/4‑inch per foot is required to ensure water runoff, and the finished surface must be shaped so that irregularities do not exceed 1½ inches relative to existing grades or cross‑slope [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The corrective work prescribed for concrete pavement ride‑quality shall produce a uniform texture together with a positive cross‑slope, again ensuring drainage of water from the pavement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In addition, the moisture content used for compaction must achieve the optimum level determined by the project mix design but may not exceed that optimum by more than 3% [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Finally, curing of chemically stabilized layers proceeds at a considerably faster rate when weather conditions are favorable—specifically no rain, sunshine, low humidity, and high temperature—thereby influencing the timing of cross‑slope establishment in such environments [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 93–94); [2] — SECTION 300 BASE COURSES (pp. 222–224), SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 386–396)</small></p>
+<p>For new construction, reconstruction, and 3R projects the finished roadway surface shall provide at least the minimum cross‑slope specified in Publication 13 Design Manual Part 2 (Chapters 3 and 4). Superelevations on curves must be checked and corrected if necessary to meet those cross‑slope requirements. Any shoulder reconstruction shall also conform to the same Publication 13 cross‑slope criteria. When the design criteria for cross‑slopes cannot be satisfied, a design‑exception request must be submitted in accordance with Publication 10X Appendix P, and preservation work follows Chapter 4 Section 4.3 of Publication 13. In diamond grinding and grooving operations the cross‑slope shall be provided as a positive slope so that the pavement surface and shoulder area can drain, supporting safety by reducing skidding and hydroplaning risks per FHWA guidance. Cross‑slope shall be generated by a milling machine equipped with automatic transverse control capable of setting the slope at a prescribed rate, allowing either constant or variable cross‑slope as shown on the plans; the milled surface must be free of grooves, ridges, gouges or other irregularities that could endanger vehicle operation, and the resulting cross‑slope shall be positive so that drainage occurs, with the geometric value conforming to the specified cross‑slope within 1/8 inch in 12 feet and matching adjacent passes within the same tolerance. For diamond‑grinding work the original pavement cross‑slope must be restored and a uniform cross‑slope maintained; cross‑slope uniformity shall be checked at 100‑foot intervals longitudinally, and any segment showing deviations greater than 1/4 inch in 12 feet shall be corrected, with a positive cross‑slope provided to ensure drainage. In next‑generation concrete surface construction grinding shall preserve the roadway’s existing cross‑slope and limit any slope deviation to no more than 1/8 inch over a 12‑foot straightedge measured perpendicular to the centreline; a feather pass shall extend at least 2 feet onto adjacent shoulders, gore areas, auxiliary lanes or ramp lanes to provide proper drainage while maintaining that consistent cross‑slope. For full‑depth reclamation the finished pavement must include a minimum final surface cross‑slope of 1/4‑inch per foot unless the project design specifies a different value, and the reclaimed material surface shall not exceed 1 ½ inch irregularity of the existing centreline, grades and/or cross‑slope. Corrective actions in concrete pavement ride‑quality evaluation require a uniform texture and a positive cross‑slope so water can drain; when correcting the transverse profile any ridge or valley may not exceed 1/8 inch relative to adjacent pavement, and all corrective work, including grinding to achieve the required texture, must be completed before depth testing. Acceptance criteria for asphalt pavement ride‑quality mandate that the surface provide a uniform texture and positive cross‑slope for drainage, with any ridge or valley deviation not exceeding 1/8 inch on the transverse profile and any individual bump whose irregularity exceeds 3/16 inch when tested with a 12‑foot straightedge must be ground. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 4 (pp. 93–94); [2] — SECTION 300 BASE COURSES (pp. 222–224), SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–343), SECTION 500—RIGID PAVEMENTS (pp. 386–396)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed cross‑slope is verified by confirming that the finished roadway surface provides at least the minimum cross slope called out in Publication 13, Design Manual Part 2, Chapters 3–4 for new construction, reconstruction and 3R projects, and superelevations in any curved sections are checked and corrected if necessary; corrections may involve adding leveling material or removing surface material, and when the required criteria cannot be satisfied a design‑exception request is prepared according to Publication 10X Appendix P. For profile milling of asphalt pavement surfaces, the contractor uses the milling equipment’s automatic grade control system and then measures the slope, confirming that it matches the specified positive slope within 1/8 inch over a 12‑ft length; any measurement beyond this tolerance is deemed defective under Section 492.3(f). After diamond grinding of concrete pavement, the cross‑slope is restored to its original value and checked at 100‑foot longitudinal intervals, with correction required wherever the deviation exceeds 1/4 inch over a 12‑ft length, and documentation of each test location and maximum depression or misalignment is provided to the Representative. When the subgrade is formed, reference grade lines are installed on either side of the work area and a taut transverse string line is stretched; vertical distances from the string to the finished surface are measured at points spaced no more than twenty‑five feet (or up to fifty feet when an automatic grader controls the cut, or up to five hundred feet with GPS/laser control), and any deviation exceeding one‑half inch is corrected by adjusting material and re‑compacting before further pavement layers are placed. For the next generation concrete surface, a feather pass extending at least 2 feet onto the adjacent shoulder and at least 100 feet long is first made, after which a 12‑foot straightedge placed perpendicular to the centerline is used; depressions or misalignments greater than 1/8 inch over the 12‑ft span are not allowed and must be reground. In full‑depth reclamation, surface‑tolerance inspection after compaction and curing involves measuring the reclaimed material against design grades, ensuring that irregularities do not exceed 1 ½ inches from existing centerline, grades or cross‑slope, checking transverse grade with a 10‑foot straightedge, and correcting any 3,000‑square‑yard lot whose average irregularity exceeds ½ inch; the final cross‑slope must meet at least a 1/4‑inch per foot value unless otherwise specified. For full‑depth precast/prestressed concrete pavement slabs, a screeding device set to the required slope is used, and the bedding surface is examined with an approved straight‑edge of at least ten feet and a depth gauge of at least six feet; any deviation from the theoretical plane greater than 1/8 inch over the length of each slab must be corrected before slab placement. During ride‑quality evaluation, the transverse profile is measured and any ridge or valley that deviates more than 1/8 inch from adjacent pavement triggers corrective carbide grinding on sections 15 feet long or less with a maximum single‑pass depth of 1/8 inch, after which the surface is retested to confirm compliance with the specified profile and texture. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60); [2] — SECTION 200 EARTHWORK (pp. 166–167), SECTION 300 BASE COURSES (pp. 222–224), SECTION 400 FLEXIBLE PAVEMENTS (pp. 342–343), SECTION 500—RIGID PAVEMENTS (pp. 386–435)</small></p>
+<p>For diamond‑grinding of concrete pavement (Section 514) the expected performance is that the treatment shall restore the original pavement cross slope and shall maintain a uniform cross slope; compliance is verified by checking the cross‑slope at 100‑foot intervals along the lane and correcting any deviation greater than ¼ inch in 12 feet, with each test location and the maximum depth of depression or misalignment recorded. Ride quality after grinding shall meet a maximum International Roughness Index of 70 in/mile where posted speeds exceed 45 mph, or 90 in/mile where posted speeds are 45 mph or less, measured with the prescribed longitudinal roughness equipment before and after grinding. For next‑generation concrete surface (Section 509) cross‑slope performance shall be controlled by limiting any deviation to no more than 1/8 inch over a 12‑foot length measured with a straightedge placed perpendicular to the centerline, and the existing roadway cross‑slope shall be preserved during grinding. Ride quality of the treated surface shall be verified after NGCS completion using the International Roughness Index; the IRI must not exceed 70 in/mile where posted speeds are greater than 45 mph and must not exceed 90 in/mile where posted speeds are less than or equal to 45 mph. Under the rigid‑pavement incentive program (Section 507) the expected performance for cross‑slope is a uniform surface that provides positive drainage and shall not develop transverse deviations greater than 1/8 inch; compliance is verified by measuring the transverse profile after any corrective work. If a ridge or valley exceeds this limit, the contractor shall grind the affected length (typically ≤15 ft) with walk‑behind carbide grinders to produce parallel grooves between 3/32 and 1/4 inch wide with land areas of 1/16 to 3/16 inch, limiting each grinding pass to a depth of no more than 1/8 inch, and the corrected area shall be retested for profile and texture to confirm uniform cross‑slope before pavement depth testing proceeds. For asphalt pavement (Section 404) cross‑slope is expected to contribute to a uniform pavement texture that promotes proper drainage while meeting ride‑quality criteria; surface deviations shall be limited to ridges or valleys of no more than 1/8 inch on the transverse profile and any individual bump may not exceed 3/16 inch when checked with a 12‑foot straightedge. Ride quality is quantified by the Mean Roughness Index, and acceptance requires that the verification MRI does not exceed the acceptance MRI by more than 6.1 inches per mile on at least 90 percent of the 528‑ft lots, that the average verification MRI also stays within 6.1 inches per mile of the average acceptance MRI, and that lot length differences remain under 0.2 %; these measurements are performed using the Department’s inertial lightweight profiler during smoothness verification testing coordinated with the Representative. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 233–234), SECTION 500—RIGID PAVEMENTS (pp. 386–396)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

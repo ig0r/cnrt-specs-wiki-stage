@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alternate Pavement Type Bidding</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html" class="active" aria-current="page">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-type-selection.html">Pavement Type Selection</a><span class="crumb-sep">›</span><span class="crumb-current">Alternate Pavement Type Bidding</span></nav>
+<article><h1>Alternate Pavement Type Bidding</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-type-selection.html">Pavement Type Selection</a> <span class="edge edge-taxonomic" title="Alternate Pavement Type Bidding is a topic under Pavement Type Selection.">is-subtopic-of</span></div><div class="edge-reading">Alternate Pavement Type Bidding is a topic under Pavement Type Selection.</div><div><a class="tag" href="index.html?q=alternate-pavement-type-bidding">alternate-pavement-type-bidding</a></div><div>Created 2026-10-28 · Updated 2026-10-28</div></div>
+<p>Alternate Pavement Type Bidding is a systematic pre‑construction process that lets PennDOT compare multiple equivalent pavement designs and select the one offering the greatest life‑cycle cost savings while still meeting required performance standards; it is triggered when the life‑cycle cost analysis shows at least a ten‑percent difference in agency‑only costs or a twenty‑percent difference when user delay costs are included [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Each competing design is evaluated with a Life‑Cycle Cost Analysis that calculates a C‑Factor—the present worth of future maintenance costs—which is added to the construction bid so that the lowest total (bid plus C‑Factor) determines the award, and all alternatives must provide comparable service levels over the same analysis period and satisfy applicable standards [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If the cost thresholds are not met, the District Pavement Type Selection Committee may justify a single pavement type based on regional engineering judgment and other contextual factors before final approval is granted [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-decision-context">Purpose and decision context</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#information-needs">Information needs</a></li><li><a href="#alternatives">Alternatives</a></li><li><a href="#decision-criteria">Decision criteria</a></li><li><a href="#analysis-methods-and-tools">Analysis methods and tools</a></li><li><a href="#stakeholders-and-constraints">Stakeholders and constraints</a></li><li><a href="#timing-and-implementation">Timing and implementation</a></li><li><a href="#outcomes-and-follow-up">Outcomes and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (1)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a></div></details>
+
+<h2 id="purpose-and-decision-context">Purpose and decision context</h2>
+<p>Alternate Pavement Type Bidding is used to support the decision of which pavement type will be selected for a project. Under the life‑cycle cost analysis guidelines (Section 3.2), a formal comparison is permissible when the difference in agency‑only LCCA costs is ten percent or greater, or when the difference that includes user delay costs is twenty percent or greater; alternatively, the District Pavement Type Selection Committee may provide justification for a single pavement type after consideration of regional factors such as engineering judgment, adjacent pavement types and performance, subgrade composition and condition, local materials, right‑of‑way constraints, maintenance and protection of traffic or utility impacts. In the Alternate Pavement Type Bidding process (Section 3.6), the decision is intended to be driven by the lowest bid after each alternate design’s C‑Factor has been calculated from the present worth of future maintenance costs; alternates must be “equivalent,” meaning they provide comparable levels of service and performance over the same analysis period, must meet all applicable standards, and the bid package will indicate the appropriate C‑Factors for each alternative as determined by PennDOT based on the LCCA methodology for the project. For projects that apply Alternate Pavement Type Bidding (Section 6.1), the district shall submit the competing pavement designs together with their life‑cycle cost analyses to the Board of Directors for review; after preliminary approval by the HDD Chief, the final approval of the selected pavement design and its LCCA is granted before construction proceeds. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<p>Alternate Pavement Type Bidding exists to meet the need for a systematic way to choose a pavement design when life‑cycle cost differences between alternatives are not large enough to dictate a single solution; it permits multiple pavement types to be bid and compared so that agency cost savings can be evaluated when a difference of at least ten percent in life‑cycle costs, excluding user delay costs, is observed, or broader societal impacts can be considered when a difference of at least twenty percent in life‑cycle costs, including user delay costs, is present. It is intended to address the need for lower construction costs and greater market competition by allowing PennDOT to select pavement designs based on life‑cycle cost adjusted bids rather than a predetermined type, thereby capturing savings from fluctuating material prices while still meeting sound engineering standards, and it also seeks to spur innovation and maintain comparable service levels across alternatives so that any cost advantage does not compromise performance. Additionally, Alternate Pavement Type Bidding addresses the need to evaluate and compare different pavement design alternatives together with their life‑cycle cost analyses, ensuring that the selected pavement provides the required structural adequacy while remaining cost‑effective for PennDOT projects; when an alternate design package is completed, the District shall submit the pavement designs and LCCA to BODD for review, and the project is identified in ECMS as an “Alternative Pavement (C‑Factor)” bidding type to be tracked on the planned letting schedule. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Alternate Pavement Type Bidding is appropriate for any new construction, reconstruction, or rehabilitation project in which the work is primarily pavement‑related and does not contain substantial non‑pavement items (section 3.6). The process may be used during the preconstruction/design stage after the district has completed the alternate pavement designs, submitted them for review, and posted the design package for a three‑week comment period before award (section 3.6). When a life‑cycle cost analysis with C‑Factors is required, Alternate Pavement Type Bidding may be employed during the LCCA phase provided that the alternatives being compared satisfy one of the prescribed cost thresholds—either a difference of 10% or more in life‑cycle costs excluding user delay costs, or a difference of 20% or more when user delay costs are included—and the project does not contain substantial non‑pavement items (section 3.2). Even when an LCCA is not required, Alternate Pavement Type Bidding may still be considered, with selection based on initial costs or other factors and without a C‑Factor calculation (section 3.6). The District Pavement Type Selection Committee may also permit the bidding if it provides a fact‑based justification grounded in regional factors and engineering judgment (section 3.2). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p>The following figure illustrates the application of Alternate Pavement Type Bidding within these contexts.</p>
+<!-- concept-compliance:begin fig=b1073122 n=1 -->
+<figure class="cmp-figure" id="cmp-alternate-pavement-type-bidding-1">
+<img src="assets/alternate-pavement-type-bidding/b1073122624d8aef2adbc04b91d9db844d95aace5eef87a225b8479b47902ce6.jpg" alt="Flowchart detailing the decision process for Life-Cycle Cost Analysis (LCCA) and alternate pavement type bidding." aria-describedby="cmp-alternate-pavement-type-bidding-1-ld">
+<figcaption>Flow chart for LCCA and Alternate Pavement Type Bidding. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</figcaption>
+</figure>
+<div id="cmp-alternate-pavement-type-bidding-1-ld" hidden>
+<p>The flowchart begins with a District Pavement Project defined as New Construction, Reconstruction, or Rehabilitation. The first decision is whether LCCA is required per Pub. 242, Chapter 3 for projects with at least 30,000 square yards of mainline pavement. If no, the district may select pavement type or elect to alternate bid without a C-Factor and notify HDTS.</p>
+<p>If yes, the process requires performing LCCA and submitting it to HDTS for approval. A decision follows: does the LCCA show a difference of 10% or more in life-cycle cost excluding user-delay costs? If no, check if there is a 20% or more difference including user-delay costs. If yes to either threshold, the district may prefer an alternate bid with C-Factor; if not, proceed with the preferred pavement type.</p>
+<p>If the initial LCCA shows less than a 10% difference excluding user-delay costs, but the committee prefers a higher life-cycle cost type, HDTS approval is required based on regional factors. If approved, select that type; otherwise, select the lower life-cycle cost type.</p>
+</div>
+<details class="cmp-longdesc">
+<summary>Text description of this figure</summary>
+<p>The flowchart begins with a District Pavement Project defined as New Construction, Reconstruction, or Rehabilitation. The first decision is whether LCCA is required per Pub. 242, Chapter 3 for projects with at least 30,000 square yards of mainline pavement. If no, the district may select pavement type or elect to alternate bid without a C-Factor and notify HDTS.</p>
+<p>If yes, the process requires performing LCCA and submitting it to HDTS for approval. A decision follows: does the LCCA show a difference of 10% or more in life-cycle cost excluding user-delay costs? If no, check if there is a 20% or more difference including user-delay costs. If yes to either threshold, the district may prefer an alternate bid with C-Factor; if not, proceed with the preferred pavement type.</p>
+<p>If the initial LCCA shows less than a 10% difference excluding user-delay costs, but the committee prefers a higher life-cycle cost type, HDTS approval is required based on regional factors. If approved, select that type; otherwise, select the lower life-cycle cost type.</p>
+</details>
+<!-- concept-compliance:end -->
+
+<p>The figure displays a decision tree that outlines the procedural steps for determining whether to perform a Life-Cycle Cost Analysis (LCCA) based on project size thresholds. It illustrates how the process branches into alternate bidding if specific cost differences are met, or proceeds with standard selection if they are not.</p>
+<p><small>[1] — Ch. 3 (pp. 65–79)</small></p>
+<p>Under section 3.6 Alternate Pavement Type Bidding, alternate pavement type bidding should be avoided when a project contains substantial non‑pavement items because such projects are identified as poor candidates for this competitive approach; in those cases the department normally relies on conventional bidding that selects pavement type based on initial costs or other factors rather than life‑cycle cost analysis. The same condition is reflected in section 3.2 Life‑Cycle Cost Analysis Guidelines, where projects with substantial non‑pavement items may not be appropriate for alternate pavement type bidding and the District Pavement Type Selection Committee can instead justify selecting a single pavement type after consideration of regional factors such as engineering judgment, adjacent pavement types and performance, subgrade composition and condition, local materials, right‑of‑way constraints, maintenance and protection of traffic or utility impacts. Also in section 3.2, if life‑cycle cost comparisons reveal a difference of 10 % or more for agency costs alone, the committee may also deem a single pavement type selection sufficient without pursuing alternate bidding; likewise, if a difference of 20 % or more is found when user delay costs are included, the committee may also deem a single pavement type selection sufficient. Finally, under section 3.6, when an LCCA is not required for a project, the process may still be used but without C‑Factor calculations, so a standard selection method is often preferable. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79)</small></p>
+<h2 id="information-needs">Information needs</h2>
+<p>Alternate Pavement Type Bidding relies on a life‑cycle cost analysis that incorporates the current discount rate, the Asphalt Adjustment Multiplier applied to both initial and future asphalt costs, and quantity estimates for each alternative’s typical cross‑section (wearing, binder, base, subbase or PCCP, treated permeable base, and subbase). Only the differences between alternatives for pavement items, earthwork percentages (cut, fill, cut‑and‑fill), resurfacing thicknesses, shoulder type, and non‑pavement items such as drainage, guide rail and utility relocations are entered into the LCCA, and the analysis must show either a 10% or more difference in agency‑only life‑cycle costs or a 20% or more difference when user delay costs are included to trigger a pavement‑type decision. The District Pavement Type Selection Committee may also consider regional factors—engineering judgment, adjacent pavement performance, subgrade composition and condition, local materials, right‑of‑way constraints, maintenance or traffic‑protection impacts—and projects with substantial non‑pavement items may not be good candidates for alternate bidding. Alternate Pavement Type Bidding requires detailed cost information, specifically the initial construction costs and the present‑worth value of future maintenance costs that are used to calculate a C‑Factor for each pavement alternative; it also must incorporate traffic‑related cost impacts such as user delay costs and maintenance‑and‑protection‑of‑traffic costs so that these factors are reflected in the bid amount, and the impact of constructability/phasing issues and/or maintenance and protection of traffic constraints should be reflected by varying initial construction costs, user delay costs, and/or maintenance and protection of traffic costs. The bid package will indicate the appropriate C‑Factors for each alternative, determined by PennDOT based on the LCCA methodology for the project. In addition, Alternate Pavement Type Bidding projects must supply a full set of design and analysis documentation that captures all condition, site, cost, traffic, and related information; the submission package includes a cover letter stating the estimated project cost, pavement length and other basic data, a geotechnical report with CBR values, Falling Weight Deflectometer results and frost‑heave probability, a traffic summary table of average daily traffic and truck percentage together with its source and date, DARWin printouts and structural calculations, LCCA printouts with quantity and unit‑cost support, a location map and typical section drawing, the existing pavement history from RMS, and for Federal Oversight projects a STAMPP Treatment Summary. This collection of data enables the District to compare alternate designs and perform life‑cycle cost analysis before the design package is posted for review. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<!-- formulas-check:begin pub_242_change_10::f:782420f81197 x alternate-pavement-type-bidding -->
+
+<p>The publication gives AAM as:</p>
+<!-- gaps: 38b3a7cab296c2fd -->
+
+<!-- formula-anchor: eq-pub-242-change-10-782420f81197 -->
+
+<div class="fc-math" id="eq-pub-242-change-10-782420f81197" role="region" aria-label="Formula 1" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="{ \mathrm { A A M } } = 1 + { \mathrm { A d j u s t m e n t s } } / { \mathrm { T o t a l ~ o f ~ A s p h a l t ~ P a y m e n t s } } ."><mrow><mrow><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">A</mi><mi mathvariant="normal">M</mi></mrow></mrow><mo>&#x0003D;</mo><mn>1</mn><mo>&#x0002B;</mo><mrow><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">j</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">s</mi></mrow></mrow><mo>&#x0002F;</mo><mrow><mrow><mi mathvariant="normal">T</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mtext>&#x000A0;</mtext><mi mathvariant="normal">o</mi><mi mathvariant="normal">f</mi><mtext>&#x000A0;</mtext><mi mathvariant="normal">A</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">t</mi><mtext>&#x000A0;</mtext><mi mathvariant="normal">P</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">s</mi></mrow></mrow><mo>&#x0002E;</mo></mrow></math></div>
+<p>The Asphalt Adjustment Multiplier is computed from asphalt price adjustments and the total of asphalt payments made over the preceding twelve months. As the asphalt price adjustments increase, the multiplier rises. Conversely, as the total of asphalt payments increases, the multiplier falls.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-1" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-1">Symbols: Asphalt Adjustment Multiplier from adjustments and total asphalt payments ([1] PDF p. 66)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="AAM"><mrow><mi>A</mi><mi>A</mi><mi>M</mi></mrow></math></td><td>Asphalt Adjustment Multiplier</td><td>not stated near this formula</td><td>output</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Adjustments"><mrow><mi>A</mi><mi>d</mi><mi>j</mi><mi>u</mi><mi>s</mi><mi>t</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi><mi>s</mi></mrow></math></td><td>asphalt price adjustments</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Total~of~Asphalt~Payments"><mrow><mi>T</mi><mi>o</mi><mi>t</mi><mi>a</mi><mi>l</mi><mtext>&#x000A0;</mtext><mi>o</mi><mi>f</mi><mtext>&#x000A0;</mtext><mi>A</mi><mi>s</mi><mi>p</mi><mi>h</mi><mi>a</mi><mi>l</mi><mi>t</mi><mtext>&#x000A0;</mtext><mi>P</mi><mi>a</mi><mi>y</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi><mi>s</mi></mrow></math></td><td>total of asphalt payments</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+</table></div>
+
+<p><small>[1] — PDF p. 66</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats: not stated in the publication near this formula.</p>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<p>See also:</p>
+<ul>
+<li><a href="pavement-design-submission.html#eq-pub-242-change-10-782420f81197">Pavement Design Submission</a></li>
+<li><a href="pavement-type-selection.html#eq-pub-242-change-10-782420f81197">Pavement Type Selection</a></li>
+<li><a href="resurfacing.html#eq-pub-242-change-10-782420f81197">Resurfacing</a></li>
+</ul>
+<details class="fc-calc"><summary>Calculator: Asphalt Adjustment Multiplier from adjustments and total asphalt payments ([1] PDF p. 66)</summary><iframe src="_apps/pub-242-change-10-782420f81197.html" title="Calculator: Asphalt Adjustment Multiplier from adjustments and total asphalt payments ([1] PDF p. 66)" loading="lazy"></iframe><p><a href="_apps/pub-242-change-10-782420f81197.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-29.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 115 words before and 641 words after the formula.</p>
+<p>Found by the search:</p>
+<ul>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Adjustments"><mrow><mi>A</mi><mi>d</mi><mi>j</mi><mi>u</mi><mi>s</mi><mi>t</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi><mi>s</mi></mrow></math> from PDF p. 66, beside the formula</li>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Total~of~Asphalt~Payments"><mrow><mi>T</mi><mi>o</mi><mi>t</mi><mi>a</mi><mi>l</mi><mtext>&#x000A0;</mtext><mi>o</mi><mi>f</mi><mtext>&#x000A0;</mtext><mi>A</mi><mi>s</mi><mi>p</mi><mi>h</mi><mi>a</mi><mi>l</mi><mi>t</mi><mtext>&#x000A0;</mtext><mi>P</mi><mi>a</mi><mi>y</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi><mi>s</mi></mrow></math> from PDF p. 66, beside the formula</li>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="AAM"><mrow><mi>A</mi><mi>A</mi><mi>M</mi></mrow></math> from PDF p. 66, 1 step / 36 words before the formula</li>
+</ul>
+</details>
+
+<!-- formulas-check:end -->
+
+<p>The information submitted for an Alternate Pavement Type Bidding project must be complete enough to satisfy all items required in Section 6.1.C, including the cover letter, design calculations, DARWin printouts, traffic data with its source and date, a geotechnical report signed by the District Geotechnical Engineer, and the LCCA package. Currency is addressed by requiring that the traffic summary list the source and date of the traffic data and that the geotechnical data be accompanied by a current engineer’s signature. The source does not prescribe a specific accuracy standard beyond the requirement to provide the documented values. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 6 (pp. 134–136)</small></p>
+<h2 id="alternatives">Alternatives</h2>
+<p>Under Alternate Pavement Type Bidding the feasible alternatives are any distinct pavement designs whose quantity estimates are based on the actual typical cross‑section; a flexible asphalt layer stack consisting of wearing, binder, base and subbase is one example and a Portland Cement Concrete Pavement with a treated permeable base and subbase is another. In addition, the bidding may present either a concrete pavement paired with an asphalt‑treated permeable base course, a concrete pavement paired with a cement‑treated permeable base course, or a full Superpave asphalt system comprising wearing, binder and base courses; each of these alternatives is shown with the same subbase and Class 1 excavation items and must be designed to the deepest pavement type for drainage while keeping lane width, shoulder width, cross‑slope and other geometric features unchanged, and must meet RC standards, DM‑2 and Publication 242 requirements. For PennDOT Oversight projects the guidance suggests considering one rigid pavement design and one flexible pavement design before submitting the designs and life‑cycle cost analysis for review. Each alternative must be evaluated through a life‑cycle cost analysis that includes only the differing quantities of construction items, earthwork, resurfacing, shoulder type and non‑pavement items; a difference of 10% or more in life‑cycle costs, excluding user delay costs, or a difference of 20% or more in life‑cycle costs, including user delay costs, will be sufficient to select the lower‑cost pavement type. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<h2 id="decision-criteria">Decision criteria</h2>
+<p>The decision for Alternate Pavement Type Bidding should be driven primarily by cost, using a life‑cycle cost approach that adds the C‑Factor (present worth of future maintenance) to the construction bid. A pavement alternative that shows at least a 10 % lower life‑cycle cost when user delay costs are excluded must be selected, and if the difference reaches at least 20 % when user delay costs are included, that alternative also prevails. Each alternate must be equivalent, meaning it provides comparable levels of service and performance over the same analysis period. Safety, sustainability, or other factors are not stipulated as controlling criteria, although engineering judgment and regional considerations may be used for justification after the cost thresholds have been evaluated. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79)</small></p>
+<p>In the life‑cycle cost analysis guidelines (section 3.2), competing criteria are weighted primarily by the magnitude of the life‑cycle cost differential between pavement alternatives. A difference of ten percent or more in agency‑only life‑cycle costs, and a difference of twenty percent or more when user delay costs are included, is considered sufficient to select the lower‑cost pavement type. If neither percentage threshold is met, the District Pavement Type Selection Committee may justify selecting a single pavement type after evaluating regional factors such as engineering judgment, adjacent pavements, subgrade composition and condition, local materials, right‑of‑way constraints, and traffic or utility impacts; the decision must be recorded in the LCCA, meeting minutes and design package for HDTD approval. For alternate pavement type bidding (section 3.6), all alternatives must first be deemed “equivalent,” meaning they provide comparable levels of service and performance over the same analysis period. Bids are then evaluated on a life‑cycle cost basis by adding each bid’s C‑Factor—the present worth of future maintenance costs, which excludes user delay costs—to its initial construction cost; the resulting total determines the low bid. Constructability, phasing, and traffic‑protection considerations are not assigned separate weight but should be reflected through variations in the initial construction cost, user delay cost, and maintenance‑and‑traffic‑protection cost components. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79)</small></p>
+<h2 id="analysis-methods-and-tools">Analysis methods and tools</h2>
+<p>Alternate Pavement Type Bidding evaluates each candidate pavement through a Life‑Cycle Cost Analysis that serves as the primary quantitative tool. The analysis must include discounted agency costs for construction, resurfacing, shoulders and any differing earthwork or non‑pavement items between alternatives, applying the current discount rate and the Asphalt Adjustment Multiplier to asphalt prices. Under Section 3.2 a difference of 10% or more in life‑cycle costs, excluding user delay costs, will be sufficient to conclusively determine the pavement type, and a difference of 20% or more when user delay costs are included will also meet that criterion. In accordance with Section 3.6 the LCCA incorporates a C‑Factor representing the present worth of future maintenance costs—excluding user delay costs—and adds this amount to the construction bid so that award is based on total life‑cycle cost. The standard PennDOT workflow requires each pavement alternative to be analyzed with AASHTOWare® DARWin® 3.01 software before the LCCA is performed, and the resulting LCCA together with meeting minutes and justification is submitted to the Board of Directors for review as part of the design package. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<p>The results depend on several assumed inputs and sources of uncertainty. The discount rate used in the life‑cycle cost analysis is taken from the ECMS File Cabinet. Asphalt material costs are adjusted by an Asphalt Adjustment Multiplier that is calculated semiannually from the total of asphalt payments made over the preceding twelve months and the price adjustments applied to those payments, affecting both construction and maintenance estimates. Prescribed overlay thicknesses for resurfacing—such as a 4‑inch thick layer for a 9.5 mm wearing mix on rigid pavements—drive material quantities. Only the differences in item quantities between alternatives are included while total quantities and engineering or mobilization costs are excluded. The selection rule requires at least a 10% cost difference when user delay costs are omitted, or at least a 20% cost difference when they are included, making the outcome sensitive to how those costs are estimated. Each alternate design is assumed &ldquo;equivalent,&rdquo; meaning it provides comparable levels of service and performance over the same analysis period. The C‑Factor adds only the present worth of future maintenance costs while deliberately excluding user delay costs. Any constructability, phasing or traffic‑protection impacts must be reflected by varying initial construction costs, user delay costs, or maintenance and protection of traffic costs rather than being treated as separate uncertainties. Results are further influenced by the uncertainty of fluctuating material prices that cannot be predicted during the preconstruction phase, and projects with substantial non‑pavement items may not be suitable candidates for this bidding approach. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79)</small></p>
+<h2 id="stakeholders-and-constraints">Stakeholders and constraints</h2>
+<p>The process begins with the District Pavement Management Engineers providing the Asphalt Adjustment Multiplier and the life‑cycle cost data that form the basis of the analysis. That input is evaluated by the District Pavement Type Selection Committee, whose members are appointed at the discretion of the District Executive; the committee may provide justification for selecting a single pavement type after considering regional factors, and it must be justified when the agency‑only life‑cycle costs differ by 10% or more, or when the life‑cycle costs that include user delay differ by 20% or more. Once the committee reaches a selection, the district prepares the alternate pavement designs together with the life‑cycle cost analysis and submits the package to BODD for review. After BODD’s review, the HDTD Chief gives preliminary approval, after which the design package is posted in ECMS as an unofficial plan set for a three‑week comment period. The HDTD Chief then issues the final approval for projects under PennDOT oversight, or forwards the package to FHWA for Federal‑oversight final approval, and the LCCA, meeting minutes, and conclusions are recorded in the pavement design package that is submitted for HDTD approval. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<p>The choice of an alternate pavement type is bounded by several statutory and procedural constraints. Under the life‑cycle cost analysis guidelines only differences in quantities for pavement, earthwork and non‑pavement items may be included while engineering and mobilization costs are excluded, and the shoulder type must match the mainline pavement; an agency may pursue alternate bidding only when the LCCA shows a difference of 10% or more in life‑cycle costs excluding user delay costs, or a difference of 20% or more when user delay costs are included, otherwise the District Pavement Type Selection Committee must justify a single choice using FHWA Technical Advisory guidance and NCHRP Report 703. All alternate designs must meet RC standards, DM‑2, and Publication 242 requirements and retain lane width, shoulder width, cross‑slope and all other geometric features exactly as shown on the plans, and the alternatives must be equivalent, providing comparable service and performance over the same analysis period. Every PennDOT pavement design shall follow the 1993 AASHTO Pavement Design Procedures as amended and be performed with AASHTOWare® DARWin® 3.01 software; a DARWin analysis is mandatory when the paved length exceeds 500 ft on divided roadways or 1,000 ft on undivided roadways (or bridge approaches over 1,000 ft). For each alternate design the district shall submit the pavement design and its life‑cycle cost analysis to BODD for review, obtain preliminary approval from the HDTD (or HDD) Chief, post the package in ECMS for a three‑week comment period, and then receive final approval either from the HDTD Chief for PennDOT‑oversight projects or from FHWA for Federal‑oversight projects, with the project flagged as an “Alternative Pavement (C‑Factor)” in ECMS. Once an LCCA and pavement type are approved the selected pavement type shall not be changed during design or construction unless the HDTD grants approval, and pavement type may not be changed after award unless the HDTD approves the change. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<h2 id="timing-and-implementation">Timing and implementation</h2>
+<p>The decision to employ Alternate Pavement Type Bidding is made when the alternate pavement designs are completed; at that point the District shall submit the pavement designs together with the life‑cycle cost analysis to BODD for review. Under section 3.6, after the designs are submitted the design package is posted in ECMS and a three‑week comment period is provided before final approval. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 77–79), Ch. 6 (pp. 134–136)</small></p>
+<p>Action for Alternate Pavement Type Bidding is triggered when the life‑cycle cost analysis shows a difference of at least 10% in agency‑only costs, or a difference of at least 20% when user delay costs are included; either threshold is sufficient to conclusively determine pavement type while still allowing alternate bidding. The semiannual update of the Asphalt Adjustment Multiplier during the first week of July and January provides a deadline for supplying the most current cost data that can prompt a new bid cycle. When the alternate pavement designs are completed, the District shall submit the pavement designs and the LCCA to BODD for review (section 3.6); after the HDTD Chief gives preliminary approval, the District posts the design package in ECMS as an unofficial plan set for a three‑week review and comment period. Marking the Alternative Pavement C‑Factor field as affirmative then triggers the project’s inclusion on the Planned 6‑Month Letting Schedule, which is refreshed monthly, and if an LCCA is not required the District must notify HDTD for tracking purposes. When the alternate pavement designs are finished, the district must submit those designs and the LCCA to BODD for review (section 6.1); after the HDD Chief has preliminarily approved the pavement designs, the district will post the package in ECMS for a three‑week comment period, after which final approval is granted or forwarded to FHWA. The project is then flagged as an alternate pavement type bidding item by selecting affirmative for the Alternative Pavement C‑Factor and appears on the Planned 6‑Month Letting Schedule, which is updated each month. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<p>To carry out the selected alternate‑pavement option the project team must obtain the Asphalt Adjustment Multiplier (AAM) and the current Discount Rate from the ECMS File Cabinet, apply the AAM to all asphalt unit costs for construction and maintenance as required by Publication 408, and have District Pavement Management Engineers incorporate these adjusted figures into the life‑cycle cost analysis. The HDTS is responsible for delivering the semiannual AAM update during the first week of each July and January, which establishes the timing that the LCCA data must be refreshed before bidding. The district must finish the pavement designs and the life‑cycle cost analysis using the mandated AASHTOWare® DARWin® 3.01 software and assemble all required supporting documentation—including a cover letter, Form D‑4332, typical section drawings, location map, DARWin printouts, structural calculations, traffic summaries, geotechnical report, and LCCA printouts—before submitting the designs and LCCA to BODD for review. After preliminary approval by the HDTD (or HDD) Chief, the design package is posted in ECMS as an unofficial plan set for a three‑week review and comment period; any needed corrections are made and final approval is granted by the HDTD (or FHWA) Chief. The approved project is then flagged in ECMS by checking “Yes” for “Alternative Pavement (C‑Factor)” under Innovative Bidding Types, causing it to appear on the Planned 6‑Month Letting Schedule, which is refreshed each month. Resources required throughout this process include district design engineers, LCCA analysts, the HDTD Chief’s review authority, BODD reviewers, and ECMS access. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<h2 id="outcomes-and-follow-up">Outcomes and follow-up</h2>
+<p>Success for Alternate Pavement Type Bidding is achieved when the district completes alternate pavement designs and submits those designs together with a life‑cycle cost analysis (LCCA) to the Bureau of Design and Development (BODD). The LCCA must produce a conclusive pavement‑type decision that satisfies one of the sufficiency conditions: either a difference of at least 10 % in agency‑only life‑cycle costs, or a difference of at least 20 % when user delay costs are included. If those thresholds are not met, the District Pavement Type Selection Committee may provide a fact‑based justification that considers regional factors such as engineering judgment, adjacent pavement types and performance, subgrade condition, local materials, right‑of‑way constraints, maintenance, and traffic or utility impacts. The LCCA results, meeting minutes, and committee rationale shall be recorded and included in the pavement design package for HDTD approval. In parallel, every submitted pavement alternative must be equivalent, meaning it provides comparable levels of service and performance over the same analysis period. The low bid, after adding the C‑Factor to the construction amount, must yield considerable savings in construction costs while still meeting RC standards, DM‑2 and Publication 242 requirements. Success is measured by a sequence of documented milestones: the HDD Chief grants preliminary approval, the design package is posted in ECMS as an unofficial plan set for a three‑week review and comment period, and the HDD Chief subsequently grants final approval (or submits to FHWA for Federal Oversight). The project must be marked “Yes” for Alternative Pavement (C‑Factor) in ECMS, appear on the monthly‑updated Planned 6‑Month Letting Schedule as an alternate pavement type bidding project, and be tracked by HDTS monitoring. Monthly updates confirming that the equivalence criterion has been met and that cost‑saving outcomes have been realized constitute the final measurement of success. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<p>Results of Alternate Pavement Type Bidding must be captured in a life‑cycle cost analysis that isolates only the differences between alternatives for construction items, earthwork, and non‑pavement items. The LCCA, together with meeting minutes and conclusions, shall be recorded and included in the pavement design package submitted for HDTD approval. After the district submits the pavement designs and LCCA to BODD, the results are monitored by the HDTS, which tracks each project in ECMS; the design package is posted as an unofficial plan set for a three‑week comment period, during which any required corrections are made before final approval. The project is flagged in ECMS by selecting “Yes” for “Alternative Pavement (C‑Factor)” under Innovative Bidding Types, causing it to appear on the Planned 6‑Month Letting Schedule that is refreshed monthly, thereby providing ongoing monitoring of alternate bids. All documentation—including C‑Factors, review comments, and final approvals—remains in ECMS and is reported to HDTS. The District Pavement Type Selection Committee then applies the documented LCCA to the decision thresholds—a difference of 10 % or more in agency‑only life‑cycle costs, or a difference of 20 % or more when user delay costs are included—to select the pavement type. The recorded analyses and the accumulated data reported to HDTS constitute the database that HDTS and PennDOT use to refine bidding guidelines and inform future pavement type selections with industry. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 65–79), Ch. 6 (pp. 134–136)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-21.2: formula-block display math (md->html reverse builder; per-page inject) */
+div.fc-math { overflow-x: auto; margin: 1rem 0; }
+
+/* FR-MH-21.12(a): formula-block calculator disclosure (md->html reverse builder; per-page inject) */
+details.fc-calc { margin: 1rem 0; }
+details.fc-calc > summary { cursor: pointer; }
+details.fc-calc iframe { display: block; box-sizing: content-box; width: calc(100% - 2px);
+  height: 28rem; margin-top: .5rem; border: 1px solid var(--border); }
+</style>
+<script>
+window.addEventListener("message", function (e) {
+  if (!e.data || e.data.type !== "fc-calc-height") return;
+  var frames = document.querySelectorAll("details.fc-calc iframe");
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].contentWindow === e.source) frames[i].style.height = e.data.height + "px";
+  }
+});
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

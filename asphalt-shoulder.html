@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asphalt Shoulder</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html" class="active" aria-current="page">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><a href="shoulder.html">Shoulder</a><span class="crumb-sep">›</span><span class="crumb-current">Asphalt Shoulder</span></nav>
+<article><h1>Asphalt Shoulder</h1>
+<div class="meta"><div class="part-of">Part of: <a href="shoulder.html">Shoulder</a> <span class="edge edge-taxonomic" title="Asphalt Shoulder is a topic under Shoulder.">is-subtopic-of</span></div><div class="edge-reading">Asphalt Shoulder is a topic under Shoulder.</div><div><a class="tag" href="index.html?q=asphalt-shoulders">asphalt-shoulders</a><a class="tag" href="index.html?q=asphalt-shoulder">asphalt-shoulder</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>The Asphalt Shoulder is an asphalt‑paved roadway shoulder that abuts a concrete pavement and serves to prevent water, chlorides and other incompressible materials from infiltrating the joint while providing the required shoulder width on low‑volume rural Interstates and Expressways where an incident‑management lane is not needed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In every Concrete Pavement Rehabilitation (CPR) project the pavement‑shoulder joint must be cleaned and sealed by constructing a 0.75‑inch × 0.75‑inch sealant reservoir and filling it with rubberized or asphalt joint‑sealing material, creating a durable barrier regardless of whether the shoulder is being reconstructed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The shoulder is built on a scarified aggregate base (no deeper than 4 inches below grade), shaped and compacted to the bottom elevation of the proposed base course, then treated with an asphalt prime coat and surface treatment; its structural layers follow a Superpave mixture design using a PG 64S‑22 binder for traffic under 0.3 million ESALs [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Density acceptance follows Section 413.3(j): non‑critical placements may be approved by non‑movement or an optimum‑rolling pattern, while critical shoulders require core testing to verify bulk specific gravity and density [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>In section 4.3 JOINTS, the Asphalt Shoulder is intended to mitigate the risk of water, chlorides and other incompressible materials infiltrating the joint between a concrete pavement and its adjacent shoulder, which can compromise pavement durability; consequently the design requires that the pavement‑shoulder joint be cleaned and sealed during every CPR project by constructing a 0.75‑inch by 0.75‑inch sealant reservoir and applying rubberized/asphalt joint sealing material to maintain an effective barrier. In section 8.14 WIDENED LANES FOR CONCRETE PAVEMENT, the Asphalt Shoulder is used to supply an effective roadway shoulder on low‑volume rural Interstates and Expressways with two‑way ADTs less than 10,000 where a dedicated incident management lane is not required, doing so by pairing a widened concrete slab limited to a maximum width of 14 feet with a Type 1 asphalt shoulder to achieve the needed shoulder width while keeping the slab within the prescribed limits. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90), Ch. 8 (p. 165)</small></p>
+<p>The asphalt shoulder is required to be incorporated into the pavement‑shoulder joint cleaning and sealing requirement for every concrete pavement rehabilitation project, which involves constructing a 0.75‑inch by 0.75‑inch sealant reservoir at the joint and filling it with rubberized or asphalt joint‑sealing material, thereby satisfying durability and serviceability objectives for the pavement system [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The shoulder must satisfy the mat‑density acceptance requirements of Section 413.3(j); when density is critical the shoulder shall be accepted only by pavement core testing as specified in 413.3(j)4.a [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Where density is not critical, the required density may be met by a non‑movement or optimum‑rolling pattern provided that the shoulder depth is less than 1 inch or equal to or less than 110 pounds per square yard, its width does not exceed 4 feet, and the placement is limited to small quantities not exceeding 500 tons in a continuous placement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The preparation of the shoulder must include removal of any surplus material to the bottom of the proposed base course, scarifying to a maximum depth of 4 inches below the existing grade, shaping and compacting to the bottom elevation of the proposed base course, and backfilling with aggregate‑base‑course material that meets the compaction criterion that it does not move under the compaction equipment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Guide rails that remain must be left undisturbed while any damaged rail is satisfactorily repaired, and excess or unsuitable material must be satisfactorily disposed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. An asphalt prime coat and surface treatment are then applied as specified in Sections 461.3 and 480.3 to provide a durable paved surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The aggregate component of the shoulder must satisfy durability criteria; when steel‑slag aggregate is used, total expansion determined according to PTM No. 130 shall be less than 0.50% and the stockpile size may not exceed a maximum of 30,000 tons [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When lightweight aggregate is used, its absorption factor must not exceed 2.5% and it must meet a freeze‑thaw resistance limit of a maximum 60% reduction in dynamic modulus after 300 cycles [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273), SECTION 600 INCIDENTAL CONSTRU… (p. 560), SECTION 700 MATERIAL (pp. 636–639)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>For Portland cement concrete pavements that have an adjacent asphalt shoulder, the Asphalt Shoulder design approach is appropriate in Concrete Pavement Restoration projects where the pavement‑shoulder joint must be cleaned and sealed; the required treatment calls for constructing a 0.75‑inch by 0.75‑inch sealant reservoir and sealing the joint with rubberized/asphalt joint sealing material, and this work should be performed whether or not the asphalt shoulder will be reconstructed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The Asphalt Shoulder design is also appropriate when it forms part of a widened concrete slab that does not exceed 14 feet in width, providing a partial asphalt right shoulder (often Type 1) alongside the concrete roadway; this configuration is considered for low‑volume rural Interstates and Expressways with two‑way average daily traffic less than 10,000 where the need for an incident‑management lane is low. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In the Pennsylvania Department of Transportation specifications, the Asphalt Shoulder design is applied to paved shoulder categories identified as Type 6, Type 6‑F, Type 6‑S and Type 6‑SP. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Such shoulders may be constructed using an asphalt surface treatment, a slurry seal, a tack coat, or the required backfill. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When the shoulder is built with a Superpave asphalt mixture, the base course shall follow Section 313.2 and use a PG 64S‑22 binder for pavements with less than 0.3 million equivalent single axle loads unless otherwise indicated, and the wearing course (SRL‑L) shall follow Sections 413.2, 410.2 or 412.2 using the same PG 64S‑22 binder and the same &lt;0.3 million ESAL limit. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The specification permits steel‑slag coarse aggregate for asphalt shoulders provided the material meets the requirements of Section 703.2; if the slag was manufactured after 1 January 2007 traceability must be established, the stockpile may not exceed 30,000 tons, and the total expansion measured by PTM No. 130 must be less than 0.50% before the laboratory testing system will accept it for use in shoulders or other asphalt surface courses. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The Inspector‑in‑Charge may accept density by non‑movement for asphalt shoulders that are part of mixtures used for patching, road widening, driveway adjustments, parking lots or other miscellaneous applications when the shoulder is less than 1 inch deep or equal to or less than 110 pounds per square yard, or when the paved width is less than 4 feet causing equipment bridging. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] An optimum‑rolling pattern may be used for shoulders where density is not critical provided the material is placed in small quantities not exceeding 500 tons in a continuous placement or on unstable or non‑uniform bases. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When shoulder density is deemed critical, acceptance must be by pavement cores as specified in Section 413.3(j)4.a. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90), Ch. 8 (p. 165); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273), SECTION 600 INCIDENTAL CONSTRU… (p. 562), SECTION 700 MATERIAL (pp. 636–639)</small></p>
+<p>The widened‑slab with an asphalt shoulder is limited to low‑volume rural Interstates and Expressways that have two‑way ADTs less than 10,000 and where the need for an incident management lane is low; when those traffic or incident‑management conditions are not present, another design approach would be considered instead of an Asphalt Shoulder. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 8 (p. 165)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>The Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10) specifies that the pavement‑shoulder joint addressed in section 4.3 JOINTS must be treated in accordance with Publication 408 specifications by applying the joint‑sealing provisions of Sections 512 and 521; the joint shall be cleaned and a sealant reservoir sized at 0.75 inch by 0.75 inch constructed, then sealed with rubberized/asphalt joint sealing material, and this cleaning and sealing work should be performed whether or not the asphalt shoulder will be reconstructed. In the context of widened lanes for concrete pavement described in section 8.14 WIDENED LANES FOR CONCRETE PAVEMENT, an asphalt shoulder is governed by the limitation that the widened concrete slab shall not exceed 14 feet in width and must be striped at 12 feet, after which the remaining slab portion provides an effective shoulder when combined with a Type 1 asphalt shoulder; this configuration is intended only for low‑volume rural Interstates and Expressways where the two‑way average daily traffic is less than 10,000 and the need for an incident‑management lane is low, and design calculations must employ the Load Transfer Coefficient (J) specified for widened lanes with asphalt or RCC shoulders as listed in Table 8.2. The Commonwealth of Pennsylvania Department of Transportation Publication 408/2020 SPECIFICATIONS governs material selection for asphalt shoulders through Section 703.2 Coarse Aggregate, which limits acceptable aggregate types to durable stone, gravel, blast‑furnace slag, steel slag, granulated slag, lightweight aggregate or recycled concrete and imposes a maximum absorption of 3.0 % for Type A (or 3.5 % for Type B) as determined by AASHTO T‑85, a total expansion less than 0.50 % for steel slag evaluated per PTM No. 130, and a stockpile size not to exceed 30 000 tons; steel slag manufactured after 1 January 2007 must have traceability. For type 6 paved shoulders the structural layers are governed by Section 656.2, which requires that the asphalt surface treatment follow Section 480.2, shoulder backfill follow Section 350.2, slurry seal comply with Section 482.2 and tack coat adhere to Section 460.2. The base‑course mixture for such shoulders must be designed according to the Superpave procedure in Section 313.2 and shall use a PG 64S‑22 binder when traffic is less than 0.3 million ESALs unless otherwise indicated or directed; the wearing (SRL‑L) course must be designed per Sections 413.2, 410.2 or 412.2 and also requires a PG 64S‑22 binder under the same traffic condition. For type 4 paved shoulders material requirements are set out in Section 654.2, which mandates that aggregate base comply with Section 350.2, the asphalt prime coat be applied in accordance with Section 461.2 (or 461.3 for construction), and the surface treatment follow Section 480.2; shoulder backfill likewise follows Section 350.2. Construction of type 4 shoulders is prescribed in Section 654.3: surplus material shall be removed and the existing shoulder scarified to a maximum depth of 4 inches below the existing grade or as directed; the prepared area is then filled and compacted to the bottom elevation of the proposed base course using aggregate base constructed per Section 350.3, with compaction performed by rollers in accordance with Section 108.05(c)3.a, 3.b, 3.e, or 4; an asphalt prime coat is applied as required by Section 461.3 and an asphalt surface treatment per Section 480.3 completes the shoulder. Density acceptance for the asphalt‑shoulder mat follows the rules of Section 413.3(j); when the shoulder is deemed non‑critical, the Inspector‑in‑Charge may approve density by non‑movement for courses that are less than 1 inch in depth or equal to or less than 110 pounds per square yard, and may also use an optimum‑rolling pattern provided density is measured with an approved nuclear or electrical impedance gauge calibrated according to ASTM D2950; when the shoulder’s density is considered critical, verification must be made with pavement cores as required in Section 413.3(j)4.a, with cores taken within one day of placement and evaluated for bulk specific gravity and density per the procedures of that section. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90), Ch. 8 (p. 165); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273), SECTION 600 INCIDENTAL CONSTRU… (pp. 560–562), SECTION 700 MATERIAL (pp. 636–639)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>In the Pavement Policy Manual, section 4.3 requires a pavement‑shoulder joint cleaning and sealing procedure that constructs a 0.75‑inch by 0.75‑inch sealant reservoir at the joint and seals it with rubberized/asphalt joint sealing material, and this work must be performed during every CPR project whether or not the asphalt shoulder will be reconstructed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Section 8.14 of the same manual specifies that when an Asphalt Shoulder identified as a Type 1 accompanies a widened concrete slab not to exceed 14 feet in width, the design procedure calls for using the load‑transfer coefficient (J) given for “widened lane with asphalt or RCC shoulders” in Table 8.2, and this coefficient governs how traffic loads are transferred between the concrete slab and the adjacent asphalt shoulder [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Department of Transportation specifications prescribe that the Asphalt Shoulder be designed using the Superpave mixture design approach for both its base course (per Section 313.2) and its wearing course (per Sections 413.2, 410.2 or 412.2), requiring a performance grade of PG 64S‑22 and applying only when traffic does not exceed 0.3 million ESALs unless otherwise directed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Construction begins by removing surplus material on existing shoulders down to the bottom of the proposed base course or to a depth directed by the engineer, and at specified locations the shoulder is scarified up to a maximum depth of four inches below the existing grade (or to the directed depth) before shaping and compacting to the bottom elevation of the proposed base course; where graded fill is insufficient additional aggregate base is placed, and where excavation extends below that elevation the void is backfilled, shaped and compacted using rollers in accordance with Section 108.05(c)3.a, 3.b, 3.e or 4 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After shaping and compaction an asphalt prime coat (Section 461.3) and an asphalt surface treatment (Section 480.3) are applied to the shoulder [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For mat density acceptance the department permits either a non‑movement procedure, which may be used when the course is less than 1‑inch deep or not more than 110 lb/yd² and placement is narrow or limited to small quantities, or an optimum‑rolling pattern procedure that requires on‑site density measurement with an approved nuclear gauge (PTM No. 402) or an approved electrical impedance gauge (PTM No. 403), documentation of the rolling pattern and verification against target densities [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Critical shoulders must be validated by pavement cores that are tested for bulk specific gravity and bulk density and compared to the theoretical maximum specific gravity determined per AASHTO T 209 as modified in Bulletin 27 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Additional construction items called for include Asphalt Surface Treatment (Section 480.2), Shoulder Backfill (Section 350.2), Slurry Seal (Section 482.2) and Asphalt Tack Coat (Section 460.2) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=075b461f src=408_2020_11::tab:p270#1 -->
+<p>The table below specifies the minimum compacted depths for various asphalt mixture types.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-asphalt-shoulder-1-cap" tabindex="0"><table class="ct-table" id="ct-asphalt-shoulder-1" aria-describedby="ct-asphalt-shoulder-1-sum">
+<caption id="ct-asphalt-shoulder-1-cap">TABLE GMixture Minimum Compacted Depths</caption>
+<thead>
+<tr><th scope="col">Mixture</th><th scope="col">Minimum Depth</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">9.5 mm Wearing Course</th><td>1 1/2 in.</td></tr>
+<tr><th scope="row">12.5 mm Wearing Course</th><td>2 in.</td></tr>
+<tr><th scope="row">19 mm Binder Course</th><td>2 1/2 in.</td></tr>
+<tr><th scope="row">25 mm Binder Course</th><td>3 in.</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-asphalt-shoulder-1-sum">Rows list different asphalt mixture types, columns give the minimum compacted depth for each.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 270.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 4 (pp. 89–90), Ch. 8 (p. 165); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273), SECTION 600 INCIDENTAL CONSTRU… (pp. 560–562)</small></p>
+<p>For every CPR project, the pavement‑shoulder joint of an asphalt shoulder shall be cleaned and sealed, requiring construction of a sealant reservoir measuring 0.75 inch by 0.75 inch and sealing with rubberized/asphalt joint sealing material, regardless of whether reconstruction is planned. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When a widened concrete slab is combined with a Type 1 asphalt shoulder, the concrete slab may not exceed 14 feet in width and shall be striped at 12 feet, leaving the remaining portion to function as an effective shoulder; this configuration is limited to low‑volume rural Interstates or Expressways with two‑way ADTs less than 10,000 and low incident‑management lane demand, and design shall employ the Load Transfer Coefficient (J) for “widened lane with asphalt … shoulders” from Table 8.2. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Within the Superpave mixture design framework, the mat‑density acceptance method depends on whether density is deemed critical; when density is not critical, the Inspector‑in‑Charge may accept density by non‑movement for material placed in small quantities not exceeding 500 tons continuously or when the placement width is less than 4 ft and the mixture does not move under compaction equipment. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For such non‑critical placements, an optimum‑rolling pattern may be used for small placements (≤ 500 tons) or for courses that are at least 1 inch deep or have a weight of at least 110 lb/yd². [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When density is critical, the asphalt shoulder must be accepted by pavement cores as required in Section 413.3(j)4.a and tested for bulk specific gravity and density. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Scarifying of the existing surface shall not exceed a depth of 4 inches below the existing grade unless a different depth is directed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Compacted material shall be considered satisfactory only when it does not move under the compaction equipment. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The asphalt shoulder shall be constructed using the materials specified in the referenced sections, including Asphalt Surface Treatment (Section 480.2), Shoulder Backfill if required (Section 350.2), Slurry Seal (Section 482.2) and Asphalt Tack Coat (Section 460.2). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For the structural layers, the Superpave asphalt mixture design shall follow Section 313.2 for the base course and Sections 413.2, 410.2 or 412.2 for the wearing course, each requiring a performance grade of PG 64S‑22 with traffic exposure less than 0.3 million ESALs unless otherwise indicated or directed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90), Ch. 8 (p. 165); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273), SECTION 600 INCIDENTAL CONSTRU… (pp. 560–562)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>The joint sealing of an asphalt shoulder requires constructing a sealant reservoir measuring 0.75‑inch by 0.75‑inch, and this work shall be performed whether or not the shoulder is reconstructed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When an asphalt shoulder is placed as a scratch or leveling course, the non‑movement acceptance method may be used only if the course depth is less than 1 inch, the in‑place density does not exceed 110 pounds per square yard, and the paved width is less than 4 feet or narrow enough to cause bridging by approved compaction equipment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If density is critical for the shoulder, acceptance shall be based on pavement cores as specified in Section 413.3(j)4.a [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Scarifying of existing shoulder areas may be performed to a maximum depth of 4 inches below the existing grade, or to a directed depth when specified [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Construction of an aggregate base course for the shoulder follows Section 350.3 and shall be placed to the depth indicated in the plans; any excavation beneath the proposed base course shall be to that indicated or directed depth [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. No other explicit dimensional requirements are provided for pavement, subbase, treated‑soil, slab, edge‑support, or reinforcement within these sections [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273), SECTION 600 INCIDENTAL CONSTRU… (p. 560)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>For paved shoulders of Type 4, the specification must identify an aggregate base in accordance with Section 350.2 (or as defined in Section 350.3), a shoulder backfill material also referenced to Section 350.2, an asphalt prime coat as required by Section 461.2 (or Section 461.3 where applicable), and an asphalt surface treatment per Section 480.2 (or Section 480.3 where applicable); the aggregate base‑course material must be placed to fill low areas and backfill excavated portions and must be compacted according to the roller specifications in Section 108.05. For paved shoulders of Types 6, 6‑F, 6‑S, or 6‑SP, the materials listed in Section 656.2 include an asphalt surface treatment (Section 480.2), shoulder backfill if required (Section 350.2), a slurry seal (Section 482.2) and an asphalt tack coat (Section 460.2); the base course follows a Superpave asphalt mixture design per Section 313.2 with PG 64S‑22, less than 0.3 million ESALs, or as indicated or directed, and the wearing course follows a Superpave design under Sections 413.2, 410.2 or 412.2 with the same PG 64S‑22, less than 0.3 million ESALs, or as indicated or directed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 560–562)</small></p>
+<p>The asphalt shoulder material mix is selected in accordance with the Superpave mixture design specifications referenced in Section 656.2; for the base course the binder shall be PG 64S‑22 and the design traffic load shall be limited to less than 0.3 million ESALs unless a different requirement is indicated, and the wearing course follows the same PG grade and traffic limit under the SRL‑L provisions. Coarse aggregate for an asphalt shoulder must consist of hard, tough, durable, uncoated inert particles that are reasonably free from clay, silt, vegetation and other deleterious substances such as reactive chert, gypsum, iron sulfide, amorphous silica, and hydrated iron oxide; the LTS will evaluate quality by petrographic analysis per PTM No. 518 and require physical properties to meet Tables B‑D with sources listed in Bulletin 14 or approved by the LTS. When gravel is used in any asphalt wearing course on shoulders at least 85 % of the particles shall be crushed with a minimum of two fracture faces, and the maximum allowable absorption determined according to AASHTO T 85 shall be 3.0 % for Type A use (3.5 % for Type B). If steel slag is selected as aggregate, total expansion measured by PTM No. 130 shall be less than 0.50 %, stockpiles shall not exceed 30 000 tons, and any stockpile that fails must be cured with moisture for at least six months before retesting. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=c20843a9 src=408_2020_11::tab:p636#1 -->
+<p>The table below specifies the grading and quality requirements for fine aggregates used in asphalt concrete.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-asphalt-shoulder-2-cap" tabindex="0"><table class="ct-table" id="ct-asphalt-shoulder-2" aria-describedby="ct-asphalt-shoulder-2-sum">
+<caption id="ct-asphalt-shoulder-2-cap">TABLE AFine Aggregate Grading and Quality Requirements</caption>
+<thead>
+<tr><td></td><th id="ct-asphalt-shoulder-2-h0-1" scope="col">CementConcreteSand</th><th id="ct-asphalt-shoulder-2-h0-2" scope="col" colspan="3">Asphalt Concrete Sand Type B</th><th id="ct-asphalt-shoulder-2-h0-5" scope="col">MortarSand</th></tr>
+<tr><th id="ct-asphalt-shoulder-2-h1-0" scope="col">Sieve Size</th><th id="ct-asphalt-shoulder-2-h1-1" scope="col">Type A</th><th id="ct-asphalt-shoulder-2-h1-2" scope="col">#1</th><th id="ct-asphalt-shoulder-2-h1-3" scope="col">#3</th><th id="ct-asphalt-shoulder-2-h1-4" scope="col">Filler</th><th id="ct-asphalt-shoulder-2-h1-5" scope="col">Type C</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">9.5 mm (3/8-inch)</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">100</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-2">100</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-3">100</td><td></td><td headers="ct-asphalt-shoulder-2-h0-5 ct-asphalt-shoulder-2-h1-5">—</td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">4.75 mm(No.4)</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">95-100</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-2">95-100</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-3">80-100</td><td></td><td headers="ct-asphalt-shoulder-2-h0-5 ct-asphalt-shoulder-2-h1-5">100</td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">2.36 mm(No. 8)</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">70-100</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-2">70-100</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-3">65-100</td><td></td><td headers="ct-asphalt-shoulder-2-h0-5 ct-asphalt-shoulder-2-h1-5">95-100</td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">1.18mm(No.16)</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">45-85</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-2">40-80</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-3">40-80</td><td></td><td></td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">600μm(No. 30)</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">25-65</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-2">20-65</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-3">20-65</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-4">100</td><td></td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">300μm(No.50)</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">10-30</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-2">7-40</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-3">7-40</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-4">95-100</td><td></td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">150μm(No. 100)</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">0-10</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-2">2-20</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-3">2-20</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-4">90-100</td><td headers="ct-asphalt-shoulder-2-h0-5 ct-asphalt-shoulder-2-h1-5">0-25</td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">75 μm (No. 200)</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">—</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-2">0-10</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-3">0-10</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-4">70-100</td><td headers="ct-asphalt-shoulder-2-h0-5 ct-asphalt-shoulder-2-h1-5">0-10</td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">Material Finer Than 75μm (No. 200) SieveMax. Percent Passing</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">3</td><td></td><td></td><td></td><td></td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">Strength RatioMin. Percent</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">95</td><td></td><td></td><td></td><td headers="ct-asphalt-shoulder-2-h0-5 ct-asphalt-shoulder-2-h1-5">95</td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">Soundness TestMax. Loss Percent</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">10</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-2">15</td><td headers="ct-asphalt-shoulder-2-h0-2 ct-asphalt-shoulder-2-h1-3">15</td><td></td><td headers="ct-asphalt-shoulder-2-h0-5 ct-asphalt-shoulder-2-h1-5">10</td></tr>
+<tr><td headers="ct-asphalt-shoulder-2-h1-0">Fineness Modulus</td><td headers="ct-asphalt-shoulder-2-h0-1 ct-asphalt-shoulder-2-h1-1">2.30-3.15</td><td></td><td></td><td></td><td headers="ct-asphalt-shoulder-2-h0-5 ct-asphalt-shoulder-2-h1-5">1.6-2.5</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-asphalt-shoulder-2-sum">Rows list Sieve Size; columns give CementConcreteSand (Type A), Asphalt Concrete Sand Type B (#1, #3, Filler), MortarSand (Type C).</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 636.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[2] — SECTION 600 INCIDENTAL CONSTRU… (p. 562), SECTION 700 MATERIAL (pp. 636–639)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>In section 4.3, because many concrete pavements have asphalt shoulders, the pavement‑shoulder joint must be cleaned and sealed during every CPR project; this work includes constructing a sealant reservoir that is 0.75 inch by 0.75 inch and sealing the joint with rubberized/asphalt joint sealing material, and it should be performed whether or not the asphalt shoulder will be reconstructed. In section 8.14, when a widened concrete slab incorporates an Asphalt Shoulder, the design must employ the load‑transfer coefficient (J) specified in Table 8.2 for a “widened lane with asphalt or RCC shoulders,” and no additional joints, reinforcement, transitions, or connections are prescribed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90), Ch. 8 (p. 165)</small></p>
+<p>When a concrete pavement abuts an asphalt shoulder, the interface is treated as a pavement‑shoulder joint that must be cleaned and sealed during every CPR project, regardless of whether the shoulder is being rebuilt; the procedure calls for constructing a 0.75‑inch by 0.75‑inch sealant reservoir at the joint and filling it with rubberized/asphalt joint sealing material [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Asphalt Shoulder must follow the same mat‑density acceptance rules as other low‑critical applications, so it may be approved by non‑movement or an optimum‑rolling pattern unless the Representative determines density to be critical, in which case pavement cores are required [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Longitudinal joints at the shoulder are offset about 6 inches from the joint in the layer below, placed near the pavement centreline for two‑lane roads or within 12 inches of lane lines on wider roads, painted with a uniform coating of the course binder before compaction, and compacted according to the Paving Operation QC Plan with the first roller pass kept roughly 18 inches from the joint and subsequent passes overlapping the joint 2 to 6 inches [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. All shoulder joints are sealed with hot PG 64S‑22 asphalt binder maintained between 265°F and 320°F (not placed when air temperature is below 40°F unless allowed) by applying a 4‑inch +/-1‑inch wide band centered within 1 inch of the joint at a thickness of 1/16‑inch +/-1/32‑inch, only to joints that are clean, dry and free of any loose material or debris [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The Asphalt Shoulder interface is prepared by first removing any surplus material to the bottom of the proposed base course or to the depth directed, then scarifying the existing shoulder to a maximum depth of 4 inches below the existing grade (or as directed) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The exposed area and any low spots are shaped and compacted to the bottom elevation of the proposed base course; where graded material is insufficient an aggregate base course is placed and compacted, and if excavation has lowered the shoulder below that elevation the void is backfilled with aggregate base, shaped, and compacted until it does not move under the compaction equipment, establishing a stable interface before applying the asphalt prime coat (Section 461.3) and the asphalt surface treatment (Section 480.3) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273), SECTION 600 INCIDENTAL CONSTRU… (p. 560)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>For a CPR project the existing drainage system needs to be functional and the subgrade stable, which is a prerequisite for any asphalt shoulder that abuts concrete pavement. The design must prevent future infiltration of water, chlorides, and incompressible materials into the pavement structure, so the pavement‑shoulder joint should be cleaned and sealed. Joint sealing includes constructing a 0.75‑inch by 0.75‑inch sealant reservoir and applying rubberized/asphalt joint sealing material. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90)</small></p>
+<p>The asphalt shoulder joint with the adjacent concrete pavement must be cleaned and sealed in every CPR project, which entails constructing a sealant reservoir measuring 0.75‑inch by 0.75‑inch and applying rubberized/asphalt joint sealing material; this work should be performed whether or not the asphalt shoulder is being reconstructed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For geometric conformity, the asphalt shoulder must be shaped and compacted to the bottom elevation of the proposed base course, and any low spots are filled using graded or aggregate base material before compaction. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Scarifying of existing shoulder areas is required to a maximum depth of 4 inches below the existing grade, or as directed, and where excavation extends below that elevation the backfill must be shaped and compacted until it does not move under the compaction equipment. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Safety considerations require that any existing guide rail remain undisturbed during excavation, and any damage to the guide rail caused by construction operations shall be satisfactorily repaired. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 89–90); [2] — SECTION 600 INCIDENTAL CONSTRU… (p. 560)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The completed asphalt shoulder is checked for compliance by first deciding if its density is critical; when it is not, the Inspector‑in‑Charge may accept mat density by non‑movement for courses less than 1‑inch deep or equal to or less than 110 lb/yd², or by an optimum‑rolling pattern for thicker or heavier placements. If density is deemed critical, pavement cores must be taken within one day of placement and tested for bulk specific gravity and density in the presence of the Representative, using an approved nuclear gauge to establish the target density and then comparing the measured percent of theoretical maximum density to the acceptance levels set out in Table F. The results, together with any required Gmm verification samples, determine whether the shoulder meets the project’s constructability, performance, and consistency requirements. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 269–273)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

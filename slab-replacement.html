@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slab Replacement</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.2tOuZUASLw -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">174 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html" class="active" aria-current="page">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-and-seal.html">Saw and Seal</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-preservation.html">Pavement Preservation</a><span class="crumb-sep">›</span><a href="concrete-patching.html">Concrete Patching</a><span class="crumb-sep">›</span><span class="crumb-current">Slab Replacement</span></nav>
+<article><h1>Slab Replacement</h1>
+<div class="meta"><div class="part-of">Part of: <a href="concrete-patching.html">Concrete Patching</a> <span class="edge edge-taxonomic" title="Slab Replacement is a topic under Concrete Patching.">is-subtopic-of</span></div><div class="edge-reading">Slab Replacement is a topic under Concrete Patching.</div><div><a class="tag" href="index.html?q=slab-replacement">slab-replacement</a><a class="tag" href="index.html?q=full-depth-replacement">full-depth-replacement</a><a class="tag" href="index.html?q=full-depth-replacement">full-depth-replacement</a></div><div>Created 2026-10-28 · Updated 2026-10-29</div></div>
+<p>Slab replacement is a corrective‑maintenance treatment applied to rigid (concrete) pavements when an isolated slab has deteriorated to the point that its full width and depth must be removed and replaced, restoring the pavement’s intended functional condition and safety [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The procedure is triggered by severe concrete distress such as failed joints, edge spalls, corner breaks, excessive edge‑slump, longitudinal or transverse cracking, or vertical differentials that exceed specification limits, indicating that repair of the existing slab is no longer feasible [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Replacement involves cutting and lifting out the defective slab, preparing a clean, properly compacted subbase, and installing a new full‑depth precast or slip‑form concrete slab that meets prescribed strength, joint geometry, and tolerances before traffic is reopened [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Because it addresses localized failures rather than widespread deterioration, slab replacement restores structural integrity without increasing the pavement’s load‑carrying capacity and is performed at no additional cost to the agency [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2020 Specifications (2025)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Slab replacement is a corrective‑maintenance treatment applied to rigid pavements when an isolated slab has deteriorated enough that its full width and depth must be removed and replaced, addressing severe concrete distress such as failed joints, edge spalls or corner breaks that compromise safety and future integrity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania Department of Transportation specifications for SECTION 529—FULL DEPTH PRECAST/PRESTRESSED CONCRETE PAVEMENT SLABS state that slab replacement is used when an existing concrete pavement slab has become damaged or cracked because of manufacturing imperfections, handling damage, construction damage, or other in‑service distress [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For SECTION 501—PLAIN OR REINFORCED CEMENT CONCRETE PAVEMENTS, slab replacement is required when a concrete slab fails to meet the acceptance criteria for edge slumping, specifically when hardened concrete shows edge slump beyond the allowable 1/8‑inch between lanes (or 1/4‑inch between lane and shoulder); it also applies when a longitudinal crack appears within a lane, when surface defects such as spalling, honeycombing or insufficient depth are identified, or when curing, joint construction, or surface‑tolerance requirements are not met [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Under SECTION 679—SLAB STABILIZATION, slab replacement is prescribed when stabilization fails and transverse cracks appear between adjacent grout injection holes, indicating that the slab cannot be effectively repaired; in such cases the entire slab must be removed and replaced as specified in Section 516 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 12 (pp. 211–213); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Slab replacement is classified as a corrective‑maintenance treatment for rigid pavements, meaning it is performed in response to a deficiency that threatens safe and efficient operation and its primary purpose is to restore the pavement to an acceptable level of service after damage has occurred. The Pennsylvania Department of Transportation specifications expressly describe the objective of slab replacement as repairing damage and restoring the pavement’s intended functional condition. For full‑depth precast/prestressed concrete slabs (Section 529) the treatment is applied to repair manufacturing imperfections, handling damage or construction damage, with each case inspected on a case‑by‑case basis and performed at no additional cost to the Department. For plain or reinforced cement concrete pavements placed by the slip‑form method (Section 501) slab replacement is employed when a slab is judged defective—such as edge‑slumping, joint construction errors, or other surface flaws—and the required action is to remove and replace the faulty portion at no additional cost, thereby repairing the damage and restoring the intended condition. For slab‑stabilization projects (Section 679) when transverse cracks develop between adjacent grout injection holes the entire slab must be replaced, and if movement exceeds the specified limit after two proper groutings the Representative may direct removal and replacement with a full‑depth concrete patch; these measures are aimed at repairing the damaged slab and restoring its functional performance. The combined guidance therefore indicates that slab replacement seeks to repair identified damage and return the pavement to its designed functional state rather than to prevent further deterioration or extend service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress prompting slab replacement is observed at pavement joints or cracks where a loaded slab corner deflection reaches 0.02 inch, with joint efficiency falling below 65 % (or even when it meets the 65 % threshold) and, in particular, when transverse cracks appear between adjacent grout injection holes; such cracks trigger full‑depth slab replacement per Section 516, while radial cracks spreading from injection holes are treated as a safety stop until corrected. The extent of the problem is defined by the measured deflection and joint efficiency values, indicating severity sufficient to require either stabilization/patching or complete slab removal. Safety and operational consequences include halting work when radial cracking occurs and replacing the slab when transverse cracking develops, ensuring that unsafe or ineffective repairs are not left in service. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>The distress that leads to slab replacement is usually linked to manufacturing imperfections, handling damage or construction damage to precast slabs and to inadequate support when soft, wet, or unsuitable subbase material remains in place; these mechanisms manifest as surface cracking, edge breakage, or joint differentials that exceed the allowable 1/4‑inch vertical differential or the prescribed joint width limits of 1/2 inch transverse and 3/4 inch longitudinal. The specification for full‑depth precast/prestressed concrete pavement slabs requires a minimum concrete compressive strength of 4,925 psi and a minimum flexural strength of 650 psi, with joints required to be at least 1/4 inch wide and not to exceed the stated limits, and any recurring damage must halt installation until its cause is determined. In addition, distress may be attributed to moisture intrusion from rain and inadequate joint sealing, freeze‑thaw action, edge slumping observed during placement, curing deficiencies, insufficient compressive strength or slab depth, honeycombing, and poor reinforcement bond; surface defects resulting from freezing and thawing, rain, improper final finish, or honeycombing that cannot be repaired also trigger replacement. For slip‑form paving, the specification limits edge slump to not exceed 1/8 inch between adjacent lanes, and pavement that fails the edge‑slump test, curing requirements, surface tolerance, depth, or compressive‑strength criteria must be removed and replaced at no additional cost. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Slab replacement is a corrective‑maintenance treatment applied to rigid (concrete) pavements when isolated deficiencies such as failed joints, edge spalls or corner breaks have developed that negatively affect the safe, efficient operation of the facility [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Because it is a reactive measure, the treatment is used only at isolated locations where the distress is localized rather than requiring full‑depth reconstruction of an entire pavement section and it restores functionality without increasing structural capacity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the context of a slab‑stabilization effort, the appearance of transverse cracks between adjacent grout injection holes triggers the requirement to replace the entire slab as specified in Section 516 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Work on the replacement cannot be started if daytime temperatures are below 40 °F or if the subgrade or base course material is frozen, and deflection testing that guides the decision may only be performed when air temperature is between 40 °F and 70 °F and the subgrade is not frozen [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 12 (pp. 211–213); [2] — SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Slab replacement is presented as a corrective‑maintenance option for rigid pavements only when the failure is confined to an isolated location, so it is unsuitable when distress is widespread or the pavement remains structurally sound but exhibits surface defects; in those cases preventive‑maintenance treatments such as partial or full‑depth concrete repairs, joint sealing, diamond grinding, or other isolated slab repairs are preferred, and if non‑structural enhancements are needed the work falls under minor rehabilitation, while structural deficiencies that require increased load‑carrying capacity call for major rehabilitation or reconstruction. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>To determine whether slab replacement is warranted, the pavement is first inspected for edge slumping with a 12‑foot straightedge both before the concrete loses plasticity and again after it hardens; any slump that exceeds the allowable limits calls for removal and replacement under Section 501.3(t). The same straightedge is then used to measure surface tolerance, and the finished surface must not vary more than 3/16 inch when the straightedge is laid parallel with the centerline nor more than 3/16 inch when it is laid perpendicular within a traffic lane; depressions larger than 3/16 inch are deemed defective. Pavement thickness is verified by drilling cores in accordance with PTM 606 or by non‑destructive thickness measurements according to PTM 605, and a deficiency greater than 1/4 inch prompts additional coring while a depth shortfall exceeding 1/2 inch classifies the slab as defective. Core samples are also tested for air content (PTM 623) and for compressive strength either by cylinder tests (PTM 604) or maturity methods (PTM 640); failure to meet the minimum strength specified in Table D—or, for accelerated mixes, 1,200 psi—requires slab removal and replacement. In addition, after grout injection the crew must visually inspect the pavement; when transverse cracks are observed forming between adjacent grout injection holes, the entire slab is required to be replaced as directed in Section 516, and no other specific measurements or tests for replacement are stipulated in this section. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Slab Replacement is applied as a corrective maintenance treatment for rigid pavements when an isolated portion has developed a deficiency that threatens safe, efficient operation and the distress has progressed to the stage where it negatively impacts the pavement’s functional condition. For slip‑form constructed concrete pavements covered by Section 501.3(g), replacement is required when edge slumping in hardened concrete exceeds the acceptable limits of 1/8 inch between adjacent lanes (or lane‑ramp) or 1/4 inch between a lane and a shoulder, at which point the slab must be removed and replaced. The same slip‑form specification also mandates replacement when any longitudinal crack appears within a lane, triggering removal of the affected slab. Under the slab‑stabilization specifications in Section 679.3, the occurrence of transverse cracks between adjacent grout injection holes requires that the entire slab be replaced. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Section 529 specifies that slab replacement using full‑depth precast or prestressed concrete pavement slabs shall be performed with each slab fabricated to the dimensions shown on the approved shop drawings; the maximum length may not exceed 15 ft, except that a prestressed slab may be up to 20 ft long, and the minimum length shall be 6 ft, while the width follows the longitudinal joint layout. Each replacement slab is cast 1/4 in thicker than the nominal design thickness, and the concrete mix shall achieve at least 4,925 psi compressive strength and at least 650 psi flexural strength. Load‑transfer dowels, tie bars and their slots must be placed within ±1/8 in of the drawing locations, and grout ports, lifting devices recessed a minimum of 1 in, bond‑breaker coating on dowel portions, optional foam gaskets and slab‑setting bolt hardware are required. Joint configuration is limited to transverse joint widths not exceeding ½ in (minimum ¼ in) and longitudinal joints not exceeding ¾ in, with vertical differentials across any joint not to exceed ¼ in before grinding; dowel and bedding grouts shall reach a minimum compressive strength of 2,500 psi prior to traffic opening. The subbase shall be prepared with compacted No. 2A coarse aggregate, and placement may employ setting bolts, polyurethane leveling or strongback beams as detailed in the installation plan. Section 501 requires that slab replacement be carried out by removing the defective concrete slab and installing a new slab in accordance with the Standard Drawings and any other applicable requirements of Section 501.3; when reinforced cement concrete is used, the removed length must be at least 10 ft between transverse joints, whereas for plain cement concrete the minimum removal length shall be 6 ft. The new work shall include full‑width transverse joints with salvaged or replaced existing joints as directed. If a longitudinal crack occurs within a lane, the entire cracked slab shall be removed and replaced at no additional cost to the Department. When depth deficiency is identified, removal proceeds transversely across the full lane width and longitudinally until the pavement is not more than ¼ in deficient in depth. Section 679 states that when transverse cracks develop between adjacent grout‑injection holes, the entire slab shall be replaced as directed in Section 516; after drilling, any wooden plugs must be removed and each hole filled full depth with a rapid‑set, non‑shrink concrete patching material, which is then struck flush with the surrounding pavement surface. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=90beccb9 src=408_2020_11::tab:p366#1 -->
+<p>The table below specifies the required concrete compressive strength for opening to traffic based on slab thickness and length.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-slab-replacement-1-cap" tabindex="0"><table class="ct-table" id="ct-slab-replacement-1" aria-describedby="ct-slab-replacement-1-sum">
+<caption id="ct-slab-replacement-1-cap">Table D</caption>
+<thead>
+<tr><th id="ct-slab-replacement-1-h0-0" scope="col" rowspan="3">Slab Thick, inches</th><th id="ct-slab-replacement-1-h0-1" scope="col" colspan="2">Strength for Opening to Traffic, psi</th></tr>
+<tr><th id="ct-slab-replacement-1-h1-1" scope="col">Slab Length &lt; 10 ft</th><th id="ct-slab-replacement-1-h1-2" scope="col">Slab Length ≥ 10 ft</th></tr>
+<tr><th id="ct-slab-replacement-1-h2-1" scope="col">f&#x27;c</th><th id="ct-slab-replacement-1-h2-2" scope="col">f&#x27;c</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-slab-replacement-1-h3-0" scope="row">6.0</th><td headers="ct-slab-replacement-1-h0-1 ct-slab-replacement-1-h1-1 ct-slab-replacement-1-h2-1 ct-slab-replacement-1-h3-0">3000</td><td headers="ct-slab-replacement-1-h0-1 ct-slab-replacement-1-h1-2 ct-slab-replacement-1-h2-2 ct-slab-replacement-1-h3-0">3600</td></tr>
+<tr><th id="ct-slab-replacement-1-h4-0" scope="row">7.0</th><td headers="ct-slab-replacement-1-h0-1 ct-slab-replacement-1-h1-1 ct-slab-replacement-1-h2-1 ct-slab-replacement-1-h4-0">2400</td><td headers="ct-slab-replacement-1-h0-1 ct-slab-replacement-1-h1-2 ct-slab-replacement-1-h2-2 ct-slab-replacement-1-h4-0">2700</td></tr>
+<tr><th id="ct-slab-replacement-1-h5-0" scope="row">8.0</th><td headers="ct-slab-replacement-1-h0-1 ct-slab-replacement-1-h1-1 ct-slab-replacement-1-h2-1 ct-slab-replacement-1-h5-0">2150</td><td headers="ct-slab-replacement-1-h0-1 ct-slab-replacement-1-h1-2 ct-slab-replacement-1-h2-2 ct-slab-replacement-1-h5-0">2150</td></tr>
+<tr><th id="ct-slab-replacement-1-h6-0" scope="row">9.0 +</th><td headers="ct-slab-replacement-1-h0-1 ct-slab-replacement-1-h1-1 ct-slab-replacement-1-h2-1 ct-slab-replacement-1-h6-0">2000</td><td headers="ct-slab-replacement-1-h0-1 ct-slab-replacement-1-h1-2 ct-slab-replacement-1-h2-2 ct-slab-replacement-1-h6-0">2000</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-slab-replacement-1-sum">Rows list slab thickness values, columns provide required strength for opening to traffic based on slab length.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2020 SPECIFICATIONS, untitled table, p. 366.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Performance of a slab‑replacement treatment depends first on the concrete properties of the precast units; for Section 529 the shop drawings must show a compressive strength of at least 4,925 psi and a flexural strength of at least 650 psi, and the mix design must account for ambient average daily temperatures and exposure conditions to select appropriate panel size and expansion‑joint locations. The slabs are cast 1/4 inch thicker than the nominal design thickness and must be placed within the dimensional tolerances shown in Table A, with load‑transfer dowels and tie bars cast square to the edge and positioned within ±1/8 inch of the drawing locations and coated with a bond breaker. Existing pavement conditions also control success: the subbase must be cleaned of soft, wet or unsuitable material, compacted with No. 2A aggregate to a firm even surface that does not vary more than ±½ inch from grade, joint vertical differentials may not exceed 1/4 inch (or ½ inch before grinding), transverse joint widths must stay between ¼ inch and ½ inch, longitudinal joints no greater than ¾ inch, and all dowel‑slot and bedding grouts must reach a minimum compressive strength of 2,500 psi before the slab is opened to traffic. For Section 501 the condition of the existing concrete and its reinforcement must be addressed; reinforcement must be free of rust, dirt, oil, grease or other foreign substances that impair bond (a light powdery rust coating is acceptable but thicker rust must be removed), edge slumping must not exceed 1/8 inch between adjacent lanes (or 1/4 inch between lane and shoulder) or the slab is deemed defective and must be replaced, dowel bars must be correctly positioned and, for Type B‑coated bars, a bond‑breaker lubricant must be applied at least one hour before concrete placement, the replacement length must be at least 10 feet for reinforced cement concrete pavements (or 6 feet for plain cement concrete pavements) with joints aligned to existing ones, any depth deficiency greater than 1/4 inch or surface tolerance exceeding 3/16 inch triggers removal and replacement, and the new slab must achieve a minimum compressive strength of 1,200 psi for accelerated‑strength pavement and be cured in accordance with Section 501.3(l). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>For full‑depth precast/prestressed concrete pavement slab replacement under Section 529, the project must first be surveyed and full‑depth diamond saw cuts placed at the proposed longitudinal joints; the existing concrete is then lifted out in one or more pieces without disturbing the subbase. The exposed subgrade is cleaned of unsuitable material and a compacted No. 2A coarse aggregate base is shaped to within ±½ inch of the design grade, with bedding surface variations limited to 1⁄8 inch over each slab length before the precast slab is positioned using an approved leveling method such as setting bolts, strongback beams or polyurethane. The slab, fabricated ¼ inch thicker than nominal, is set so that vertical differential across any joint does not exceed ¼ inch and transverse joint width remains between ¼ and ½ inch; dowel bars, tie bars and grout ports are installed, the dowel and bedding grouts are placed and must achieve at least 2 500 psi compressive strength before traffic is permitted, and any required sacrificial concrete may be milled or diamond‑ground after placement to meet joint tolerances. For plain or reinforced cement concrete pavement slab replacement under Section 501, the contractor first identifies the deficient area and removes the concrete over a transverse length that shall not be less than ten feet for reinforced cement concrete or six feet for plain cement concrete; removal proceeds across the full lane width and continues longitudinally until the remaining pavement meets the depth tolerance of one‑quarter inch as required by Section 501.3(s). After the slab is taken out, new transverse joints are installed in accordance with the Standard Drawings, salvaging or replacing any existing joint that is intersected, and the replacement slab is placed using the normal construction sequence—setting line and grade, placing and consolidating concrete, striking‑off, floating, straightedge testing, final texturing, and curing as prescribed in Sections 501.3(g) through (l). The repaired section is then inspected for edge‑slump limits, surface tolerances, joint placement, and other acceptance criteria before it may be opened to traffic. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435)</small></p>
+<p>Implementation of slab replacement requires specialized lifting devices that shall meet Section 1105 requirements, be placed per accepted shop drawings, and the contractor must provide size, weight, load distribution and lifting capacity data for all cranes, excavators and other special lifting equipment. The sequence begins with a diamond‑saw full‑depth cut of the slab limits, lift‑out removal of existing concrete, subbase preparation to within ±½ inch tolerance, followed by placement of the precast slab using an approved leveling method (setting bolts, polyurethane, strongback beams, etc.) and installation of dowels, tie bars and grout ports before grouting. Ambient average daily temperatures must be accounted for in the mix design to determine panel size and expansion‑joint locations, while joint widths are limited to ½ inch transverse (minimum ¼ inch) and ¾ inch longitudinal with vertical differentials not exceeding ¼ inch unless diamond‑ground after a differential up to ½ inch. Traffic may be opened only after dowel and bedding grout reach at least 2,500 psi compressive strength; ungrouted slabs may be temporarily opened for no more than three days and must be shimmed if edge differentials exceed ¼ inch. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 428–435)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>During slab replacement the inspector shall first verify material qualifications. Under Section 529 the precast concrete system must be listed in Bulletin 15, and the mix designs submitted at least 28 days before production shall achieve a minimum compressive strength of 4,925 psi and a flexural strength of 650 psi. Reinforcement used under Section 501 must be free of rust, dirt, oil, grease or other foreign substances that impair bond, although a light powdery rust coating is acceptable; dowel bars are examined for damaged coating before placement. Preparation checks include confirming qualified personnel and a crew supervisor with at least five years of similar project experience as required by Section 679, and reviewing a field quality‑control plan that details hole spacing, depth, diameter, drilling methods, injection sequence, reinforcement location, equipment list, line‑and‑grade control, waste disposal, curing period and traffic opening times. The subbase and bedding material shall be graded to a firm surface within ±½ inch of grade, and the slab bottom must not vary more than 1/8 inch over its length as stipulated in Section 529. Load‑transfer units are staked and dowel locations are marked within ±1 inch according to Section 501, while side forms and slip‑form equipment are set to prevent edge slump. During installation the fabricated slabs must meet the dimensional tolerances shown in Table A of Section 529, include a sacrificial thickness of 1/4 inch, possess the specified surface texture, and contain load‑transfer dowels, tie bars, slots and grout ports positioned within ±1/8 inch of the shop‑drawing locations; lifting devices are required to be recessed at least 1 inch and filled with an accepted cementitious grout after placement. Edge slumping is tested with a 12‑foot straightedge; acceptable limits are no more than 1/8 inch between adjacent lanes and 1/4 inch between a lane and its shoulder as described in Section 501. Tie bars are pull‑out tested after the concrete reaches 3,500 psi, requiring either a resistance of 12,000 pounds or a slippage not greater than 1/32 inch per Table B. Deflection testing on each joint or crack is performed according to ASTM D 4695 only when air temperature is between 40 °F and 70 °F, and slabs that exhibit a loaded corner deflection of 0.02 inch or more with a joint efficiency of at least 65 % are stabilized per Section 679. Completed‑work inspection verifies joint geometry and grout strength. Joint vertical differentials shall not exceed 1/4 inch (or up to 1/2 inch when diamond‑grinded) and transverse joint gaps must be between ¼ and ½ inch, with longitudinal gaps not exceeding ¾ inch as required by Section 529. Dowel and bedding grouts must attain a minimum compressive strength of 2,500 psi before the pavement is opened to traffic. After hardening, surface tolerance is checked with a straightedge; deviations greater than 3/16 inch parallel or perpendicular to the centerline are not acceptable (Section 501). Macrotexture depth shall be at least 0.040 inch measured according to ASTM E965, and pavement thickness is verified by cores or non‑destructive methods, any core measurement deficient by more than 1/4 inch triggering additional coring. Curing procedures must follow the specified methods. Panel displacement exceeding the allowable tolerance of 0.05 inch, radial cracks around injection holes, or transverse cracks between adjacent grout injection holes result in either patching or full slab replacement as indicated in Section 679. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<p>Under SECTION 529—FULL DEPTH PRECAST/PRESTRESSED CONCRETE PAVEMENT SLABS, a replacement slab is accepted only when the fabricated dimensions fall within the tolerance shown in Table A; slabs are rejected if the fabricated dimensions are not within that tolerance. The load‑transfer dowels and tie bars must be cast within ±1/8 inch of the locations indicated on the Shop Drawings, square to the edge and parallel to the top surface. The subbase shall be shaped to a firm even surface within plus or minus 1/2 inch of grade and contour, and the bedding surface may not vary from the theoretical plane more than 1/8 inch over a slab length. Vertical differential across any joint must not exceed 1/4 inch finished vertical differential, transverse joint width must not exceed 1/2 inch and must be at least 1/4 inch along its entire length, while longitudinal joints may not exceed 3/4 inch. Each slab shall be cast 1/4 inch thicker than the nominal design thickness, and dowel, tie‑bar and bedding grout must reach a minimum compressive strength of 2,500 psi before traffic is allowed. Under SECTION 501—PLAIN OR REINFORCED CEMENT CONCRETE PAVEMENTS (Slip‑Form Paving Method), a slab that has been removed and replaced is judged satisfactory only when it meets the same edge‑slump, surface‑tolerance, joint‑alignment and thickness limits required of new pavement. Edge slump must stay within 1/8 inch between adjacent lanes or ramps and within 1/4 inch between lanes and shoulders measured over a 6‑inch width from the edge. The finished surface may not vary more than 3/16 inch when checked with a 12‑foot straightedge both parallel to and across the centreline. Longitudinal joint offsets must not exceed 1/4 inch as measured with a straightedge (using a 12‑foot straightedge where cross‑slope is unchanged or a 4‑foot straightedge where it changes). Slab thickness may not be deficient by more than 1/4 inch; any excess of these limits renders the pavement defective and requires removal and replacement at no additional cost. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Slab replacement restores the pavement to acceptable condition by removing any slab that fails the edge‑slump, surface‑tolerance, or depth criteria and installing new concrete that meets the specified limits. When edge slump exceeds 1/8 inch between adjacent lanes (or 1/4 inch between lane and shoulder), when the finished surface varies more than 3/16 inch, or when core depth is deficient by more than 1/2 inch, the defective slab must be removed and replaced per Section 501.3(t) at no additional cost, with a minimum replacement length of 10 feet for reinforced concrete. The new slab is constructed to the same joint placement, reinforcement, curing, and finishing requirements as the original pavement, thereby re‑establishing load transfer, structural integrity, and compliance with durability standards, which in turn extends the expected service life to that of a newly built section. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>In slab replacement, several recurring distresses are identified across the various pavement specifications. For precast/prestressed concrete pavements (Section 529), excessive vertical differentials at joints constitute a common failure; when the finished vertical differential exceeds 1/4 inch across a joint it must be corrected, and any differential greater than 1/2 inch requires slab removal or re‑grading. In addition, traffic may not be opened until dowel, tie‑bar and bedding grouts achieve at least 2,500 psi compressive strength, and damage to the top surface or edges that occurs before or during installation—such as edge spalling from ungrouted slabs—triggers work stoppage until causes such as improper subbase grading, inaccurate surveying, or handling mishandling are mitigated. For plain or reinforced cement concrete pavements using slip‑form paving (Section 501), typical problems include edge slumping that exceeds the allowable 1/8 inch between adjacent lanes or 1/4 inch between lanes and shoulders, mis‑aligned or damaged load‑transfer units and transverse joints, inadequate curing that fails to meet the requirements of Section 501.3(l)2, surface tolerance violations greater than 3/16 inch, depth deficiencies beyond 1/4 inch, insufficient air content or compressive strength as defined in Sections 501.3(s) and 501.3(q), and surface defects caused by freezing‑thawing cycles, rain, improper final finish, or honeycombing. These distresses are driven by equipment operation errors such as stopping the slip‑form paver too long, poor reinforcement cleanliness, inaccurate joint placement, uncontrolled curing temperatures, failure to meet specified finishing tolerances, and adverse weather conditions. For slab stabilization (Section 679), radial cracks spreading outward from grout injection holes indicate poor quality or improper methods and require work to be stopped until the cause is corrected; transverse cracks that develop between adjacent grout injection holes trigger a requirement to replace the entire slab at no additional cost as specified in Section 516. Panel displacement raised in excess of the 0.05 inch allowable tolerance must be ground back to the correct grade, and any vertical movement observed during pumping mandates an immediate stop of material placement. If after two properly performed groutings a joint still deflects 0.02 inch or more, the Representative may direct removal and replacement with a full‑depth concrete patch. These failures are influenced by temperature limits—work shall not be performed if daytime temperatures are below 40°F or if the subgrade is frozen, and testing shall not occur when air temperature is below 40°F or exceeds 70°F—and by joint efficiency values that determine whether a joint is stabilized or patched. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After slab replacement the finished concrete must be checked for edge slumping and surface flatness using a 12‑foot straightedge; any edge slump must not exceed 1/8 inch between adjacent lanes or ramps and 1/4 inch between lanes and shoulders, and the hardened surface may not vary more than 3/16 inch both parallel and perpendicular to the centerline. Joint conditions are then verified by a QC wipe test before sealant is placed, and any joint that fails must be cleaned and re‑tested in the presence of the Representative. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 500—RIGID PAVEMENTS (pp. 355–367)</small></p>
+<p>According to the Pavement Policy Manual, when a deficiency develops that negatively impacts safe, efficient operations or threatens future integrity of the pavement—such as joint failures, edge spalls, corner breaks, or other localized deterioration—the slab‑replacement area is deemed to require further action and corrective maintenance, which may include full‑width and depth slab replacement at isolated locations. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In Section 529 of the Pennsylvania Department of Transportation specifications for full‑depth precast/prestressed concrete pavement slabs, a finished vertical differential across any joint that exceeds the ¼‑inch limit or rises above ½ inch relative to adjacent pavement obligates regrading, removal, or diamond‑grinding of the slab to restore tolerance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The same section also requires a temporary wedge transition when a permanent vertical drop greater than 2 inches exists between the new slab and existing pavement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Joint gaps that fall outside the ¼‑to‑½‑inch transverse range or longitudinal joints wider than ¾ inch are identified as needing corrective work under Section 529. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] If dowel or bedding grout has not reached the required minimum compressive strength of 2,500 psi, traffic opening must be delayed and additional curing provided, per Section 529. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Any recurring cracking, handling damage, or other distress observed after installation mandates stopping further placement until the cause is identified and repaired, as stipulated in Section 529. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Under Section 501 for plain or reinforced cement concrete pavements, edge slump that exceeds the allowable 1/8 inch between adjacent lanes or ramps, or ¼ inch between lanes and shoulders, renders the slab defective and necessitates repair or replacement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] A longitudinal crack occurring within a lane likewise triggers defect status and requires removal and replacement of the affected slabs. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Surface depressions of 3/16 inch or more between adjacent lanes, surface tolerance deviations greater than 3/16 inch from straightedge requirements, or core depth measurements deficient by more than ½ inch each indicate that additional maintenance, repair, or rehabilitation is required. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] In Section 679 concerning slab stabilization, the appearance of vertical movement during pumping work must cause pumping to stop and may lead the Representative to order cessation of work. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Radial cracks spreading outward from grout injection holes signal poor quality and require stopping work until the underlying cause is corrected. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The development of transverse cracks between adjacent grout injection holes mandates replacement of the entire slab as specified in Section 516. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] After grouting, any joint that still deflects 0.02 inch or more on a loaded slab corner may prompt the Representative to direct removal and replacement with a full‑depth concrete patch. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 211–213); [2] — SECTION 500—RIGID PAVEMENTS (pp. 355–435), SECTION 600 INCIDENTAL CONSTRU… (pp. 588–589)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2020 Specifications,&quot; Change No. 11, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2020/408_2020_11/408_2020_11.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>
