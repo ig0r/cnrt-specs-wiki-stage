@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rutting</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html" class="active" aria-current="page">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><span class="crumb-sep">›</span><a href="distress.html">Distress</a><span class="crumb-sep">›</span><span class="crumb-current">Rutting</span></nav>
+<article><h1>Rutting</h1>
+<div class="meta"><div class="part-of">Part of: <a href="distress.html">Distress</a> <span class="edge edge-taxonomic" title="Rutting is a topic under Distress.">is-subtopic-of</span></div><div class="edge-reading">Rutting is a topic under Distress.</div><div><a class="tag" href="index.html?q=rutting">rutting</a><a class="tag" href="index.html?q=rut">rut</a><a class="tag" href="index.html?q=ruts">ruts</a><a class="tag" href="index.html?q=wheel-ruts">wheel-ruts</a><a class="tag" href="index.html?q=rut-depth">rut-depth</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>Rutting, also referred to as wheel ruts or minor rutting on rigid pavements, appears as surface depressions confined to the wheel paths—smooth, longitudinal depressions that may be shallow (depth ≤ 0.5 in.) and are visible as grooves in the riding surface[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It develops when traffic loads are transmitted through the pavement to a subgrade that has become softened by excess moisture or inadequate drainage, causing the weakened base or subgrade to yield and produce the observed depressions[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Rutting is quantified by measuring the depth of those surface depressions in inches, typically with a calibrated 12‑foot straight edge across the lane width during performance surveys, and the resulting undulations reduce ride quality and structural capacity[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#description-and-identification">Description and identification</a></li><li><a href="#where-it-occurs">Where it occurs</a></li><li><a href="#causes-and-mechanisms">Causes and mechanisms</a></li><li><a href="#severity-levels-and-rating">Severity levels and rating</a></li><li><a href="#measurement-survey-and-extent">Measurement, survey and extent</a></li><li><a href="#effects-on-performance">Effects on performance</a></li><li><a href="#repairs-and-treatments">Repairs and treatments</a></li><li><a href="#prevention-in-design-and-construction">Prevention in design and construction</a></li><li><a href="#specification-limits-and-acceptance">Specification limits and acceptance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="description-and-identification">Description and identification</h2>
+<p>Rutting, also referred to as wheel ruts or minor rutting on rigid pavements, appears as surface depressions confined to the wheel paths; when the depth does not exceed 0.5 inches the condition is considered minor (section 2.1 GENERAL). In the drainage context (section 2.3), rutting manifests as longitudinal depressions in the wheel paths and one type of surface rutting is a reflection of rutting of the subgrade; traffic loads transmitted through the pavement can press a softened, poorly drained base into ruts that become visible on the riding surface. For polymer‑modified emulsified asphalt micro‑surfacing projects (section 5.4), rutting is described as depressions or grooves in the wheel paths with depth categories of shallow—less than 1/2 inch, moderate—between 1/2 inch and 1 ¼ inch, or deep—up to 2 inches. In performance measurement terms for asphalt pavements (section 13.4), rutting is quantified by measuring the depth of those surface depressions in inches. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–59), Ch. 5 (p. 105), Ch. 13 (pp. 216–217)</small></p>
+<p>In the drainage context, rutting is recognized by smooth, longitudinal depressions that appear on the pavement surface; these ruts are visible and directly reflect deformation of a softened subgrade caused by inadequate drainage, whereas transverse or shrinkage cracks manifest as fractures related to moisture‑induced cracking or temperature variations and do not produce continuous undulations, resulting in a loss of ride quality that is distinct from crack‑related roughness [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For hot‑in‑place recycled (HIR) candidate pavements the presence of surface depressions in the wheel paths is measured for depth, and the rutting severity shall be less than 1½ inches; this criterion distinguishes rutting from transverse and miscellaneous cracking, which are limited to a depth of less than 1.0 inch with crack widths not exceeding ½ inch, and also separates it from minor corrugation, shoving or slippage that are acceptable only if their average depth is less than 1½ inches, while raveling severity must not exceed the medium rating [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Within the FHWA performance framework rutting is identified by measuring the depth of surface depressions in the wheel paths of asphalt pavements and expressing the result in inches; this measurement separates it from cracking, which is reported as a percentage of cracked surface, and from faulting, which is quantified as an elevation difference across concrete joints [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. During the annual performance surveys required by the 60‑month warranty, rutting is identified by measuring the depth of depressions in wheel paths with a calibrated 12‑foot straight edge placed across the lane width, and this measured rut depth establishes both severity and extent; because flushing and potholes are evaluated only through manual visual surveys, the use of the straight‑edge measurement distinguishes true rutting from those other distresses [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 131–133), Ch. 13 (pp. 216–217); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 353–358)</small></p>
+<h2 id="where-it-occurs">Where it occurs</h2>
+<p>According to the Pavement Policy Manual, rutting is associated with Portland Cement Concrete surfaces, where wheel ruts less than 0.5 inches deep may be treated by diamond grinding if the pavement is structurally sound [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual also states that inadequate subsurface drainage and traffic loads can cause surface depressions identified as rutting on asphalt pavements [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Minor rutting is listed as a possible distress on asphalt pavements in the seal‑coats, slurry seals, and surface treatments section, with correction options including an asphalt surface treatment or a scratch‑course/seal‑coat combination; concrete, composite, overlay or shoulder structures are not referenced there [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The polymer‑modified emulsified asphalt micro‑surfacing section notes that rutting appears on asphalt wearing surfaces—often limited to the travel lane—and may also affect sound jointed plain concrete or jointed reinforced concrete pavements, for which micro‑surfacing can be used as a rut fill when the distress is not related to base failure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The project‑selection subsection of that same section defines shallow ruts less than ½ inch, moderate ruts from ½ inch to 1¼ inches, and deep ruts up to 2 inches as being addressed on asphalt wearing surfaces with appropriate micro‑surfacing treatments [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The ultra‑thin bonded wearing course description indicates that moderate rutting may develop on existing asphalt pavements and be corrected by the overlay; concrete decks, composite decks or shoulders are not mentioned as experiencing rutting in this context [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Its conditions‑for‑use subsection lists medium‑severity rutting as an allowable distress for candidate pavements, implying that such rutting can be present on the pavement types considered for ultra‑thin bonded wearing course application [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Superpave paving courses section treats rutting as a permanent deformation issue for all Superpave asphalt courses (wearing, binder and base layers) and extends the same design framework to Asphalt Fiber Modified overlays placed on concrete pavements, thereby acknowledging that rutting can occur in those overlay structures [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The specifying PG‑binders section recognizes rutting as a distress that may develop in asphalt pavement structures and recommends stiffer binders to better resist it, without reference to other structural types [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The overlay requirements state that existing rutting must be corrected by milling or by placing a leveling course before an interlayer is installed; a leveling course is required on concrete pavements and for all paving‑grid applications except those using composite grids, indicating that rutting can be present on concrete overlays as well [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The crumb‑rubber modified dense‑graded courses section identifies rutting as a potential distress in conventional dense‑graded asphalt courses, noting that the crumb‑rubber modifier reduces its occurrence compared with conventional mixes [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The pavement preservation design guidelines classify rutting as affecting flexible pavements—i.e., asphalt surface layers—and prescribe mill‑and‑overlay or micro‑surfacing/ultra‑thin bonded wearing courses for rut filling on those flexible pavements [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. FHWA performance measures evaluate rut depth only for asphalt pavements, while concrete decks, composite decks, overlays and shoulders are assessed with other distress metrics, which implies that the performance measure for rutting is applied exclusively to asphalt surfaces in that context [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In contrast, the Pennsylvania Department of Transportation specifications address rutting solely on asphalt‑concrete pavement; the warranty provisions require annual surveys and, when necessary, verification of rut depth with a 12‑foot straight edge across the lane width, without mentioning concrete slabs, composite layers, overlays or shoulders [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 54–59), Ch. 5 (pp. 103–130), Ch. 12 (pp. 204–205), Ch. 13 (pp. 216–217); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 353–358)</small></p>
+<p>Section 2.3 DRAINAGE states that rutting is a surface depression that actually reflects deformation of a softened subgrade; loads transmitted through the pavement surface can rut a softened subgrade and the resulting ruts become visible on the surface where traffic applies load, so the distress originates in the base/subgrade layer but is observed at the pavement surface. Section 5.4 POLYMER‑MODIFIED EMULSIFIED ASPHALT PAVING SYSTEM (MICRO SURFACING) notes that rutting which justifies a micro‑surfacing treatment appears in the travel‑lane wheel paths of an asphalt pavement – i.e., at the surface where traffic rolls – and it is not caused by base failure; the distress may also be present on sound jointed plain or reinforced concrete pavements, but it still manifests as ruts in the wheel‑track area rather than within the base or subgrade. Section 5.5 ULTRA‑THIN BONDED WEARING COURSE describes rutting as a distress confined to the wheel paths of the pavement surface, referring specifically to “wheel path rutting,” and indicates that the treatment can correct wheel‑path rutting up to 1/2 inch with a single pass. Section 5.19 HOT IN‑PLACE RECYCLED ASPHALT specifies that rutting is classified as a surface distress; candidate pavements must have any rutting confined to the pavement surface and not involve load distress or problems with the base, and the allowable rutting severity should be &lt; 1 ½ inches, implying that rutting does not occur at layer interfaces, in the base, or in the subgrade for suitable projects. Finally, Section 13.4 PERFORMANCE MEASURES records rutting as the depth of surface depressions that appear in the asphalt pavement layer; the distress therefore occurs at the wearing surface where wheel tracks create ruts and is measured in inches. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 104–133), Ch. 13 (pp. 216–217)</small></p>
+<h2 id="causes-and-mechanisms">Causes and mechanisms</h2>
+<p>In section 2.3 Drainage of the Pavement Policy Manual (Publication 242, Change No. 10) rutting is described as a surface manifestation of subgrade deformation caused by loads transmitted through the pavement that can rut a softened subgrade when the base is poorly drained, identifying traffic loading together with inadequate subsurface drainage as primary causes[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual links rutting to traffic loading in section 5.9 Superpave Paving Courses, noting that the Superpave design uses projected ESALs to develop mixtures capable of resisting permanent deformation and specifying that when the estimated ESAL range exceeds 10 million ESALs the district should specify a polymer‑modified PG 64E‑22 binder for wearing courses to avoid rutting[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Section 5.9 also flags roadway features such as frequent stopping conditions, intersections, and steep hills with slow truck traffic as severe rutting situations, implying that design or material choices must address these loading conditions[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In section 5.10 Specifying PG‑Binders for Superpave Pavement Courses the manual states that high pavement temperatures typical of summer months are a primary factor in rutting and recommends “bumping” the high‑temperature grade of the PG‑binder to increase mix stiffness, without mentioning traffic loading, moisture, drainage, or design/construction deficiencies as causes[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pennsylvania Department of Transportation Specification (Publication 408/2026, Section 496.3(c) Warranty) identifies excessive traffic loading as the sole cause of rutting covered under the warranty, stating that if cumulative ESALs exceed 100 % of the estimated 20‑year design life ESALs—or increase enough to require a mix‑design change—the contractor is not responsible for repairing rutting[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Neither document provides a tabular classification of distresses by cause, and consequently no table row for rutting is presented in either source[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (pp. 111–113); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 353–358)</small></p>
+<p>In section 2.3 DRAINAGE, rutting develops when traffic loads are transferred through the pavement to a subgrade that has become softened by excess moisture; because inadequate subsurface drainage leaves the base and subgrade saturated, the weakened material yields under repeated loading, producing surface depressions that mirror the underlying deformation. Conditions that accelerate this mechanism include poorly drained bases, fluid or saturated subgrades, and any situation where water cannot be removed from beneath the pavement. In section 5.10 SPECIFYING PG‑BINDERS FOR SUPERPAVE PAVEMENT COURSES, rutting progresses when the asphalt binder does not retain sufficient stiffness under repeated wheel loads, and this tendency is amplified by high pavement temperatures that typically occur during the summer months; specifying a higher‑temperature PG‑binder through “bumping” can provide a stiffer mix that can better resist rutting. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 5 (p. 113)</small></p>
+<h2 id="severity-levels-and-rating">Severity levels and rating</h2>
+<p>In the micro‑surfacing project selection guidance (Section 5.4 B), rutting severity is categorized by depth: shallow ruts are defined as less than 1/2 inch and are treated with a Type A mix; moderate ruts range from 1/2 inch to 1 ¼ inch and are addressed with a Type B mix; deep ruts are up to 2 inches deep and are filled using the single‑pass Type RF mix. For ultra‑thin bonded wearing courses, the Conditions for Use (Section 5.5 B) restrict allowable distress to medium‑severity rutting, and the source does not provide quantitative thresholds for that level. In the Hot‑In‑Place Recycled asphalt guidelines (Section 5.19 C), rutting is evaluated only as surface‑only distress and a candidate pavement is acceptable when its Rutting Severity is less than 1 ½ inches; no further rating categories are defined. Pavement condition assessment (Section 13.4) measures rut depth in inches and translates the measurement into one of three condition scores—good, fair, or poor—as summarized in Table 13.1, although the specific numeric limits for each score are not given. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 105–133), Ch. 13 (pp. 216–217)</small></p>
+<p>The rating procedure described in the Conditions for Use clause of Chapter 5, Section 5.5 B of the Asphalt Concrete Pavement Guidelines and Policies limits rutting on candidate pavements to a medium severity level. For Hot‑In‑Place Recycled (HIR) asphalt, the Pub. 336 rating criteria referenced in Chapter 5, Section 5.19 require that rutting severity be less than 1½ inches for a project to qualify as a standalone HIR candidate. The FHWA Interstate Management Program Guidelines employ the condition‑rating procedure set out in Chapter 13.4, which converts measured rut depth into a qualitative score of good, fair or poor, and specifies that poor is one of the severity levels used when rating the rutting component in overall pavement condition assessments. Under the 60‑month warranty for asphalt concrete pavement, Section 496.3(c) assigns the condition rating for rutting using the rating procedures defined in Publication 336. The performance criterion in Table A of that specification triggers remedial action when, after five years, at least 30 % of a segment’s area contains two or more distresses classified as low severity, indicating that the referenced severity level for rutting is low severity. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 107–133), Ch. 13 (pp. 216–217); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 353–358)</small></p>
+<h2 id="measurement-survey-and-extent">Measurement, survey and extent</h2>
+<p>Rutting is quantified by measuring rut depth. When a manual performance survey calls for it, the Department verifies rut depth with a 12‑foot straight edge placed across the lane width, recording the severity and extent of the depression as part of the annual warranty surveys described in Section 496.3(c) of the asphalt concrete pavement warranty. The measurement is taken directly on the wheel path during these manual checks to determine whether remedial action is required. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 353–358)</small></p>
+<p>Under the 60‑month asphalt concrete pavement warranty (Section 496.3(c)), rutting is identified chiefly through automated surveys as required for performance results, with any necessary rut‑depth verification carried out manually using a 12‑foot straight edge across the lane width; nondestructive testing may also be employed when approved. The Department schedules these surveys annually throughout the warranty period, though it may add more frequent surveys if conditions warrant. Results are reported for each State Route segment (approximately one‑half mile) or partial segment defined by the LRS. Extent of rutting is quantified either by the measured rut depth (a length across the lane) and its severity, or by expressing the proportion of a segment’s area that contains low‑severity distresses as a percent (e.g., 30 % of segment area triggers remediation). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 353–358)</small></p>
+<h2 id="effects-on-performance">Effects on performance</h2>
+<p>According to section 2.3 DRAINAGE, rutting caused by a softened or fluid subgrade reduces the pavement’s structural capacity because loads are transmitted to a weakened base, and the lack of support from a fluid base can result in surface roughness; these undulations cause a noticeable loss of ride quality. The same section notes that poor ride quality, more frequent maintenance during the life of the pavement, and shorter service life are the predictable results of such compromise. In section 4.7 DIAMOND GRINDING AND GROOVING, wheel ruts (rutting) degrade the riding experience and safety of concrete pavements because they disturb the surface texture, reduce friction, impair transverse drainage and raise pavement‑generated noise; consequently ride quality suffers and the risk of skidding increases. The source does not provide information on how rutting influences structural capacity, durability or overall service life for concrete pavements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59), Ch. 4 (pp. 93–94)</small></p>
+<p>When rutting caused by a softened subgrade is not corrected, the fluid‑base support loss creates surface roughness that quickly degrades ride quality; the resulting undulations can then initiate cracks in the asphalt layer, and those cracks become sites for additional moisture‑related damage adjacent to thermal cracking. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 58–59)</small></p>
+<h2 id="repairs-and-treatments">Repairs and treatments</h2>
+<p>Diamond grinding is identified as a repair that directly targets rutting on rigid pavements by re‑profiling the surface and eliminating wheel ruts; it should be performed only when the concrete slab is structurally sound and the wheel ruts are less than 0.5 inches deep, and total grinding of the pavement surface is preferred although an isolated low spot may be omitted if correcting it would require excessive grinding of the surrounding pavement (section 2.1 GENERAL; section 4.7 DIAMOND GRINDING AND GROOVING) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Improving or restoring subsurface drainage—such as installing lateral underdrains, continuous pavement‑base drains along edges, low‑side and median drains, or subgrade drains—is described as a means of addressing surface rutting that actually reflects deformation of a softened, water‑filled or capillary‑affected subgrade; this approach applies when the observed rutting is linked to inadequate drainage (section 2.3 DRAINAGE) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. An asphalt surface treatment or a scratch‑course/seal‑coat combination may be used to correct minor rutting, but only on non‑Interstate roads where Table 5.1 permits their use and never on pavements that require structural upgrading; these treatments shall not be placed on the Interstate system (section 5.2 SEAL COATS, SLURRY SEALS, AND SURFACE TREATMENTS) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Micro‑Surfacing, a polymer‑modified emulsified asphalt paving system, is identified as suitable for rut fill and lane re‑profiling when the pavement is structurally sound and the rutting is not caused by base failure; it is especially appropriate where only the travel lane is rutted on four‑lane roads or in special cases such as over trolley tracks or granite blocks (section 5.4 POLYMER‑MODIFIED EMULSIFIED ASPHALT PAVING SYSTEM) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Within this category Type A may be used for shallow ruts less than ½ inch deep, Type B for moderate ruts ranging from ½ inch to 1¼ inches deep, and Type RF for deep ruts up to 2 inches in a single pass (section 5.4 PROJECT SELECTION) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same polymer‑modified emulsified asphalt micro‑surfacing system is also specified as a repair for pavement sections that exhibit fatigue or excessive rutting, and the spreading operation must include dedicated rut‑filling equipment to level wheel‑path depressions; it may be applied only when the existing surface can receive satisfactory penetration and adhesion, the ambient temperature remains at least 50 °F throughout placement, rain is not imminent, freezing temperatures are not expected within the next 24 hours, and work does not occur during the seasonal prohibitions set for each district, with a pre‑placement meeting required to identify any areas of concern that may show excessive rutting (section 483.3 CONSTRUCTION) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Under the 60‑month warranty for asphalt concrete pavement, microsurfacing (or another Department‑approved treatment) is required when the year‑5 performance survey determines that at least thirty percent of a segment’s area contains two or more low‑severity distresses; conversely, the Contractor is exempted from repairing rutting once traffic counts indicate that estimated cumulative ESALs have exceeded one hundred percent of the projected twenty‑year design life (section 496.3 CONSTRUCTION) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The Ultra‑Thin Bonded Wearing Course is indicated as a surface treatment that can correct moderate rutting; it may be applied when the existing pavement exhibits only medium severity rutting and, according to its conditions for use, it can correct wheel‑path rutting up to ½ inch with a single pass when the rut depth does not exceed half an inch (section 5.5 ULTRA‑THIN BONDED WEARING COURSE &gt; B. Conditions for Use) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the estimated ESAL range is greater than 10 million, the district should specify a polymer‑modified PG 64E‑22 binder for wearing or leveling courses to avoid pavement rutting under severe stopping conditions or steep grades (section 5.9 SUPERPAVE PAVING COURSES), and “bumping” one grade from a PG 58S‑28 to a PG 64S‑28 is prescribed to provide a stiffer asphalt binder at high pavement temperatures that typically occur during the summer months, thereby better resisting rutting (section 5.10 SPECIFYING PG‑BINDERS) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Use of crumb‑rubber modified asphalt binder in dense‑graded courses is reported to yield a reduction in rutting compared with conventional mixes, so whenever the rubber‑modified binder is employed it addresses rutting by producing lower rut depth (section 5.17 CRUMB RUBBER MODIFIED ASPHALT BINDER) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Hot‑In‑Place Recycled asphalt mixtures can remediate rutting and other surface distress; they may be used when rutting severity should be less than 1½ inches and all distresses are confined to the pavement surface with no load‑related base problems, while minor corrugation, shoving or slippage are acceptable if their average depth is under 1½ inches (section 5.19 HOT IN‑PLACE RECYCLED ASPHALT) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A mill‑and‑overlay is listed as an option used to eliminate rutting; milling and overlay depths of 1½ or 2 inches may be exceeded when coring determines the depth needed to correct a rutting problem (section 12.3 DESIGN GUIDELINES) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Pre‑overlay surface preparation may require placement of a separate scratch or leveling course ahead of resurfacing to fill wheel ruts and other local small depressions; rutting must be corrected through milling or by placing a leveling course before placement of an interlayer, with a leveling course required on concrete pavements and for all paving‑grid applications except composite grids (section 5.12 a SURFACE PREPARATION) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 54–59), Ch. 4 (pp. 93–94), Ch. 5 (pp. 103–133), Ch. 12 (pp. 204–205); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 338–358)</small></p>
+<p>Diamond grinding may be performed on Portland cement concrete pavements only when the pavement is structurally sound and wheel‑path ruts are less than 0.5 inch deep; if rut depth exceeds this threshold the treatment is not recommended (Section 2.1 GENERAL). When surface rutting is identified as a manifestation of subgrade rutting caused by inadequate subsurface drainage, installation of edge/base drains, lateral underdrains and subgrade drains may be applied; the source does not prescribe a quantitative severity limit but ties the treatment to the presence of rutting linked to poor drainage (Section 2.3 DRAINAGE). Seal coats, slurry seals and other asphalt surface treatments shall be used only where rutting is minor, the pavement structure is adequate, and the road is not part of the Interstate system; they shall not be placed on a pavement that requires structural upgrading (Section 5.2 SEAL COATS, SLURRY SEALS, AND SURFACE TREATMENTS). Micro‑surfacing may be used for rut fill when the affected pavement is structurally sound, the rutting is not caused by base failure and no structural overlay is required; Type A is appropriate for shallow ruts less than 0.5 inch deep, Type B may be used for moderate ruts ranging from 0.5 inch to 1¼ inch deep, and Type RF can fill deep ruts up to 2 inches deep in a single pass (Section 5.4 POLYMER‑MODIFIED EMULSIFIED ASPHALT PAVING SYSTEM &gt; B. Project Selection). The Ultra‑thin Bonded Wearing Course is indicated for wheel‑path rutting that does not exceed 0.5 inch and is described as suitable for moderate or medium‑severity rutting; more severe rutting falls outside the allowed limits (Sections 5.5 ULTRA‑THIN BONDED WEARING COURSE and 5.5 &gt; B. Conditions for Use). When the estimated 20‑year design‑life traffic loading exceeds ten million ESALs—indicating severe rutting conditions such as stopping zones or steep grades—the district should specify a polymer‑modified PG 64E‑22 binder for wearing or binder courses; when the estimated ESAL range is 0.3 to &lt; 3.0 million, the polymer‑modified binder is not required and the standard binder may be used (Section 5.9 SUPERPAVE PAVING COURSES). Asphalt paving interlayers—including geotextile fabric, fiberglass mesh or composite reinforcing grid—are not normally used to treat rutting; consequently they are ruled out as a remedial option for this distress (Section 5.12 OVERLAYS). If rutting is present, it must be corrected through milling or by placing a leveling course before an interlayer is placed; a leveling course is required on concrete pavements and for all paving‑grid applications except composite grids (Section 5.12 &gt; a Surface Preparation). Hot‑In‑Place Recycled asphalt may be used only when the rutting severity is less than 1½ inch; projects that exceed this threshold are not considered suitable for HIR (Section 5.19 C. Characteristics of Hot‑In‑Place Recycled Mixtures). A mill‑and‑overlay is permissible when rutting is severe enough that the depth needed to correct it exceeds the standard 1½‑inch or 2‑inch limits; in such cases the milling and overlay depth may be increased to whatever depth is required to eliminate the rutting problem (Section 12.3 DESIGN GUIDELINES). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–59), Ch. 5 (pp. 103–133), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="prevention-in-design-and-construction">Prevention in design and construction</h2>
+<p>The report identifies a series of design measures that can prevent or reduce pavement rutting, each linked to specific conditions and sections. Diamond grinding is prescribed for Portland‑cement concrete surfaces when the pavement is structurally sound and existing wheel ruts are less than 0.5 inches deep (Section 2.1 General); total grinding of the surface is preferred, while isolated low‑spot grinding may be omitted if excessive removal would be required, and the Next Generation Concrete Surface treatment that incorporates flush diamond grinding can also reduce rutting on new or existing pavements when surface irregularities exceed ¼ inch (Section 4.7). Effective drainage is another measure; providing highly permeable base and subbase materials, maximizing sub‑base slopes, installing continuous edge or base drains along the outside edge and low side of superelevated sections, and placing lateral underdrains in wet subgrade areas and at all cut‑to‑fill transitions prevents rutting that reflects subgrade deformation caused by inadequate drainage (Section 2.3 Drainage). For asphalt pavements, an asphalt surface treatment or a scratch‑course/seal‑coat combination may correct minor rutting, provided the pavement does not require structural upgrading and such treatments are not placed on the Interstate system (Section 5.2). The polymer‑modified emulsified asphalt paving system known as Micro Surfacing can fill depressions and re‑profile a structurally sound pavement; it is applicable when rutting is confined to the travel lane of a four‑lane road, does not originate from base failure, and no structural overlay is required (Section 5.4). An ultra‑thin bonded wearing course applied over a polymer‑modified emulsified asphalt membrane can correct wheel‑path rutting up to one‑half inch with a single pass when installed as a surface treatment in one lift (Sections 5.5 Ultra‑Thin Bonded Wearing Course and its Advantages). The Superpave volumetric mix design procedure addresses permanent deformation by selecting an appropriate performance‑grade binder based on the project’s calculated equivalent single axle loads; when the 20‑year ESAL estimate exceeds ten million, a polymer‑modified PG 64E‑22 binder should be specified for wearing or leveling courses in locations with severe rutting conditions such as steep grades or stopping areas (Section 5.9). Specification of one of the three standard PG‑binders (PG 58S‑28, 64S‑22 or 64E‑22) for conventional or Superpave pavement courses provides a design measure that targets rutting by matching binder grade to project type, and the “bumping” practice of raising the high‑temperature grade of the PG‑binder (for example from PG 58S‑28 to PG 64S‑28) supplies a stiffer binder at summer temperatures to better resist rutting; both measures apply when the binder is selected according to Table 5.5 for the specified pavement course (Section 5.10). Employing a crumb‑rubber modified binder in dense‑graded courses reduces rutting relative to conventional mixes, and this measure applies specifically to dense‑graded courses that use a crumb‑rubber modified binder (Section 5.17). Hot‑In‑Place Recycled asphalt mixtures can remediate rutting and related surface depressions, but their use is limited to candidate pavements where rutting severity is less than 1½ inches, distresses are confined to the surface, and any minor corrugation, shoving or slippage has an average depth also less than 1½ inches (Section 5.19). A mill‑and‑overlay treatment may be used to eliminate rutting; milling and overlay depths of one‑and‑a‑half inches or two inches are permitted and may be exceeded when the required removal depth to correct a rutting problem is greater (Section 12.3). Finally, during surface preparation for an overlay any existing rutting must be corrected either by milling or by installing a leveling course before placement of an interlayer; a leveling course is required on concrete pavements and on all paving‑grid applications except paving composite grids (Section 5.12). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:begin key=efdd81eb src=pub_242_change_10::tab:p114#1 -->
+<p>The table below specifies PG-binders for Superpave pavement courses based on project types and traffic conditions.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-rutting-1-cap" tabindex="0"><table class="ct-table" id="ct-rutting-1" aria-describedby="ct-rutting-1-sum">
+<caption id="ct-rutting-1-cap">TABLE 5.5 SELECTING PG-BINDERS FOR SUPERPAVE PAVEMENT COURSES</caption>
+<thead>
+<tr><th scope="col">PG-BINDER</th><th scope="col">PROJECT TYPES</th><th scope="col">ELIGIBLEPAVEMENTCOURSES</th><th scope="col">COST(STANDARDORPREMIUM)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">PG 58S-28</th><td>To be used in the northern half of the State{Districts 1-0, 2-0, 3-0, 4-0, 9-0, 10-0, 11-0,12-0, and 5-0 (Monroe, Carbon, &amp;Schuylkill Counties only)} under light trafficconditions and level or rolling terrain. Donot use in heavily trafficked intersections.Do not use on steep downgrades wheretraffic is under moderate to heavy braking.Do not use on steep upgrades where trucktraffic slows considerably. Use in situationswhere PG 58-22 was specified in the past.</td><td>WearingBinderBase</td><td>Standard(but may bedifficult toacquire)</td></tr>
+<tr><th scope="row">PG 64S-22</th><td>To be used in any part of the State undermost traffic conditions. Use in situationswhere PG 64-22 was specified in the past.</td><td>WearingBinderBaseLevelingScratch</td><td>Standard</td></tr>
+<tr><th scope="row">PG 64E-22</th><td>To be used in any part of the State underheavy traffic situations, at intersections, onsteep grades, or at locations where ruttinghas occurred in the past. Use isrecommended for projects that have anestimated ESAL range ≥ 10 million ESALs.Use in situations where polymer-modifiedasphalt (PMA) was specified in the past.</td><td>WearingBinder *</td><td>Premium</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-rutting-1-sum">Rows list specific PG-Binder types and their usage conditions. Columns provide details on project types, eligible pavement courses, and cost classification for each binder.</p>
+<p class="ct-notes">Notes: *Under extremely heavy traffic situations or locations where rutting has been a problem in the past, the District should specify the PG 64E-22 in both the Wearing Course and Binder Course.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 114.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (pp. 54–59), Ch. 4 (pp. 93–94), Ch. 5 (pp. 103–133), Ch. 12 (pp. 204–205)</small></p>
+<p>The guide identifies diamond grinding as a construction practice that corrects minor wheel‑rut depressions and eliminates wheel ruts; it may be performed only when the pavement is structurally sound and the existing wheel ruts are less than 0.5 inches deep (section 2.1 GENERAL), and total grinding of the surface is preferred (section 4.7 DIAMOND GRINDING AND GROOVING). Asphalt surface treatments or scratch‑course/seal‑coat combinations are specified to correct minor rutting, provided that the pavement does not require structural upgrading and such treatments shall not be placed on an Interstate system (section 5.2 SEAL COATS, SLURRY SEALS, AND SURFACE TREATMENTS). Effective drainage practices—including cutting or cleaning ditches, establishing outlet low points, removing excess material along shoulders, installing continuous edge and lateral underdrains in wet subgrade areas, using highly permeable base and subbase aggregates, and maximizing sub‑base slopes—are required wherever surface runoff could infiltrate the pavement structure to prevent rutting that reflects a softened subgrade (section 2.3 DRAINAGE). An ultra‑thin bonded wearing course applied as a paver‑placed surface treatment may address moderate rutting when there are no traffic restrictions for such placement (section 5.5 ULTRA‑THIN BONDED WEARING COURSE), and the same course can correct wheel‑path rutting up to ½ inch with a single pass when used as a corrective overlay on existing pavement (section 5.5 ULTRA‑THIN BONDED WEARING COURSE &gt; D. Advantages). When the 20‑year design ESAL range exceeds ten million and severe rutting conditions such as stopping locations or steep grades are present, the district should specify a polymer‑modified PG 64E‑22 binder for wearing, leveling or binder courses to avoid pavement rutting; a fiber‑modified course with PG 64S‑22 is not an alternate where mitigation to rutting is needed (section 5.9 SUPERPAVE PAVING COURSES). “Bumping” the high‑temperature grade of a PG binder—for example from PG 58S‑28 to PG 64S‑28—is recommended under the Superpave Mixture Design System because it provides a stiffer asphalt binder at summer pavement temperatures and thus resists rutting (section 5.10 SPECIFYING PG‑BINDERS FOR SUPERPAVE PAVEMENT COURSES). The guide also recommends that, where indicated, a separate scratch or leveling course be placed ahead of resurfacing operations to fill wheel ruts and other local small depressions so they are even with the surrounding pavement; this requirement applies to concrete pavements and to all paving‑grid applications except composite grids and must be completed before placement of an interlayer because interlayers are not normally used to address rutting (section 5.12 and section 5.12 &gt; a). Use of a crumb‑rubber modified asphalt binder in dense‑graded courses reduces rutting relative to conventional mixes when the modification is applied to a conventional PG 64S‑22 binder (section 5.17). The Hot‑In‑Place Recycled asphalt process can remediate rutting for projects that qualify as HIR candidates, provided Rutting Severity is less than 1½ inches and any corrugation, shoving or slippage has an average depth of less than 1½ inches; pavements containing rubber or fiber material in the top two inches are excluded (section 5.19). For preservation treatments, a mill‑and‑overlay is prescribed to eliminate rutting, and milling and overlay depths of 1½ inches or 2 inches may be exceeded when coring determines that a greater depth is necessary to correct an existing rutting problem (section 12.3). Micro‑surfacing or an ultra‑thin bonded wearing course may also be applied early in the maintenance cycle before advanced distresses emerge to fill rutting (section 12.3). [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–59), Ch. 4 (pp. 93–94), Ch. 5 (pp. 103–133), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="specification-limits-and-acceptance">Specification limits and acceptance</h2>
+<p>Diamond grinding may be performed only when wheel ruts are less than 0.5 inches deep, a condition that must be verified by measuring the rut depth on the pavement and is listed under Section 2.1 GENERAL of the Pavement Policy Manual. In the micro‑surfacing project‑selection guidance (section 5.4), the allowable rut depth determines the specified mix: for candidate pavements with shallow ruts measured at less than 0.5 inch, Type A mix is prescribed; for moderate ruts measured between 0.5 inch and 1¼ inches, Type B mix is required; and for deep ruts measured up to 2 inches a single‑pass application of Type RF mix is called for, and these depth thresholds serve as the acceptance limits for rutting under subsection 5.4. Under the ultra‑thin bonded wearing course conditions for use (section 5.5 B), candidate pavements must exhibit no more than medium‑severity rutting; the specification does not provide a numeric threshold or specific measurement method, but this constitutes the acceptance limit for rutting within that section. The same ultra‑thin bonded wearing course guidance (section 5.5 D) states that the treatment can correct wheel‑path rutting up to 0.5 inch with a single pass, expressed as a maximum rut depth belonging to subsection 5.5. For hot in‑place recycled asphalt projects (section 5.19 C), the specification requires that rutting severity be less than 1½ inches, judged by measuring the depth of rutting in the wheel paths, and this acceptance limit is listed under the Pub. 336 criteria in Chapter 5. Under the 60‑month asphalt concrete pavement warranty (Section 496, subsection c), rutting is evaluated against performance‑criteria limits shown in Table A for each half‑mile segment; rut depth is measured, when required, with a 12‑foot straight edge across the lane width to determine severity and extent, and the results are obtained from automated surveys that form the basis of the performance assessment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 54–57), Ch. 5 (pp. 105–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 353–358)</small></p>
+<p>When rutting is identified, the specification requires correction by milling or by placing a leveling course before an interlayer is placed, as required in Section 5.12 of Chapter 5. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 120)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

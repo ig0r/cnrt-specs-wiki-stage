@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tack Coat</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html" class="active" aria-current="page">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="rehabilitation.html">Rehabilitation</a><span class="crumb-sep">›</span><a href="overlay.html">Overlay</a><span class="crumb-sep">›</span><a href="asphalt-overlay.html">Asphalt Overlay</a><span class="crumb-sep">›</span><span class="crumb-current">Tack Coat</span></nav>
+<article><h1>Tack Coat</h1>
+<div class="meta"><div class="part-of">Part of: <a href="asphalt-overlay.html">Asphalt Overlay</a> <span class="edge edge-taxonomic" title="Tack Coat is a topic under Asphalt Overlay.">is-subtopic-of</span></div><div class="edge-reading">Tack Coat is a topic under Asphalt Overlay.</div><div><a class="tag" href="index.html?q=tack-coat">tack-coat</a><a class="tag" href="index.html?q=asphalt-tack-coat">asphalt-tack-coat</a><a class="tag" href="index.html?q=non-tracking-tack-coat">non-tracking-tack-coat</a><a class="tag" href="index.html?q=non-tracking-asphalt-tack-coat-ntt-cntt">non-tracking-asphalt-tack-coat-ntt-cntt</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>A tack coat is a thin, uniform film of emulsified asphalt applied to a cleaned, dry existing pavement surface—both horizontal decks and vertical elements—prior to placing an overlay or interlayer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Its purpose is to create a reliable adhesive bond that prevents debonding, delamination, loss of waterproofing, and fabric pickup when the underlying material is cold, overly smooth, or otherwise prone to adhesion failure [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The coating is applied at a controlled temperature (generally 290–320 °F) with a calibrated distributor, using application rates selected according to surface porosity, and must be allowed to break before any traffic resumes [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-applicability">Purpose and applicability</a></li><li><a href="#required-inputs">Required inputs</a></li><li><a href="#equipment-and-personnel">Equipment and personnel</a></li><li><a href="#work-sequence">Work sequence</a></li><li><a href="#staging-and-logistics">Staging and logistics</a></li><li><a href="#quality-control-and-acceptance">Quality control and acceptance</a></li><li><a href="#safety-and-environmental-controls">Safety and environmental controls</a></li><li><a href="#cooling-or-curing-protection-and-handoff">Cooling or curing, protection, and handoff</a></li><li><a href="#expected-performance-and-maintenance">Expected performance and maintenance</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="purpose-and-applicability">Purpose and applicability</h2>
+<p>In the Pavement Policy Manual, section 5.12 b, a tack coat is used to prevent the interlayer from losing its bond to the existing pavement, a condition that can arise when the asphalt material is too cold or applied at an insufficient rate, which would otherwise cause debonding and loss of waterproofing performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual notes that the coating also alleviates the pickup of fabric by vehicle tires that may occur under high ambient temperatures or when overspray produces tack bleed‑through, and it specifies that the coat must be applied in a thickness that avoids slippage problems at higher temperatures [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Section 460 of the Pennsylvania Department of Transportation specifications, a uniform asphalt residue is spread to bond the existing pavement to the next overlay so that premature tracking is avoided and adequate adhesion is achieved before paving resumes [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 450 requires tack coat on the cleaned and dried bottom and vertical surfaces of a prepared pothole to create the necessary bond between the existing pavement and the overlay, thereby preventing loss of adhesion that could cause premature failure of the patch [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 483 directs the application of tack coat to condition existing concrete pavement so that a polymer‑modified emulsified asphalt overlay will properly adhere; without this conditioning the fresh mixture could fail to bond to the old surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 420 calls for a thin, uniform adhesive film on existing vertical surfaces such as curbs, structures, gutters and pavements that will contact new mixtures, in order to prevent loss of adhesion that could lead to delamination or separation of the layers [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 492 prescribes cleaning spalled or dislodged milled areas and coating them with an emulsified asphalt tack coat before filling, thereby providing a suitable bonding surface between the compromised substrate and the new overlay [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 466 states that applying asphalt material uniformly at a rate that saturates the reinforcement before it cools creates a continuous bond that prevents delamination during subsequent paving, eliminating the problem of insufficient adhesion between an existing pavement surface and a new interlayer system [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Finally, Section 412 requires spreading a PennDOT Material Class TACK on the cleaned existing pavement after removal of loose material, joint sealers and markings; this uniform adhesive film ensures a reliable bond between old pavement and fresh asphalt mixture, preventing loss of adhesion or delamination under traffic loads [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 120–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 250–350)</small></p>
+<p>Under Section 5.1 of the Pavement Policy Manual, a tack coat is appropriate when an existing pavement surface is being overlaid and the contract specifies a Superpave material. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The Project Engineer selects the application rate according to surface porosity, using a lower rate for very smooth nonporous surfaces and a higher rate for more porous surfaces. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The FB‑1 mix typically does not require a tack coat, whereas FB‑2 mixes that use PG 64S‑22 asphalt cement sometimes require one. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When the overlay does not involve Superpave material or when the mix type is FB‑1, another method such as omitting the tack coat or using an asphalt prime coat in accordance with Section 461 should be used. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Section 5.12 requires consulting the interlayer manufacturer on the tack‑coat/asphalt material application and type, and notes that the condition of the existing pavement determines the proper rate; if milling has produced a rough surface, a leveling course may be required before the asphalt paving interlayer is placed. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For self‑adhesive paving grids, a tack coat shall be used only when specified and approved by the manufacturer, and it may not be necessary if the grid and overlay are placed on the same day as the leveling course. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] If fabric pickup from vehicle tires occurs because of high ambient temperatures or overspray bleed‑through, the recommended alternative is to spread clean blotting sand or broadcast asphalt pavement material over the affected area. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In projects where an emulsified‑asphalt prime coat is placed under Section 461, a tack coat is appropriate when it is uniformly distributed at the junctions of adjacent applications at rates between 0.30 gallon per square yard and 0.70 gallon per square yard within the prescribed temperature range, and the surface is allowed to absorb and cure before any further work. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The tack coat should not be used when the only purpose is to condition an existing surface under Section 413.3(g), in which case emulsified‑asphalt painting is deleted and another preparation method is required. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For polymer‑modified emulsified asphalt micro‑surfacing under Section 483, a tack coat must be applied over the entire area of a cleaned concrete substrate as specified in Section 460 immediately before placing the overlay; on existing asphalt substrates the specification directs that no tack coat be applied and the surface should instead be dampened with water. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When coating existing vertical elements such as curbs, structures, gutters or pavement sides under Section 420, a thin, uniform layer of emulsified asphalt—using one of the listed material classes (AASHTO SS‑1, CSS‑1, SS‑1h, CSS‑1h, or TACK) or the class and type designated for the asphalt course—should be applied in two or more applications, and a tack coat should not be used between lifts of any pervious asphalt where the wearing course is to be placed as soon as practical after the binder course. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] In an asphalt paving interlayer system under Section 466, a tack coat is appropriate when a clean, dry pavement surface has been prepared and the project calls for the interlayer; it shall be applied with a calibrated distributor‑truck spray bar while the material temperature is kept at or above 290 °F but not above 320 °F to obtain a uniform film, and hand spraying, squeegee or brush methods may be used only where the truck cannot reach and should be minimized. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] If surface preparation, temperature control, or proper spray equipment cannot be met in an interlayer system, another bonding method must be used instead of a tack coat. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For a thin asphalt overlay on a horizontal deck under Section 412, a tack coat is required after the existing surface has been cleaned of loose material, joint sealer, crack filler and any cracks or joints wider than 1/8 in., it shall be applied in accordance with Section 460 and allowed to break completely before placement of the new wearing course. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] When the element to be treated is vertical—such as curbs, structures, gutters or pavement sides—the specification calls for painting those surfaces with a uniform coating of emulsified asphalt (PennDOT Material Class TACK) or NTT/CNTT in two or more applications rather than using a tack coat on the horizontal deck. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Similarly, under Section 413, a tack coat is called for when an overlay is to be placed on a cleaned existing pavement surface after removal of loose material, joint sealer and crack filler; it shall be applied before the wearing course unless Section 460 or other project instructions specifically indicate a different treatment, in which case the alternative preparation—such as painting vertical surfaces with emulsified asphalt (PennDOT Material Class TACK) or applying hot asphalt binder of the class and type designated for the asphalt course—should be used instead of a tack coat. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 103–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 250–339)</small></p>
+<h2 id="required-inputs">Required inputs</h2>
+<p>The specification shall call for either an asphalt tack coat that conforms to Publication 408, Specifications, Section 460, or an asphalt prime coat that conforms to Publication 408, Specifications, Section 461. Acceptable tack‑coat materials include emulsified asphalt identified as PennDOT Material Class TACK, NTT/CNTT emulsion, the PG‑binder used in the pavement course, PG 64S‑22, or an emulsified asphalt meeting AASHTO specifications SS‑1, CSS‑1, SS‑1h, CSS‑1h or TACK. Section 461 further permits the tack coat to be an emulsified asphalt—AE‑P or E‑1 Prime—delivered with the distributor described in Section 460.3(b). The Project Engineer must select an application rate within those specifications based on the porosity of the existing surface being overlaid; a lower application rate is intended for very smooth nonporous surfaces while a higher rate is desirable for more porous ones. Section 460 requires that the tack coat be applied using an emulsified‑asphalt material and that a calibrated distributor capable of uniformly spraying up to 15 feet wide control the application rate within a tolerance of 0.02 gallon per square yard, with the resulting residual asphalt content required to fall within the Table B ranges based on the asphalt residue content shown on the Bill of Lading. Section 461 specifies placement rates between 0.30 gallon per square yard and 0.70 gallon per square yard within the prescribed temperature range, with uniform distribution at junctions of adjacent applications and additional material applied to any uncoated spots. Section 466 provides application‑rate ranges that depend on the interlayer type, for example 0.22–0.28 gallon per square yard for geotextile paving fabric, 0.02–0.05 gallon per square yard for fiberglass mesh grid, and 0.19–0.28 gallon per square yard for composite reinforcing grid. The coating must be applied at an appropriate temperature to achieve waterproofing and avoid debonding; the air temperature may not be less than 40 °F and must be rising, the existing pavement surface must be dry, and the liquid asphalt binder temperature must be maintained at least 290 °F but shall not exceed 320 °F, and it should not be so heavy that slippage occurs at higher temperatures. The existing pavement must be cleaned of all loose and foreign material, excess sealers, crack filler, thermoplastic markings, vegetation, oil and debris, and must be thoroughly dried before tack coat is applied; any cracks shall be sealed and cured, the substrate must be drainable and free of depressions, and clean blotting sand or broadcast asphalt pavement material must be spread over any area prone to fabric pickup. Section 483 mandates that a tack coat be applied over the entire area of existing concrete pavement and expressly prohibits applying a tack coat to existing asphalt surfaces. The tack coat shall be placed in two or more applications on vertical surfaces that will contact the new asphalt course, traffic should be avoided after cleaning to prevent contamination, and the treated surface must be allowed to break and set without disturbance until the Representative confirms that tracking is minimized before paving resumes. On slopes steeper than 5 % the mix should be proportioned to improve compaction and shear‑rut stability, and if the pavement has been milled a leveling course may be required; for sharp curves or steep grades consultation with the manufacturer is advised. For friction‑course surface treatments, FB‑1 mixes typically do not require a tack coat, whereas FB‑2 mixes that use PG 64S‑22 asphalt cement sometimes require one. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=b9f54cda src=408_2026_1::tab:p314#2 -->
+<p>Table B specifies the uniform asphalt residual rates by surface type.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-tack-coat-1-cap" tabindex="0"><table class="ct-table" id="ct-tack-coat-1" aria-describedby="ct-tack-coat-1-sum">
+<caption id="ct-tack-coat-1-cap">TABLE B Uniform Asphalt Residual Rates by Surface Type</caption>
+<thead>
+<tr><th scope="col">Surface Type</th><th scope="col">Uniform Asphalt Residual Rates (RR)(gallons per square yard)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">New Asphalt Paving</th><td>0.03 to 0.05</td></tr>
+<tr><th scope="row">Existing Asphalt Paving</th><td>0.04 to 0.07</td></tr>
+<tr><th scope="row">Milled Surface(Asphalt &amp; Portland cement concrete)</th><td>0.04 to 0.08</td></tr>
+<tr><th scope="row">Portland cement concrete</th><td>0.04 to 0.07</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-tack-coat-1-sum">Rows list different surface types for asphalt paving. Columns provide the corresponding uniform asphalt residual rates in gallons per square yard.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 314.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 103–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 250–339)</small></p>
+<!-- formulas-check:begin 408_2026_1::f:d95a8110e690 x tack-coat -->
+
+<p>The guide provides this equation for determining the application rate based on residual rate and asphalt residue content:</p>
+<!-- formula-anchor: eq-408-2026-1-d95a8110e690 -->
+
+<div class="fc-math" id="eq-408-2026-1-d95a8110e690" role="region" aria-label="Formula 1" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="A R = ( R R / A R C )"><mrow><mi>A</mi><mi>R</mi><mo>&#x0003D;</mo><mo stretchy="false">&#x00028;</mo><mi>R</mi><mi>R</mi><mo>&#x0002F;</mo><mi>A</mi><mi>R</mi><mi>C</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
+<p>This formula computes the Application Rate in gallons per square yard using the Residual Rate and the Asphalt Residue Content. As the Residual Rate increases, the Application Rate rises. Conversely, as the Asphalt Residue Content increases, the Application Rate falls.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-2" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-2">Symbols: Application rate from residual rate and asphalt residue content ([2] PDF p. 316)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="AR"><mrow><mi>A</mi><mi>R</mi></mrow></math></td><td>Application Rate, (gallons per square yard)</td><td>(gallons per square yard)</td><td>output</td><td></td><!-- gaps: 3e0a9c66ade7f62a --></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="RR"><mrow><mi>R</mi><mi>R</mi></mrow></math></td><td>Residual Rate</td><td>(gallons per square yard)</td><td>input</td><td></td><!-- gaps: 25226c53ccce1967 --></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="ARC"><mrow><mi>A</mi><mi>R</mi><mi>C</mi></mrow></math></td><td>Asphalt Residue Content</td><td>not stated near this formula</td><td>input</td><td></td><!-- gaps: 4ed483624c84da19 --></tr>
+</table></div>
+
+<p><small>[2] — PDF p. 316</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats:</p>
+<ul>
+<li>Apply tack coat at the distributor’s application rate to achieve the proposed residual rate within the ranges listed in Table B.</li>
+<li>Before each paving course, apply the tack coat at an application rate to be within ranges of the uniform asphalt residual rate for the surface type according to Table B.</li>
+</ul>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<p>See also:</p>
+<ul>
+<li><a href="asphalt-content.html#eq-408-2026-1-d95a8110e690">Asphalt Content</a></li>
+<li><a href="emulsified-asphalt.html#eq-408-2026-1-d95a8110e690">Emulsified Asphalt</a></li>
+</ul>
+<details class="fc-calc"><summary>Calculator: Application rate from residual rate and asphalt residue content ([2] PDF p. 316)</summary><iframe src="_apps/408-2026-1-d95a8110e690.html" title="Calculator: Application rate from residual rate and asphalt residue content ([2] PDF p. 316)" loading="lazy"></iframe><p><a href="_apps/408-2026-1-d95a8110e690.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-30.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 263 words before and 320 words after the formula.</p>
+<p>Found by the search:</p>
+<ul>
+<li>a limit from PDF p. 316, 1 step / 70 words after the formula</li>
+<li>a limit from PDF p. 316, 1 step / 143 words after the formula</li>
+</ul>
+</details>
+
+<!-- formulas-check:end -->
+
+<p>For Superpave projects the contract must specify either an asphalt tack coat in accordance with Publication 408, Specification Section 460, or an asphalt prime coat in accordance with Publication 408, Specification Section 461. The Project Engineer selects the application rate from the tables in those sections based on the porosity of the existing surface, using a lower rate for very smooth non‑porous surfaces and a higher rate where the substrate is more porous. In practice FB‑1 mixes are normally exempt from a tack coat, whereas FB‑2 mixes that employ PG 64S‑22 asphalt cement may require one. The tack‑coat operation must be performed with a calibrated distributor capable of treating widths up to 15 ft and maintaining the application rate within a tolerance of 0.02 gal/yd², equipped with a tachometer, pressure gauges, volume‑measuring devices or a calibrated tank, thermometer, power pump and fully adjustable spray bars whose nozzles are sized according to the manufacturer’s recommendations. Before any paving begins a minimum 100‑linear‑ft test strip is coated for each course to verify that the approved rate yields the residual asphalt rate required in Table B. Tack coat may be placed only when the air temperature is at least 40 °F and rising, and the existing pavement surface is dry; the coating must extend a minimum of 6 in beyond each longitudinal joint of the paving course being placed. Any missed or excess areas must be corrected to the Representative’s satisfaction before paving resumes. For prime‑coat applications under Section 461.3(b) the same calibrated distributor identified in Section 460.3(b) is used, and an application rate for AE‑P or E‑1 emulsified asphalt between 0.30 gal/yd² and 0.70 gal/yd² must be selected with prior approval. The coat shall be uniformly distributed at the junction of adjacent applications and left undisturbed until the Inspector‑in‑Change determines that it is completely cured; any uncoated or lightly coated spots receive additional emulsified asphalt, and twenty‑four hours after placement any excess material identified by the Representative must be covered with sufficient dry fine aggregate to blot up or remove the excess before further construction proceeds. A thin, uniform coating of an approved emulsified asphalt (AASHTO SS‑1, CSS‑1, SS‑1h, CSS‑1h, or TACK) must be applied in two or more passes to any vertical surface that will contact the new asphalt mixture, and no tack coat may be placed between lifts of pervious asphalt. For overlay courses all existing vertical surfaces that will be in contact with the new asphalt must be painted with a uniform coating of either emulsified asphalt identified as PennDOT Material Class TACK (or NTT/CNTT) or a hot asphalt binder designated for the course, applied in two or more applications and allowed sufficient time for the tack to break completely before any overlay material is placed. Section 466.3 prescribes application rates of 0.22–0.28 gal/yd² for geotextile fabric, 0.02–0.05 gal/yd² for fiberglass mesh grid, or 0.19–0.28 gal/yd² for composite reinforcing grid, with the spray width extending at least 6 in beyond each side of the material; the binder temperature must not be lower than 290 °F and shall not exceed 320 °F. The pavement surface to receive tack coat must be dry, clean, free of debris, with cracks sealed and cured before placement. A pre‑placement meeting attended by the manufacturer’s technical representative is required to confirm tack‑coat type, application width and rate, mixture acceptance, and surface‑cleaning procedures, and all tack‑coat material must be stored dry, wrapped and labeled in accordance with ASTM D4873. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 103); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 250–319)</small></p>
+<h2 id="equipment-and-personnel">Equipment and personnel</h2>
+<p>In accordance with Section 461—Asphalt Prime Coat, the tack‑coat crew must include a qualified distributor operator who must operate a distributor that meets the requirements of Section 460.3(b) and must be able to select application rates between 0.30 and 0.70 gallon per square yard within the prescribed temperature range, obtaining approval for those rates before spraying. An Inspector‑in‑Change is required to verify that the emulsified asphalt has fully cured before any further work, and a Representative must inspect the surface after 24 hours and identify any excess material for blotting with dry fine aggregate. Under Section 466—Asphalt Paving Interlayer System, the crew must include a trained manufacturer’s technical representative who reviews the installation instructions, provides training on surface preparation, equipment and application method, and attends every phase unless a factory‑trained licensed installer approved by the supplier is used. An operator qualified to run a calibrated distributor‑truck spray bar is required for the tack coat application, while hand‑spraying, squeegee or brush work may only be used in locations where the truck cannot reach. Personnel must also be capable of operating mechanical or manual lay‑down equipment and performing brooming or rubber‑tire rolling to ensure full contact of the interlayer system. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 316–319)</small></p>
+<h2 id="work-sequence">Work sequence</h2>
+<p>According to the Pavement Policy Manual, any portion of the existing pavement that is susceptible to fabric pickup must first be covered with clean blotting sand or broadcast asphalt pavement material, and all excess sand must be removed before the interlayer is placed. The same manual adds that when the surface has been milled, a leveling course may be required depending on the smoothness achieved during milling prior to placing the asphalt interlayer. The Pennsylvania Department of Transportation specifications state that before any tack‑coat can be applied, the existing pavement surface must be conditioned in accordance with Section 413.3(g), which requires removal and disposal of all loose or foreign material and excess joint sealer and crack filler, correction of any binder‑course irregularities while traffic is kept off the cleaned area, and painting of all vertical faces that will contact new asphalt with a uniform coating of PennDOT Material Class TACK emulsified asphalt (or an equivalent hot binder) applied in two or more passes. For Section 460—Asphalt Tack Coat, the conditioning described in Section 413.3(g) must be completed, the air temperature at the time of application must be at least 40°F and rising, and the surface must be dry before the tack coat is placed. When a patch is being prepared under Section 450—Manual Asphalt Patching, the area to be patched must be cut out to a minimum of one square foot with vertical edges, may be milled or planed, excavated to sound stable material, all debris removed, the surrounding pavement thoroughly cleaned of loose and foreign material, and all surfaces must be thoroughly dried before tack coat can be applied. For Section 492—Profile Milling of Asphalt Pavement Surfaces, damaged spots must be excavated to match existing pavement depth, all loose material must be thoroughly cleaned from those areas, and only after the surface is free of debris may Representative‑designated patches receive the tack coat. Under Section 466—Asphalt Paving Interlayer System, the contractor must provide the manufacturer’s installation instructions, ensure a trained technical representative is present, hold a pre‑placement meeting that includes discussion of cleaning the pavement surface, keep the interlayer material dry and protected from weather, and the existing pavement must be dry and clean—free of dirt, gravel, vegetation, oil and loose debris—with all cracks sealed and allowed to cure and any potholes or other distresses repaired as specified before tack coat placement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 120–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 250–350), SECTION 500—RIGID PAVEMENTS (pp. 423–425)</small></p>
+<p>The sequence for applying a tack coat varies with the specific pavement treatment but follows a consistent pattern of surface preparation, calibrated application, and protection before subsequent work. In a standard asphalt tack‑coat operation (Section 460—ASPHALT TACK COAT), the existing surface is first conditioned as required by Section 413.3(g) and it is verified that the air temperature is at least 40°F and rising and that the pavement is dry. A calibrated distributor or hand‑sprayer equipped with tachometer, pressure gauges, volume‑measuring devices, thermometer, power pump and adjustable spray bars is then mobilized and set to deliver emulsified asphalt within a tolerance of 0.02 gallon per square yard; the approved application rate is determined using AR = RR/ARC and recorded on the QC plan for review with the Representative. The tack coat is applied to a minimum 100‑linear‑foot test strip for each paving course, the spray‑bar height and rate are adjusted until a uniform residual asphalt rate within the Table B ranges is achieved, and Representative approval is obtained before coating the full surface; the coat must extend at least 6 inches beyond each longitudinal joint and any missed or excess areas are corrected as directed. Finally, the coat is allowed to break and set without disturbance, the treated surface is protected from damage, defects are repaired, and paving does not begin until the Representative confirms that tracking is minimized.</p>
+<p>When a prime‑coat is placed (Section 461—ASPHALT PRIME COAT), the existing surface is conditioned as required by Section 413.3(g) except that emulsified asphalt painting and tack coat are omitted; the emulsified asphalt material is then applied using a distributor specified in Section 460.3(b) with an application rate selected between 0.30 gallon per square yard and 0.70 gallon per square yard within the prescribed temperature range and approval obtained, after which the tack coat is uniformly distributed at the junctions of adjacent applications and left undisturbed until the Inspector‑in‑Change determines it is completely cured; any uncoated or lightly coated areas receive additional emulsified asphalt.</p>
+<p>For manual asphalt patching Type A (Section 450—MANUAL ASPHALT PATCHING), after cutting out, excavating to sound material, removing debris and thoroughly drying the bottom and vertical surfaces, a tack coat is applied to those cleaned, dry surfaces as required by Section 460.3(b) and allowed to cure before the asphalt wearing course is placed and compacted.</p>
+<p>In micro‑surfacing (Section 483—POLYMER‑MODIFIED EMULSIFIED ASPHALT PAVING SYSTEM), immediately before placing the mixture the existing pavement is cleaned of vegetation, loose material, dirt, mud and any other objectionable items and all markings are completely removed; if the underlying surface is concrete a tack coat is then applied over the entire area in accordance with Section 460, while no tack coat is placed on existing asphalt surfaces, and the whole surface is dampened with water immediately before the mixture is laid.</p>
+<p>When a milled surface requires patching (Section 492—PROFILE MILLING OF ASPHALT PAVEMENT SURFACES), the damaged area is excavated to the depth of the existing surface, the exposed area is thoroughly cleaned of loose material and coated with an Emulsified Asphalt Tack Coat (TACK); immediately after the tack coat has been placed the void is filled with an asphalt mixture of the same type as the surrounding pavement, and the new fill is leveled and compacted until it matches the adjacent surface.</p>
+<p>In constructing an interlayer system (Section 466—ASPHALT PAVING INTERLAYER SYSTEM), the existing pavement is first dried and cleaned of dirt, gravel, vegetation, oil and loose debris and cracks are sealed and allowed to cure as required by Section 466.3(e); asphalt material (tack coat) is then applied with a calibrated distributor‑truck spray bar at the manufacturer‑approved rate, hand spraying, squeegee or brush application may only be used where the truck cannot reach, the material temperature must not exceed 320°F and the minimum temperature for performance‑grade liquid binders is 290°F. The selected interlayer (geotextile fabric, fiberglass mesh grid, or composite reinforcing grid) is placed onto the still‑tacky asphalt before it cools, extending six inches beyond each side of the product and any excess tack coat is cleaned from the pavement; joints and overlaps are treated by applying at least a one‑inch overlap of asphalt material or trimming to achieve that minimum, construction traffic is limited to placement equipment only, and finally the asphalt overlay is placed on the same day after confirming that the tack coat temperature meets manufacturer guidance, blotting any bleed‑through with sand and ensuring the first lift thickness will not be less than 1½ inches over the interlayer system.</p>
+<p>For thin‑asphalt overlays (Section 412—SUPERPAVE MIXTURE DESIGN), the existing pavement is conditioned by removing all loose material, foreign debris, excess joint sealer, crack filler and thermoplastic markings, repairing any potholes, gouges deeper than one inch and cracks wider than one‑eighth inch; vertical surfaces that will contact asphalt are painted with a uniform coat of emulsified asphalt classified as PennDOT Material Class TACK (or NTT/CNTT) applied in two or more passes or with hot binder. Once the surface is clean and repaired, a tack coat is applied to the cleaned surface in accordance with Section 460, and the crew must allow sufficient time for the tack to break completely before any overlay material is placed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 250–350)</small></p>
+<!-- formulas-check:begin 408_2026_1::f:1510a76e8531 x tack-coat -->
+
+<p>The guide provides this equation for computing equivalent tonnage from gallons per square yard:</p>
+<!-- gaps: 2b3a4016a2e7a738 -->
+
+<!-- formula-anchor: eq-408-2026-1-1510a76e8531 -->
+
+<div class="fc-math" id="eq-408-2026-1-1510a76e8531" role="region" aria-label="Formula 2" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="{ \mathsf { A s p h a l t T o n n a g e } } = ( 0.004164 ) ( { \mathsf { A } } ) ( { \mathsf { a } } ) ( { \mathsf { g } } )"><mrow><mrow><mrow><mi mathvariant="sans-serif">A</mi><mi mathvariant="sans-serif">s</mi><mi mathvariant="sans-serif">p</mi><mi mathvariant="sans-serif">h</mi><mi mathvariant="sans-serif">a</mi><mi mathvariant="sans-serif">l</mi><mi mathvariant="sans-serif">t</mi><mi mathvariant="sans-serif">T</mi><mi mathvariant="sans-serif">o</mi><mi mathvariant="sans-serif">n</mi><mi mathvariant="sans-serif">n</mi><mi mathvariant="sans-serif">a</mi><mi mathvariant="sans-serif">g</mi><mi mathvariant="sans-serif">e</mi></mrow></mrow><mo>&#x0003D;</mo><mo stretchy="false">&#x00028;</mo><mn>0.004164</mn><mo stretchy="false">&#x00029;</mo><mo stretchy="false">&#x00028;</mo><mrow><mrow><mi mathvariant="sans-serif">A</mi></mrow></mrow><mo stretchy="false">&#x00029;</mo><mo stretchy="false">&#x00028;</mo><mrow><mrow><mi mathvariant="sans-serif">a</mi></mrow></mrow><mo stretchy="false">&#x00029;</mo><mo stretchy="false">&#x00028;</mo><mrow><mrow><mi mathvariant="sans-serif">g</mi></mrow></mrow><mo stretchy="false">&#x00029;</mo></mrow></math></div>
+<p>This formula computes the equivalent asphalt tonnage for coatings or mixtures measured on a square yard basis. It uses surface area in square yards, gallons per square yard, and specific gravity of the asphalt material. As surface area increases, the asphalt tonnage rises. As gallons per square yard increase, the asphalt tonnage rises. As specific gravity increases, the asphalt tonnage rises.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-3" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-3">Symbols: Asphalt tonnage from area and gallons per square yard ([2] PDF p. 111)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Asphalt Tonnage"><mrow><mi>A</mi><mi>s</mi><mi>p</mi><mi>h</mi><mi>a</mi><mi>l</mi><mi>t</mi><mi>T</mi><mi>o</mi><mi>n</mi><mi>n</mi><mi>a</mi><mi>g</mi><mi>e</mi></mrow></math></td><td>Asphalt Tonnage</td><td>not stated near this formula</td><td>output</td><td></td><!-- gaps: 62a30f6d1336051d --></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="A"><mrow><mi>A</mi></mrow></math></td><td>Surface Area (square yards)</td><td>square yards</td><td>input</td><td></td><!-- gaps: 2449a90de6fe7cf9 --></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="a"><mrow><mi>a</mi></mrow></math></td><td>Price adjustments, when applicable, will be computed based on the Asphalt Material item quantity (gallon) only, as paid on current estimates.</td><td>gallons per square yard</td><td>input</td><td></td><!-- gaps: 850666dbf3c944af --></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="g"><mrow><mi>g</mi></mrow></math></td><td>gallons per square yard</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+</table></div>
+
+<p><small>[2] — PDF p. 111</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats: not stated in the publication near this formula.</p>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<details class="fc-calc"><summary>Calculator: Asphalt tonnage from area and gallons per square yard ([2] PDF p. 111)</summary><iframe src="_apps/408-2026-1-1510a76e8531.html" title="Calculator: Asphalt tonnage from area and gallons per square yard ([2] PDF p. 111)" loading="lazy"></iframe><p><a href="_apps/408-2026-1-1510a76e8531.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-30.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 1080 words before and 1145 words after the formula.</p>
+<p>Found by the search:</p>
+<ul>
+<li>meaning of <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="g"><mrow><mi>g</mi></mrow></math> from PDF p. 111, beside the formula</li>
+</ul>
+</details>
+
+<!-- formulas-check:end -->
+
+<p>Under Section 460, a tack coat may be applied only when the air temperature is at least 40 °F and rising and the existing surface is dry; after spraying, the coating must be allowed to break and set without disturbance and paving may not commence until the Representative determines that the cured coating has minimized tracking, with no other explicit time interval prescribed. Under Section 461, after applying the emulsified asphalt tack (prime) coat the surface must not be disturbed and the emulsified material must be allowed to penetrate and be absorbed until the Inspector‑in‑Change determines it is completely cured; only then may subsequent work proceed, and any excess prime coat material must be covered with sufficient dry fine aggregate no sooner than twenty‑four hours after the prime coat has been applied. Section 450 states that the subsequent asphalt layer—wearing course for Type A or binder course for Type B—may be placed only after the tack coat has cured, and the specification does not prescribe a numeric cure period but simply mandates waiting until curing is complete before proceeding to compaction and finishing steps. In Section 483, the tack coat shall be placed “immediately before placing mixture” on existing concrete surfaces, and water for surface dampening shall also be applied “immediately before placing mixture,” with no other numeric interval given. According to Section 466, the interlayer fabric must be laid onto the freshly applied asphalt material before the asphalt cement cools and loses its tackiness so that the tack coat remains effective at the time of geotextile placement; all areas where the interlayer system has been placed must be over‑paved on the same day, and if rainfall wets the tack‑coated surface before overlay the surface must be allowed to dry prior to placing the asphalt overlay. Section 412 requires that a tack coat be applied to the cleaned existing surface as described in Section 460 and then sufficient time must be allowed for the tack to break completely before any new asphalt material is placed. Finally, Section 522 mandates that after the final seating of fractured concrete the tack coat be applied before any asphalt course, and the subsequent asphalt leveling course must be overlaid within one week of the seating operation, with exposure to freezing conditions also required to be avoided during this interval. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 250–339), SECTION 500—RIGID PAVEMENTS (pp. 423–425)</small></p>
+<h2 id="staging-and-logistics">Staging and logistics</h2>
+<p>The tack‑coat operation requires that the interlayer material be kept dry and wrapped during shipping and stored elevated off the ground and covered to shield it from weather, UV light, precipitation, chemicals, or sparks before placement. Delivery onto the pavement is performed with a calibrated distributor‑truck spray bar, reserving hand‑spraying, squeegee or brush only where the truck cannot reach, and traffic is prohibited on the freshly applied tack coat except for construction vehicles needed for placement. Vehicle turning and all equipment movement must be done gradually and kept to a minimum, and abrupt starts or stops are avoided to prevent damage to the interlayer system. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<p>The tack‑coat operation must be limited to a working width that does not exceed fifteen feet. The Contractor may use hand‑spraying equipment in areas inaccessible to the distributor. Material must be applied only when the air temperature is 40°F and rising and when the existing surface is dry, ensuring proper break and set before paving. A minimum one‑hundred‑linear‑foot test strip must be coated for each course prior to full application. Each manual patch that receives tack coat shall provide at least a one‑square‑foot area so that the coating can be placed on bottom and vertical surfaces, and the site must allow debris removal, cleaning and drying—typically requiring sufficient clearance for milling or planing equipment and manual tools. Surface preparation requires a dry, clean pavement free of dirt, gravel, vegetation, oil and loose debris with sealed cracks that have cured before application. The material must be kept dry and wrapped during shipping and stored elevated and covered to protect it from precipitation, ultraviolet light, chemicals or sparks. Tack coat may not be placed when weather conditions are unsuitable according to the asphalt paving interlayer system manufacturer’s recommendations and the Representative. The temperature of the liquid‑asphalt binder used for tack coat shall be maintained at a minimum of 290°F and shall not exceed 320°F to avoid damage to the interlayer system. A pre‑placement meeting must review curves, busy intersections, utilities, slopes and sharp curves so that the distributor truck can maintain a uniform spray width while minimizing abrupt starts, stops or tight turns that could wrinkle or fold the tack coat. Tack coat applied after fractured and seated concrete must be placed while temperatures are above freezing and must be completed before any asphalt course, with the overlay required within one week of seating the fractured pavement. High ambient temperatures can cause fabric pickup or bleed‑through, requiring the spread of clean blotting sand before paving. Asphalt that is too cold may fail to adhere and may need a higher application rate. A tack coat applied too heavily could result in slippage problems at higher temperatures, so the rate must be matched to existing pavement condition and overlay temperature. On interlayer projects where grades are steeper than 5 % the asphalt mix should be proportioned to help with compaction and shear‑rut stability as advised by the manufacturer. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 120–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 312–319), SECTION 500—RIGID PAVEMENTS (pp. 423–425)</small></p>
+<h2 id="quality-control-and-acceptance">Quality control and acceptance</h2>
+<p>Inspection of a tack coat should verify that the asphalt material has been applied at an appropriate temperature and with a suitable application rate so that it is not overly heavy, because excessive thickness could cause slippage at higher temperatures while material that is too cold may fail to bond. The inspector must also watch for bleed‑through or fabric pickup from overspray and confirm that any rough milled surface has been provided with a leveling course before the interlayer is placed. In Section 460—Asphalt Tack Coat, the contractor must verify that the existing pavement has been conditioned as required and must use a calibrated distributor capable of uniform pressure and an application‑rate tolerance of 0.02 gallon per square yard, equipped with a tachometer, pressure gauges, volume‑measuring devices, thermometer, pump and adjustable spray bars with manufacturer‑approved nozzles. A minimum 100‑linear‑foot test strip must be coated before each paving course to confirm that the applied rate produces a uniform residual asphalt rate within the Table B limits, and the distributor rate and spray‑bar height must be adjusted as needed. Application is permitted only when the air temperature is at least 40 °F and rising and the surface is dry; the tack coat must extend at least six inches beyond joints and any uncoated or excess areas must be corrected to the Representative’s satisfaction. The treated surface must be allowed to break and set without disturbance until the Representative determines that tracking is minimized before paving resumes. In Section 461—Asphalt Prime Coat, the tack coat must be applied at a rate approved by the inspector and limited to between 0.30 gallon per square yard and 0.70 gallon per square yard for AE‑P or E‑1 prime emulsified asphalt, and it must be spread uniformly at the junction of adjacent applications. After placement the Inspector‑in‑Change must verify that the emulsified asphalt has fully cured before any further work, and any areas identified by the Representative as having excess material must be blotted with dry fine aggregate within twenty‑four hours. The treated surface also must be protected from damage and repaired to the Representative’s satisfaction prior to subsequent construction. In Section 466—Asphalt Paving Interlayer System, inspection of the tack coat requires confirming a dry and clean pavement surface free of dirt, gravel, vegetation, oil and loose debris with all cracks sealed and potholes repaired; the liquid asphalt binder used for the tack coat must meet temperature limits that the minimum temperature is 290 °F and the temperature must not exceed 320 °F. The application rate must be within the manufacturer‑approved range such as 0.22 gallon per square yard to 0.28 gallon per square yard for geotextile fabric and must be applied uniformly to cover the prepared surface with a width extending six inches beyond each side of the reinforcement, providing at least a one‑inch overlap where pieces meet. Any damaged or non‑adhered interlayer material, wrinkles larger than one inch, or insufficient tackiness must be removed and replaced before overlay placement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 120–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 314–319)</small></p>
+<p>Measurements of tack‑coat application are performed at the start of every paving course by treating a minimum 100‑linear‑foot test section; the distributor’s calibrated equipment – including a tachometer, pressure gauges and accurate volume‑measuring devices (or a calibrated tank) – is used in the field to determine the application rate according to PTM No. 747 and to verify that the resulting residual asphalt rate falls within the Table B ranges before the full surface is treated. The adequacy of this test section coverage is reviewed with the Representative, and only after acceptance does the contractor continue applying tack coat over the entire course. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=9ae74c66 src=408_2026_1::tab:p314#1 -->
+<p>The table below specifies the application temperature ranges for tack coat emulsified asphalt materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-tack-coat-2-cap" tabindex="0"><table class="ct-table" id="ct-tack-coat-2" aria-describedby="ct-tack-coat-2-sum">
+<caption id="ct-tack-coat-2-cap">TABLE AEmulsified Asphalt Materials</caption>
+<thead>
+<tr><th id="ct-tack-coat-2-h0-0" scope="col" rowspan="2">Class of Material</th><th id="ct-tack-coat-2-h0-1" scope="col" rowspan="2">Type of Material</th><th id="ct-tack-coat-2-h0-2" scope="col" colspan="2">Application Temperature F</th></tr>
+<tr><th id="ct-tack-coat-2-h1-2" scope="col">Minimum</th><th id="ct-tack-coat-2-h1-3" scope="col">Maximum</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-tack-coat-2-h2-0" scope="row">TACK</th><td headers="ct-tack-coat-2-h0-1 ct-tack-coat-2-h2-0">Anionic or Cationic Emulsified Asphalt</td><td headers="ct-tack-coat-2-h0-2 ct-tack-coat-2-h1-2 ct-tack-coat-2-h2-0">90</td><td headers="ct-tack-coat-2-h0-2 ct-tack-coat-2-h1-3 ct-tack-coat-2-h2-0">150</td></tr>
+<tr><th id="ct-tack-coat-2-h3-0" scope="row">NTT/CNTT</th><td headers="ct-tack-coat-2-h0-1 ct-tack-coat-2-h3-0">Anionic or Cationic Emulsified Asphalt</td><td headers="ct-tack-coat-2-h0-2 ct-tack-coat-2-h1-2 ct-tack-coat-2-h3-0">140</td><td headers="ct-tack-coat-2-h0-2 ct-tack-coat-2-h1-3 ct-tack-coat-2-h3-0">180</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-tack-coat-2-sum">Rows list material classes and types, columns provide application temperature ranges for emulsified asphalt materials.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 314.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 314–315)</small></p>
+<p>Under Section 460—Asphalt Tack Coat, a tack coat is accepted only after a minimum 100‑linear foot test strip for each paving course achieves a uniform residual rate that falls within the Table B ranges and this coverage is approved by the Representative before full application; the distributor must be calibrated so its application rate does not exceed the tolerance of 0.02 gallon per square yard, with spray‑bar height and pressure adjusted to meet the test‑strip requirement. Any uncoated or lightly coated spots must be recoated to the Representative’s satisfaction, excess material must be blotted with sufficient dry fine aggregate, and any damaged treated surface must be repaired to the Representative’s satisfaction before the next pavement course is placed. In Section 461—Asphalt Prime Coat, the tack coat must be applied at approved rates between 0.30 gallon per square yard and 0.70 gallon per square yard, uniformly distributed at the junction of adjacent applications, and left undisturbed until the Inspector‑in‑Change determines it is completely cured; any area that remains uncoated or only lightly coated is considered nonconforming and must be corrected by applying additional emulsified asphalt, while excess material identified after twenty‑four hours must be blotted up or removed with sufficient dry fine aggregate. For Section 466—Asphalt Paving Interlayer System, acceptance of tack coat placement requires that asphalt material be applied at a rate of 0.22 gallons per square yard to 0.28 gallons per square yard for geotextile paving fabric, with the target width equal to the fabric width plus six inches on each side, and all joints and overlaps must contain at least a one‑inch asphalt coating; any overlap lacking this coating must be corrected by manual placement of asphalt material or trimmed to a one‑inch overlap before overlay construction. Wrinkles larger than one inch must be repaired by slicing and overlapping the excess material flat. When nonconforming work such as damaged interlayer, insufficient coverage, or missing overlaps is identified, corrective actions call for removing and replacing the damaged interlayer system at no additional cost to the Department, manually applying asphalt to fill gaps, trimming excess to meet the one‑inch overlap requirement, and repairing wrinkles before overlay construction proceeds. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 314–319)</small></p>
+<h2 id="safety-and-environmental-controls">Safety and environmental controls</h2>
+<p>According to the Pavement Policy Manual (section 5.12 b), overspray of tack coat can bleed through the surface and, when combined with high ambient temperatures, may cause fabric to be picked up by vehicle tires, creating a slip‑and‑run hazard for workers and the traveling public. The same guidance notes that applying a tack coat that is too heavy can lead to slippage problems at higher temperatures, increasing the risk of loss of traction for personnel and vehicles on the work area. The Commonwealth of Pennsylvania Department of Transportation specifications (section 466.3) require workers to keep tack‑coat material dry, wrapped, elevated and covered during shipping and storage to protect it from ultraviolet light, precipitation, chemicals and sparks. Those specifications also mandate that the tack coat be applied at a temperature not exceeding 320 °F (with a minimum of 290 °F for performance‑grade binders) in order to avoid damage, and they prohibit traffic on freshly applied material until it has cured, thereby protecting both workers and the public from exposure to hot tack coat and slip hazards. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 120–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<h2 id="cooling-or-curing-protection-and-handoff">Cooling or curing, protection, and handoff</h2>
+<p>According to the Pavement Policy Manual (Publication 242, Change No. 10), Section 5.12 OVERLAYS b Interlayer Installation Guidance, a freshly applied tack coat that is at risk of tire pickup from high ambient temperatures or overspray bleed‑through should be protected by spreading clean blotting sand or broadcast asphalt pavement material over the affected area and then removing any excess before the overlay is placed; no specific cooling or curing steps are prescribed in this guidance. The Pennsylvania Department of Transportation specifications state that in Section 460—Asphalt Tack Coat, after the emulsified asphalt is applied the coating must be allowed to break and set without disturbance, and paving may not commence until the Representative determines that the tack coat has cured sufficiently for tracking to be minimized; during this period the treated surface shall be maintained and protected from damage and any damaged or lightly coated spots must be repaired to the Representative’s satisfaction before the next pavement course is placed. In Section 461—Asphalt Prime Coat, the tack coat must remain undisturbed so that the emulsified asphalt can penetrate and be absorbed until the Inspector‑in‑Change finds it completely cured; twenty‑four hours after application any areas identified as having excess material are to be covered with sufficient dry fine aggregate to blot up or remove the surplus, and the surface continues to be protected against damage and repaired as required. Section 450—Manual Asphalt Patching requires that the tack coat applied to the bottom and vertical surfaces of a prepared patch area be left undisturbed until it has cured, after which the asphalt wearing course may be placed and compacted; no additional protective covering or cooling measures are prescribed for the tack‑coated work. Under Section 466—Asphalt Paving Interlayer System, traffic on freshly sprayed asphalt material is prohibited, the coating must be kept dry, precipitation must be avoided, and if rain occurs before overlay the interlayer system must be allowed to dry before the next layer is placed; the interlayer fabric or grid is installed while the asphalt cement is still tacky—that is, before the asphalt cools and loses its tackiness—and the asphalt temperature shall be at least 290 °F but not above 320 °F (or between 40 °F and 140 °F when placing a fiberglass mesh grid), with full curing required before any construction traffic may travel over the surface. Section 412—Superpave Mixture Design, Construction of Plant‑Mixed 6.3 mm Thin Asphalt Overlay Courses reiterates that after applying a tack coat to the cleaned existing surface the work must be left undisturbed until the tack has broken completely before any new asphalt material is laid; no other protective covering, cooling method, or curing treatment beyond this waiting period is required. Finally, Section 522—Slab Fracturing of Existing Concrete Pavements specifies that after a fractured slab is fully seated and swept clean, traffic is prohibited until a tack coat is applied in accordance with Section 460, after which the surface must be overlaid with an asphalt leveling course within one week and must not be left exposed to freezing conditions, thereby protecting the fresh coating during its cure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 120–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 250–319), SECTION 500—RIGID PAVEMENTS (pp. 423–425)</small></p>
+<p>For asphalt paving interlayer systems (Section 466), work completed under a tack coat may only support construction traffic after the applied asphalt material has fully cured, and even then only the vehicles required for placement of the interlayer system are permitted; all other traffic is prohibited until the overlay is placed. The specification explicitly prohibits any traffic on the fresh tack coat and limits movement to the equipment needed to install the interlayer. For slab fracturing of existing concrete pavements (Section 522), after the fractured concrete slab has been fully seated traffic—both vehicular and construction—is prohibited until an asphalt surface is placed; a tack coat must be applied to the seated surface before any asphalt course, and only after the asphalt leveling course (placed within one week of seating) may the roadway be opened to traffic. Consequently work completed under the tack‑coat cannot carry construction traffic or be opened to users until the subsequent asphalt overlay is installed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319), SECTION 500—RIGID PAVEMENTS (pp. 423–425)</small></p>
+<h2 id="expected-performance-and-maintenance">Expected performance and maintenance</h2>
+<p>The Pavement Policy Manual (Publication 242, Change No. 10), section 5.12 OVERLAYS b Interlayer Installation Guidance, notes that when the applied tack‑coat layer is too heavy slippage problems can occur at higher temperatures [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It also states that if the asphalt material is not applied at the proper temperature debonding of the waterproofing layer may result [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Non‑adherence of the interlayer can develop when the coating is too cold or when the application rate is insufficient [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. High ambient temperatures or overspray may cause tack‑coat bleed‑through that picks up fabric on vehicle tires, a condition that should be mitigated by spreading clean blotting sand before overlay placement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Section 460—Asphalt Tack Coat (460.3 Construction) identifies uncovered or only lightly coated spots, excess emulsified asphalt left on the surface, and damage to the treated layer prior to placement of the next pavement course as typical failures that must be corrected to the Representative’s satisfaction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Paving shall not commence until the tack coat has cured sufficiently to minimize tracking; otherwise tracking can occur [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In Section 461—Asphalt Prime Coat (461.3 Construction), applying the tack coat at a rate below the approved range of 0.30 gallon per square yard to 0.70 gallon per square yard using the distributor specified in Section 460.3(b) can leave uncoated or lightly coated spots that require additional emulsified asphalt [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Conversely, applying more than the intended amount creates excess prime‑coat material that must be blotted up with dry fine aggregate after 24 hours [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Failure to achieve a uniform, cured film before the Inspector‑in‑Change signs off can lead to surface damage, so the treated surface must be protected and any damaged areas repaired to the Representative’s satisfaction before subsequent construction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Section 466—Asphalt Paving Interlayer System (466.3 Construction) notes that the most common distresses during tack‑coat installation are inadequate adhesion of the interlayer product, damage to sections of the asphalt paving interlayer system, and wrinkles exceeding one inch in size [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The specification requires removal of any interlayer material that is not adequately adhered (Section 466.3(b)), replacement of damaged interlayer with the same type at no additional cost (Section 466.3(g)), and repair of any wrinkle one inch or larger by slicing along the wrinkle and overlapping the excess material flat with at least a one‑inch overlap before overlay placement (Section 466.3(h)) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 120–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 314–319)</small></p>
+<p>Preventive maintenance of a tack coat, as described in the Pavement Policy Manual (Publication 242, Change No. 10) section 5.12 OVERLAYS b, requires applying the material at the proper temperature and in an appropriate amount because an overly heavy coat can cause slippage at higher temperatures while insufficient heat may lead to debonding. If fabric pickup or bleed‑through occurs during construction, clean blotting sand or broadcast asphalt pavement material should be spread over the affected spot and excess removed before the overlay is placed. When post‑placement monitoring shows that the interlayer is not adhering, the crew should verify that the asphalt was not too cold and may need to increase the application rate or add a leveling course after milling. For projects on grades steeper than 5 %, the tack‑coat mix shall be proportioned to improve compaction and shear‑rut stability as recommended by the interlayer manufacturer. Section 460 of the Pennsylvania Department of Transportation Specification mandates that a calibrated distributor equipped with appropriate nozzles, tachometer, pressure gauges, volume‑measuring devices, thermometer and power‑operated pump be used to apply the tack coat at a uniform pressure, keeping the application rate within a tolerance of 0.02 gallon per square yard. The application may proceed only when the air temperature is at least 40 °F and rising and the existing surface is dry; a minimum 100‑linear‑foot test strip must be sprayed first to verify that the residual rate falls within Table B, and any uncoated or lightly coated spots are to be corrected to the Representative’s satisfaction while excess material is blotted with dry fine aggregate. After a tack coat is placed, the treated surface must be protected from damage, and any damaged areas are required to be repaired to the Representative’s satisfaction before placing the next pavement course; monitoring continues until the Inspector‑in‑Change confirms that the emulsified asphalt has fully cured. Within twenty‑four hours, areas identified as having excess prime coat material shall be covered with sufficient dry fine aggregate to blot up or remove the surplus. Section 450 specifies that, after debris removal, the area to be patched and surrounding pavement must be thoroughly cleaned of loose material and fully dried before applying tack coat to the bottom and vertical surfaces as prescribed. Monitoring is achieved by confirming that the tack coat has cured prior to placing the asphalt wearing course, and any needed repair involves resealing edges with emulsified asphalt, Class TACK or NTT as indicated. In Section 466, preventive maintenance begins with surface preparation that must leave the pavement dry and clean of dirt, gravel, vegetation, oil and loose debris, seal all cracks, and repair potholes or other distresses before placement; during application the asphalt material temperature shall be maintained at a minimum of 290 °F and shall not exceed 320 °F to ensure a uniform spray pattern and avoid damage to the interlayer system. After the tack coat is laid, any product that is not adequately adhered or any wrinkles one inch or larger must be removed, sliced and overlapped flat, and gaps at joints or overlaps less than one inch must be filled with hand‑placed asphalt as identified by the technical representative, while continuous monitoring for adhesion failures and prompt replacement of damaged interlayer material are required to maintain bond integrity. When spalling or dislodgement of unsound pavement occurs during profile milling, Section 492 designates those areas for surface patching; the repair procedure requires excavating to match the existing depth, cleaning all loose material, applying an emulsified asphalt tack coat, and then filling with a matching asphalt mixture that is leveled and compacted to conform to the adjacent pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 120–121); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 312–350)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=fc1c2a73 src=408_2026_1::tab:p316#1 -->
+<p>The table below specifies the application temperature ranges for AE-P and E-1 Prime emulsified asphalt tack coats. It relates to the section <a href="#required-inputs">Required inputs</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-tack-coat-3-cap" tabindex="0"><table class="ct-table" id="ct-tack-coat-3" aria-describedby="ct-tack-coat-3-sum">
+<caption id="ct-tack-coat-3-cap">461.2 MATERIAL— (table)</caption>
+<thead>
+<tr><th id="ct-tack-coat-3-h0-0" scope="col" rowspan="2">Class of Material</th><th id="ct-tack-coat-3-h0-1" scope="col" rowspan="2">Type of Material</th><th id="ct-tack-coat-3-h0-2" scope="col" colspan="2">Application Temperature F</th></tr>
+<tr><th id="ct-tack-coat-3-h1-2" scope="col">Minimum</th><th id="ct-tack-coat-3-h1-3" scope="col">Maximum</th></tr>
+</thead>
+<tbody>
+<tr><td></td><td></td><td></td><td></td></tr>
+<tr><th id="ct-tack-coat-3-h3-0" scope="row">AE-P</th><td headers="ct-tack-coat-3-h0-1 ct-tack-coat-3-h3-0">Emulsified Asphalt</td><td headers="ct-tack-coat-3-h0-2 ct-tack-coat-3-h1-2 ct-tack-coat-3-h3-0">90</td><td headers="ct-tack-coat-3-h0-2 ct-tack-coat-3-h1-3 ct-tack-coat-3-h3-0">150</td></tr>
+<tr><th id="ct-tack-coat-3-h4-0" scope="row">E-1 Prime</th><td headers="ct-tack-coat-3-h0-1 ct-tack-coat-3-h4-0">Emulsified Asphalt</td><td headers="ct-tack-coat-3-h0-2 ct-tack-coat-3-h1-2 ct-tack-coat-3-h4-0">100</td><td headers="ct-tack-coat-3-h0-2 ct-tack-coat-3-h1-3 ct-tack-coat-3-h4-0">170</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-tack-coat-3-sum">Rows list Class of Material; columns give Type of Material, Application Temperature F (Minimum, Maximum).</p>
+<p class="ct-notes">Notes: (b) Fine Aggregate (for Blotting). Section 703.1</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 316.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-21.2: formula-block display math (md->html reverse builder; per-page inject) */
+div.fc-math { overflow-x: auto; margin: 1rem 0; }
+
+/* FR-MH-21.12(a): formula-block calculator disclosure (md->html reverse builder; per-page inject) */
+details.fc-calc { margin: 1rem 0; }
+details.fc-calc > summary { cursor: pointer; }
+details.fc-calc iframe { display: block; box-sizing: content-box; width: calc(100% - 2px);
+  height: 28rem; margin-top: .5rem; border: 1px solid var(--border); }
+</style>
+<script>
+window.addEventListener("message", function (e) {
+  if (!e.data || e.data.type !== "fc-calc-height") return;
+  var frames = document.querySelectorAll("details.fc-calc iframe");
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].contentWindow === e.source) frames[i].style.height = e.data.height + "px";
+  }
+});
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

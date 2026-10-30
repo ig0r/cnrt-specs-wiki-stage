@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concrete Base</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html" class="active" aria-current="page">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="pavement-structure.html">Pavement Structure</a><span class="crumb-sep">›</span><a href="base-course.html">Base Course</a><span class="crumb-sep">›</span><span class="crumb-current">Concrete Base</span></nav>
+<article><h1>Concrete Base</h1>
+<div class="meta"><div class="part-of">Part of: <a href="base-course.html">Base Course</a> <span class="edge edge-taxonomic" title="Concrete Base is a topic under Base Course.">is-subtopic-of</span></div><div class="edge-reading">Concrete Base is a topic under Base Course.</div><div><a class="tag" href="index.html?q=concrete-base">concrete-base</a><a class="tag" href="index.html?q=concrete-base-course">concrete-base-course</a><a class="tag" href="index.html?q=plain-cement-concrete-base-course">plain-cement-concrete-base-course</a><a class="tag" href="index.html?q=rigid-base">rigid-base</a><a class="tag" href="index.html?q=pcc-base-course">pcc-base-course</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>The Concrete Base is a rigid foundation layer that provides the load‑bearing capacity required for brick pavements and for asphalt wearing courses on low‑volume roadways, with structural analysis employing a coefficient for a rigid base.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] It is typically placed as roller‑compacted concrete (RCC), a very dry, low‑slump mix of cement, aggregate and water designed to achieve compressive strengths between 4,000 psi and 10,000 psi and installed in thicknesses from 4 inches to 18 inches on a prepared subgrade and compacted with rollers to obtain the required density.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Because forms, reinforcement and dowel bars are not required, the layer relies on proper joint spacing—15–20 feet for slabs under 8 inches thick or thickness‑times‑2.5 feet for thicker sections—and strict surface‑tolerance checks that remove any high points over ¼ inch or depressions over ⅜ inch after curing.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-design-objectives">Purpose and design objectives</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#design-inputs-and-requirements">Design inputs and requirements</a></li><li><a href="#design-methods-and-criteria">Design methods and criteria</a></li><li><a href="#structural-section-and-dimensions">Structural section and dimensions</a></li><li><a href="#materials-and-mixture-design">Materials and mixture design</a></li><li><a href="#structural-details-and-interfaces">Structural details and interfaces</a></li><li><a href="#drainage-environment-and-accessibility">Drainage, environment, and accessibility</a></li><li><a href="#verification-and-expected-performance">Verification and expected performance</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="purpose-and-design-objectives">Purpose and design objectives</h2>
+<p>The concrete base is intended to provide the rigid foundation that supplies the load‑bearing capacity required for brick pavements and any later overlay, and when a brick pavement rests on such a base the structural analysis shall employ the coefficient for a rigid base. For low‑volume roadways with an average daily traffic of ≤ 2000 vehicles and speed limits of ≤ 55 mph, the roller‑compacted concrete (RCC) base is used as a base course beneath an asphalt wearing course or surface treatment to carry traffic loads, relying on its high compressive strength—potentially ranging from 4,000 psi to 10,000 psi—and its ability to be placed over various prepared subgrade and subbase conditions without the need for forms, reinforcement, or dowel bars. The specification further requires that the RCC base be constructed with a low‑slump mix and compacted by rollers of appropriate size to achieve the required thickness and density, thereby satisfying the performance need for a uniformly smooth surface. To meet the surface‑tolerance requirement, any high points exceeding 1/4 inch must be removed by grinding or cutting, and depressions greater than 3/8 inch must be corrected by replacing at least a 10‑foot length of the affected lane section. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 62), Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (pp. 206–219)</small></p>
+<p>The Concrete Base, when placed as Roller Compacted Concrete, is required to deliver a structural capacity that is comparable to conventional concrete [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. This structural capacity is achieved by selecting a slab thickness in the range of 4 inches to 18 inches and by attaining a compressive strength that may be from 4,000 psi to 10,000 psi [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Functionally, the layer shall be capable of supporting roadways with an average daily traffic not exceeding 2,000 vehicles and speed limits up to 55 mph, while providing an estimated design life of 20 years under the anticipated traffic and environmental conditions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For any exposed RCC surface on routes where the posted speed limit is 35 mph or greater, the surface must be textured by diamond grinding in order to satisfy safety and ride‑quality requirements [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The underlying subgrade and subbase shall be prepared so as to support proper compaction of the RCC layer, thereby contributing to both structural integrity and serviceability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. After the concrete has hardened, the surface of the plain cement concrete base course shall be retested with straightedges in accordance with Section 501.3(k)3, and any high points that exceed ¼ inch must be removed by grinding or cutting tools [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Sections containing depressions greater than ⅜ inch shall be replaced when directed in writing, with replacement requiring removal of the full lane width of the depression for a length of at least 10 feet [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (p. 206)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Concrete Base is suitable for brick pavement projects where the historic or existing roadway consists of bricks laid on a rigid concrete foundation; in those situations the base material is treated as a concrete base and the structural analysis of any overlay shall employ the Brick with Rigid Base coefficient, while the brick layer itself receives its own coefficient applied only to its depth. Concrete Base is also appropriate when Roller Compacted Concrete is placed beneath an asphalt wearing course or surface treatment on roadways whose average daily traffic does not exceed 2,000 vehicles and whose speed limit does not exceed 55 mph; it may further serve as the base for temporary median crossovers, widening areas, or as a shoulder adjacent to reinforced or plain cement‑concrete pavements. Roller compacted concrete base is appropriate when a prepared subgrade and subbase need a stiff, low‑slump concrete layer that will support an asphalt wearing course or other surface treatment. The RCC mix used for the concrete base is a very dry concrete of cement, aggregate and water with a low water‑cement ratio as low as 0.30 and can be designed from 4 inches up to 18 inches thick, providing compressive strengths between 4,000 psi and 10,000 psi. Construction of the roller compacted concrete base course employs conventional or high‑density asphalt paving equipment together with rollers of various sizes to achieve the required thickness and density. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 62), Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (p. 219)</small></p>
+<p>In brick pavements that are supported by stone or other aggregate rather than a rigid concrete base, the design must treat the system as having a flexible base and apply the structural coefficient for &ldquo;Brick with Flexible Base&rdquo; instead of the concrete‑base method, making that alternative approach preferable. Additionally, when the community wishes to preserve the historic appearance of the brick pavement, an assessment of its historical and cultural significance may be required before selecting a design that replaces the existing base. For roller‑compacted concrete used as a concrete base, the Department limits its use to roadways whose average daily traffic does not exceed 2,000 vehicles and whose posted speed limit is 55 mph or less; when either of those thresholds is exceeded another pavement design should be considered. RCC pavements are also discouraged wherever the International Roughness Index will be measured for ride‑quality payment incentives because the typical surface texture is rougher than conventional concrete or asphalt. Moreover, if an exposed RCC surface will serve a road with a speed limit of 35 mph or greater, the pavement surface must be textured by diamond grinding, which may also favor an alternative treatment. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 62), Ch. 4 (pp. 98–99)</small></p>
+<h2 id="design-inputs-and-requirements">Design inputs and requirements</h2>
+<p>For projects where an existing brick pavement rests on a concrete base, the structural analysis shall be performed using the structural coefficient for “Brick with Rigid Base” as listed in Table 9.3, and that coefficient is applied only to the depth of the brick layer while the base material has a separate structural coefficient applied only to the depth of the base material. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] If the underlying support beneath the brick pavement is stone or another flexible material, the analysis shall instead use the structural coefficient for “Brick with Flexible Base”. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When Roller Compacted Concrete (RCC) is used as a concrete base course, its use is governed by Publication 408 specifications—specifically Sections 323, 502 and 658—and by PennDOT’s concrete pavement design procedures found in Chapter 8 Section 8.15 of the Pavement Policy Manual. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] RCC may be placed as a base only on projects where the average daily traffic does not exceed 2,000 vehicles and the posted speed limit does not exceed 55 mph. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] If the RCC surface will remain exposed and the speed limit is 35 mph or greater, diamond grinding must be provided to texture the pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Joint spacing for RCC bases follows the rules in Publication 72M RC‑27M: joints are spaced 15 ft to 20 ft when thickness is less than 8 in, and for thicknesses of 8 in or more the spacing equals the thickness multiplied by 2.5 ft. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The concrete base course follows the provisions of Section 501.3, but Section 301.3 modifies several requirements for this layer. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Forms are not required for base‑course widening six feet or less in width. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Where longitudinal joints are indicated or formed for convenience of construction, a tied joint must be provided as shown on the Standard Drawings; full‑width construction does not require sawing. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The surface shall be finished with a rake or broom finish. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Curing may use only black liquid‑membrane forming compound, which may be used provided the cement concrete base course is not accessible to traffic before the surface course is placed; white compound will not be allowed and the black compound must be discontinued if it becomes unsatisfactory. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Surface tolerance for the plain cement concrete base course is controlled by a post‑curing inspection using straightedges as directed in Section 501.3(k)3; any high points that exceed one‑quarter inch must be removed with grinding or cutting tools, and depressions greater than three‑eighths inch must be eliminated by replacing the concrete when written direction is given, with replacement extending across the full lane width for a minimum length of ten feet. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=e2aa2c59 src=408_2026_1::tab:p206#1 -->
+<p>The table below specifies the proportional contract price allowed for concrete base course deficiencies in depth determined by cores.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-concrete-base-1-cap" tabindex="0"><table class="ct-table" id="ct-concrete-base-1" aria-describedby="ct-concrete-base-1-sum">
+<caption id="ct-concrete-base-1-cap">301.4 MEASUREMENT AND PAYMENT—Square Yard (table)</caption>
+<thead>
+<tr><th id="ct-concrete-base-1-h0-0" scope="col">Deficiency in Depth Determined by Cores</th><th id="ct-concrete-base-1-h0-1" scope="col">Proportional Part of</th></tr>
+<tr><th id="ct-concrete-base-1-h1-0" scope="col">Inches</th><th id="ct-concrete-base-1-h1-1" scope="col">Contract Price Allowed</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-concrete-base-1-h0-0 ct-concrete-base-1-h1-0">0.0 to 0.25</td><td headers="ct-concrete-base-1-h0-1 ct-concrete-base-1-h1-1">100%</td></tr>
+<tr><td headers="ct-concrete-base-1-h0-0 ct-concrete-base-1-h1-0">0.26 to 0.30</td><td headers="ct-concrete-base-1-h0-1 ct-concrete-base-1-h1-1">95%</td></tr>
+<tr><td headers="ct-concrete-base-1-h0-0 ct-concrete-base-1-h1-0">0.31 to 0.35</td><td headers="ct-concrete-base-1-h0-1 ct-concrete-base-1-h1-1">90%</td></tr>
+<tr><td headers="ct-concrete-base-1-h0-0 ct-concrete-base-1-h1-0">0.36 to 0.40</td><td headers="ct-concrete-base-1-h0-1 ct-concrete-base-1-h1-1">85%</td></tr>
+<tr><td headers="ct-concrete-base-1-h0-0 ct-concrete-base-1-h1-0">0.41 to 0.45</td><td headers="ct-concrete-base-1-h0-1 ct-concrete-base-1-h1-1">80%</td></tr>
+<tr><td headers="ct-concrete-base-1-h0-0 ct-concrete-base-1-h1-0">0.46 to 0.50</td><td headers="ct-concrete-base-1-h0-1 ct-concrete-base-1-h1-1">70%</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-concrete-base-1-sum">Rows list deficiency ranges in inches, columns give the proportional part of contract price allowed.</p>
+<p class="ct-notes">Notes: (b) Defective Base Course Left in Place. Section 501.4(b).</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 206.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 2 (p. 62), Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (pp. 205–206)</small></p>
+<h2 id="design-methods-and-criteria">Design methods and criteria</h2>
+<p>In the structural analysis of a concrete base that supports a brick pavement, the manual requires the use of the “Brick with Rigid Base” structural coefficient taken from Table 9.3 and applied only to the depth of the brick layer, while a separate structural coefficient is assigned exclusively to the depth of the concrete‑base material; if the underlying layer were stone or another flexible material the analysis would instead employ the “Brick with Flexible Base” coefficient [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For roller‑compacted concrete (RCC) bases the design follows the PennDOT RCC design procedures set out in Chapter 8 of the manual, and thickness selection is performed by applying the current PennDOT concrete pavement design procedures described in Chapter 8, Section 8.15 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The mix design for these RCC bases limits the water‑to‑cement ratio to as low as 0.30 but typically 0.40, and a compressive strength that may range from 4,000 psi to 10,000 psi is used as an input to the structural design calculations [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Control joint spacing for RCC pavements less than 8 inches thick shall be provided at intervals of 15 feet to 20 feet, whereas for RCC pavements 8 inches or greater the spacing equals the pavement thickness multiplied by 2.5 feet [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. After a plain cement concrete base course has hardened, its surface must be retested with straightedges in accordance with Section 501.3(k)3, and any high points that exceed ¼ inch are to be removed using grinding or cutting tools as directed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Sections of the base that contain depressions greater than ⅜ inch must be removed and replaced when instructed in writing, and the removal shall extend across the full lane width for a length of at least 10 feet where such a depression occurs [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (p. 62), Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (p. 206)</small></p>
+<p>When a brick pavement rests on a concrete base, the design must treat that base as a rigid support and the structural analysis shall be performed using the structural coefficient designated for “Brick with Rigid Base”. The concrete base is assigned its own separate structural coefficient that applies only to the depth of the base material. When roller‑compacted concrete is used as a concrete base beneath an asphalt wearing course or surface treatment, it may be employed only where the roadway’s average daily traffic does not exceed 2000 vehicles and the speed limit is no greater than 55 mph. The design thickness shall be selected between 4 inches and 18 inches in accordance with current PennDOT concrete pavement procedures. For roller‑compacted concrete bases thinner than 8 inches, control joints shall be spaced at 15 feet to 20 feet. For bases that are 8 inches or thicker, the joint spacing shall equal the thickness multiplied by 2.5 feet. Because the RCC base will be covered by an asphalt layer, the base surface does not need diamond grinding before the wearing course is placed. After the concrete has hardened, the surface of the base course shall be retested using straightedges. Any high points in excess of 1/4 inch shall be removed by grinding or cutting tools as directed. Depressions greater than 3/8 inch shall be removed and replaced when directed in writing, with replacement extending across the full lane width for a length of at least 10 feet. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 62), Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (p. 206)</small></p>
+<h2 id="structural-section-and-dimensions">Structural section and dimensions</h2>
+<p>The concrete base may be designed with a thickness ranging from 4 inches to 18 inches [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. This required thickness can be achieved by placing the mix in either a single lift or multiple lifts, with the width and depth of each lift governed by the dimensions of the paver used for placement [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For concrete bases less than 8 inches thick, control joints shall be spaced between 15 feet and 20 feet; when the base is 8 inches or greater, joint spacing shall equal the pavement thickness multiplied by 2.5 feet [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. No dimensional requirements are provided for overlay, subbase, treated‑soil, edge‑support, widening, or reinforcement in this section of the manual [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the Pennsylvania construction specifications, forms are not required for base‑course widening that does not exceed six feet in width [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The same subsection does not specify values for pavement thickness, slab lift height, overlay depth, or subbase depth [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Reinforcement dimensions are not prescribed because the reinforcement sections have been deleted from the specification [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (pp. 205–206)</small></p>
+<p>For a concrete base constructed with roller compacted concrete, slab or lift thicknesses are selected using the current PennDOT concrete pavement design procedures and may be placed in single or multiple lifts, with allowable design thickness ranging from 4 inches to 18 inches; joint spacing is then governed by that thickness—RCC pavements less than 8 inches thick require control joints spaced 15 feet to 20 feet, while those 8 inches or greater use a spacing equal to the pavement thickness multiplied by 2.5 feet, and shoulders must have control joints that match the spacing and alignment of the adjacent mainline concrete—no additional guidance on layer configurations, structural layer coefficients, cross‑slopes, transitions, or tie‑ins is provided in this section. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<h2 id="materials-and-mixture-design">Materials and mixture design</h2>
+<p>For a concrete base constructed as roller‑compacted concrete, the mix must include cement, aggregate and water, and it may incorporate limited admixtures and may or may not have air entrainment. The design should employ a dense aggregate gradation whose maximum aggregate size is less than 1 inch. A lower water‑to‑cement ratio, as low as 0.30 but typically 0.40, produces a no‑slump mixture that resembles damp gravel. Such RCC mixtures are expected to achieve compressive strengths ranging from 4,000 psi to 10,000 psi, and the design thickness for base applications may be anywhere from 4 inches to 18 inches. For the plain cement concrete base course, a white liquid membrane forming curing compound shall not be allowed, whereas a black liquid membrane forming curing compound may be used only when the base course is not accessible to traffic before the surface course is placed and must be discontinued if it becomes unsatisfactory. The roller‑compacted concrete base must be placed on a prepared subgrade and subbase using a stiffer low‑slump concrete mix, and placement shall be carried out with conventional or high‑density asphalt paving equipment together with rollers of various sizes selected to obtain the required thickness and density. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (pp. 205–219)</small></p>
+<p>For a concrete base constructed as Roller Compacted Concrete, the mix is proportioned with cement, aggregate and water at a low water‑cement ratio (as low as 0.30, but typically 0.40) to produce a no‑slump, dry mixture that can be placed with a paver and compacted by rollers, facilitating constructability; the mix may use a dense aggregate gradation with a maximum aggregate size less than 1 inch, and it may or may not include air entrainment while admixture use is limited, which supports durability; structural capacity is achieved by targeting a compressive strength potential of 4,000 psi to 10,000 psi and selecting a pavement thickness between 4 inches and 18 inches in accordance with PennDOT concrete design procedures for the expected traffic loads, thereby meeting performance requirements. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<h2 id="structural-details-and-interfaces">Structural details and interfaces</h2>
+<p>In roller‑compacted concrete (RCC) bases the Department’s guidelines specify that forms, steel reinforcing, and dowel bars are not required, and control joints may be omitted except where the Department requires them in shoulders to align with adjacent mainline concrete pavement; when joints are shown on the plans their spacing must follow the prescribed limits. For RCC pavements thinner than 8 inches the recommended control‑joint spacing is between 15 feet and 20 feet, while for thicknesses of 8 inches or greater the joint spacing is calculated as the pavement thickness multiplied by 2.5 feet [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In plain cement‑concrete base courses, forms are not required for widening projects that are six feet wide or less, provided that an acceptable method is used to contain the concrete during placement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Where longitudinal joints are introduced for construction convenience in such base courses, a tied joint as illustrated on the standard cement‑concrete pavement drawings shall be formed and full‑width placements do not require sawing of those joints [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Transverse joints for these base courses are governed solely by Section 501.3(i)1, with no additional detail supplied in this specification section [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The reinforcement handling and placement sections have been removed from the concrete‑base specifications, resulting in no explicit reinforcement requirements for the concrete base [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. No load‑transfer systems such as dowel bars are mandated for either RCC or plain cement‑concrete bases under the cited provisions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Likewise, the documents do not prescribe any paving interlayers, membranes, edge treatments beyond the form‑free widening allowance, notches, transitions, or other connection details for the concrete base.</p>
+<p><small>[1] — Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (pp. 205–206)</small></p>
+<p>When a brick pavement is placed on a concrete base the structural analysis shall be performed using the structural coefficient designated for “Brick with Rigid Base,” while the concrete base itself receives its own separate coefficient that applies only to the depth of the base material, and the appropriate coefficient—rigid for a concrete base or flexible for a stone or aggregate base—is selected as specified in Table 9.3. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Joint and form provisions are used to treat the interfaces between the concrete base and adjacent pavement layers or structures; transverse joints shall follow Section 501.3(i)1, and longitudinal joints that are indicated or formed for construction convenience must be a tied joint as shown on the Standard Drawings for cement‑concrete pavement joints, with sawing not required when the work is full width. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For base‑course widening of six feet or less, forms are not required provided acceptable containment methods are used. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The finished surface of the concrete base shall receive a rake or broom finish, and curing may employ a Liquid Membrane Forming Curing Compound in black only when the base course will not be accessible to traffic before the surface course is placed; a white compound shall not be allowed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] In roller‑compacted concrete (RCC) bases the control joints shall be aligned with the spacing and alignment of the adjacent concrete mainline, with joint spacing set at fifteen feet to twenty feet for RCC thicknesses less than eight inches and at a distance equal to the thickness multiplied by 2.5 ft for RCC eight inches or greater. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] If an RCC pavement will have an exposed surface and the posted speed limit is thirty‑five miles per hour or higher, the surface must be textured by diamond grinding; no grinding is required when the RCC serves only as a base beneath an asphalt wearing course prior to placement of the overlay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The RCC base course is installed directly on a prepared subgrade and subbase, creating the lower interface for the pavement system and serving as the foundation beneath an asphalt wearing course or surface treatment; the design calls for a stiffer low‑slump concrete mix applied with conventional or high‑density asphalt paving equipment and compacted with rollers of various sizes until the required thickness and density are achieved. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The subgrade and subbase shall be treated as separate construction items to support compaction of the RCC pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] After the concrete has hardened, the surface of the base course is retested with straightedges as specified in Section 501.3(k)3; any high points exceeding one‑quarter inch are removed by grinding or cutting tools, and sections containing depressions greater than three‑eighths inch shall be removed and replaced when directed in writing, with the full width of the lane removed for a length of at least ten feet wherever such a depression occurs. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 62), Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (pp. 205–219)</small></p>
+<h2 id="drainage-environment-and-accessibility">Drainage, environment, and accessibility</h2>
+<p>Concrete base courses must be limited to roadways where the average daily traffic does not exceed 2,000 vehicles and the posted speed limit does not exceed 55 mph when roller‑compacted concrete (RCC) is used as the base layer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If the RCC surface will remain exposed and the speed limit is 35 mph or greater, the pavement surface must be textured by diamond grinding; however, when the RCC serves only as a base beneath an asphalt wearing course or other surface treatment, diamond grinding is not required [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For RCC bases thinner than 8 inches, control joints shall be spaced between 15 and 20 feet, whereas for thicknesses of 8 inches or more the joint spacing shall equal the pavement thickness multiplied by 2.5 feet [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When a plain cement concrete base course is widened no more than 6 feet, forms may be omitted provided that acceptable containment methods are employed; longitudinal joints used for construction convenience shall be tied joints as shown on standard drawings and full‑width sections do not require sawing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The surface finish of the concrete base must be limited to a rake or broom texture [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Curing may employ the black liquid‑membrane forming compound only if the base course will not be accessible to traffic before the overlying surface course is placed, and the compound shall be discontinued should it become unsatisfactory [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After the concrete has hardened, the surface must be re‑tested with straightedges in accordance with Section 501.3(k)3; any high points that exceed 1/4 inch shall be removed by grinding or cutting tools [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Depressions that are more than 3/8 inch deep must be replaced when directed in writing, the replacement covering the full lane width for a length of at least 10 feet [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 4 (pp. 98–99); [2] — SECTION 300 BASE COURSES (pp. 205–206)</small></p>
+<h2 id="verification-and-expected-performance">Verification and expected performance</h2>
+<p>The hardened concrete base is inspected by retesting its surface with straightedges. High points that exceed 1/4 inch are removed by grinding or cutting tools, and depressions greater than 3/8 inch are removed and replaced when directed in writing; the replacement extends across the full lane width for a length of at least 10 feet. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (p. 206)</small></p>
+<p>Under Section 4.11 the Roller Compacted Concrete base is expected to provide a design life estimated to be 20 years, with longevity dependent on construction materials, environmental conditions, and traffic volumes. Its compressive strength has the potential to be from 4,000 psi to 10,000 psi, giving structural behavior comparable to conventional concrete and thus good resistance to cracking and other distress. Because RCC typically has a rougher surface than conventional Portland Cement Concrete or asphalt pavements, the ride‑quality result will vary with the equipment used during placement, and projects that require International Roughness Index (IRI) measurements for ride‑quality assessment and payment incentives are not suitable for RCC. Performance is evaluated by estimating design life from material and traffic inputs and by measuring surface roughness through IRI testing when such measurement is required. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 4 (pp. 98–99)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Exception</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html" class="active" aria-current="page">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><span class="crumb-current">Design Exception</span></nav>
+<article><h1>Design Exception</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-design.html">Pavement Design</a> <span class="edge edge-taxonomic" title="Design Exception is a topic under Pavement Design.">is-subtopic-of</span></div><div class="edge-reading">Design Exception is a topic under Pavement Design.</div><div><a class="tag" href="index.html?q=design-exception">design-exception</a><a class="tag" href="index.html?q=design-exception-request">design-exception-request</a><a class="tag" href="index.html?q=pavement-design-related-exceptions">pavement-design-related-exceptions</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>Design Exception is a formal engineering and documentation process that permits an agency to approve a departure from established design standards when the required minimum cross‑slope for new construction, reconstruction, or 3R projects cannot be achieved, or when pavement preservation treatments exceed prescribed limits [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The request must be prepared at the point of trigger and follows the procedures in Publications 10X (Appendix P) and 10C, with engineering analysis—often including core sampling, FWD testing, and cost‑effectiveness calculations—to demonstrate that the deviation is justified [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Approval is granted by the appropriate authority (e.g., HDTS for pavement‑design related exceptions) after the documented justification satisfies defined criteria such as minimum cross‑slope compliance, structural performance, and economic rationale [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-decision-context">Purpose and decision context</a></li><li><a href="#scope-and-applicability">Scope and applicability</a></li><li><a href="#information-needs">Information needs</a></li><li><a href="#alternatives">Alternatives</a></li><li><a href="#decision-criteria">Decision criteria</a></li><li><a href="#stakeholders-and-constraints">Stakeholders and constraints</a></li><li><a href="#timing-and-implementation">Timing and implementation</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="purpose-and-decision-context">Purpose and decision context</h2>
+<p>In section 2.5 (Cross‑Slopes), when the required cross‑slope criteria for new construction, reconstruction, or 3R projects cannot be satisfied, a design exception request must be prepared to obtain approval for deviating from those design requirements so that the project may proceed. In section 12.3 (Design Guidelines), the Design Exception process is used to support the decision to document and approve a departure from the standard pavement‑preservation design guidelines when geometric or bridge issues prevent strict compliance; by following the Design Flexibility procedures in Publication 10C an agency can formally grant an exception after engineering analysis rather than requiring a full pavement design, and pavement‑design related exceptions should be directed to HDTS for the same approval purpose. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 12 (pp. 204–205)</small></p>
+<p>The Design Exception process is invoked when the required minimum cross‑slope for new construction, reconstruction, or 3R projects cannot be achieved, because the finished roadway surface should provide a minimum cross slope as defined in Publication 13, Design Manual Part 2; any inability to meet that criterion triggers the need for a design exception request, which must be prepared according to Publication 10X, Appendix P. The process is also used when a preservation activity cannot satisfy the standard design criteria—such as an overlay on a flexible pavement that exceeds the 2‑inch limit or a project involving geometric or bridge issues—and a documented justification is required for approval; thickness limitations do not include material required for slope correction, and pavement‑design related exceptions should be directed to HDTS while following the documentation and approval procedures described in Publication 10C. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="scope-and-applicability">Scope and applicability</h2>
+<p>Design Exception is appropriate for new construction, reconstruction, and 3R projects when the required cross‑slope design criteria cannot be satisfied; in that situation a design exception request must be prepared. The guidance applies during the design stage of those project types, while pavement preservation projects follow separate guidance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60)</small></p>
+<p>Design Exception is only warranted when the required minimum cross‑slope cannot be achieved for new construction, reconstruction, or 3R projects; if the cross‑slope criteria are met, the normal design process should be followed. For pavement preservation projects the source points to separate guidance, implying that a design‑exception request is not the preferred route in those cases. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60)</small></p>
+<h2 id="information-needs">Information needs</h2>
+<p>For pavement preservation design exceptions the manual requires detailed condition data such as core samples that are inspected to establish depth and integrity of the existing pavement and Falling Weight Deflectometer testing to verify joint failures. The amount of concrete patching may be performed up to, but not exceeding, 10 % of the total area unless a cost‑effectiveness justification is provided for exceeding that threshold. When milling depths exceed standard limits the required depth is determined from the core results, so cost data must demonstrate that any deviation from the prescribed limits remains economically justified. For low‑strength cement concrete design exceptions the specification requires detailed condition data in the form of compressive‑strength test results from acceptance cylinders or cores (e.g., F′(28‑cyl), F′(56‑cyl) and F′(cores)) to determine whether the concrete meets the specified design strength (F′(c)). Cost information is needed in the form of the Contract Unit Price of the in‑place concrete because if a deficient lot is allowed to remain, the adjusted payment will be exactly 50 % of that CUP. Stakeholder input includes a written request from the contractor to retain the deficient concrete, a signed document waiving any claim for the reduced payment, and an engineering analysis of the deficiency performed at no expense to the Department. No traffic, environmental or site‑specific data are stipulated in this section. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p>The following figure illustrates the evaluation, disposition, and adjusted payment procedures for prestressed concrete beams.</p>
+<!-- concept-compliance:begin fig=85af3c8e n=1 -->
+<figure class="cmp-figure" id="cmp-design-exception-1">
+<img src="assets/design-exception/85af3c8edcae04019e29a3ed02372fc7c95299e07b57ad1ba54e36e12f6269d1.jpg" alt="Flowchart detailing evaluation and payment adjustment for low-strength concrete beams based on core tests." aria-describedby="cmp-design-exception-1-ld">
+<figcaption>Flowchart for evaluating and adjusting payment for low-strength concrete beams. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</figcaption>
+</figure>
+<div id="cmp-design-exception-1-ld" hidden>
+<p>The flowchart is divided into two parallel processes labeled C and D. Process C begins with cores being tested according to PTM procedures, followed by calculating F&#x27;cs acceptability as specified in Section 110.10(d)1. A decision asks if the lot is acceptable; a Yes leads to calculating F&#x27;c acceptability per Section 110.10(d)2 and adjusting payment using core strength per Section 110.10(d)2, while a No results in the concrete lot being deficient and requiring removal unless directed otherwise by the District Executive.</p>
+<p>Process D begins with performing F&#x27;(56-cyl) tests. A decision asks if F&#x27;(56-cyl) is greater than or equal to F&#x27;(c). If Yes, the concrete lot may be accepted at full pay. If No, F&#x27;cs acceptability is calculated per Section 110.10(d)1. Another decision asks if the lot is acceptable; a Yes leads to calculating F&#x27;c acceptability per Section 110.10(d)2 and adjusting payment using F&#x27;(56-cyl) per Section 110.10(d)2, while a No results in the concrete lot being deficient and requiring removal unless directed otherwise by the District Executive.</p>
+</div>
+<details class="cmp-longdesc">
+<summary>Text description of this figure</summary>
+<p>The flowchart is divided into two parallel processes labeled C and D. Process C begins with cores being tested according to PTM procedures, followed by calculating F&#x27;cs acceptability as specified in Section 110.10(d)1. A decision asks if the lot is acceptable; a Yes leads to calculating F&#x27;c acceptability per Section 110.10(d)2 and adjusting payment using core strength per Section 110.10(d)2, while a No results in the concrete lot being deficient and requiring removal unless directed otherwise by the District Executive.</p>
+<p>Process D begins with performing F&#x27;(56-cyl) tests. A decision asks if F&#x27;(56-cyl) is greater than or equal to F&#x27;(c). If Yes, the concrete lot may be accepted at full pay. If No, F&#x27;cs acceptability is calculated per Section 110.10(d)1. Another decision asks if the lot is acceptable; a Yes leads to calculating F&#x27;c acceptability per Section 110.10(d)2 and adjusting payment using F&#x27;(56-cyl) per Section 110.10(d)2, while a No results in the concrete lot being deficient and requiring removal unless directed otherwise by the District Executive.</p>
+</details>
+<!-- concept-compliance:end -->
+
+<p>The figure displays two decision flowcharts, labeled C and D, which outline the procedures for testing cores or cylinders to determine if a concrete lot is acceptable. These diagrams illustrate how low-strength concrete prestress beams are evaluated using compressive strength test results from acceptance cylinders or cores, and how adjusted payment is calculated for deficient lots.</p>
+<p><small>[1] — Ch. 12 (pp. 204–205); [2] — SECTION 100 GENERAL PROVISIONS (pp. 115–122)</small></p>
+<h2 id="alternatives">Alternatives</h2>
+<p>When a design exception is evaluated for pavement preservation, the analyst must compare the range of prescribed treatments for both flexible and rigid surfaces, ensuring each meets the depth and cost‑effectiveness thresholds set out in Chapter 12.3; for flexible pavements the alternatives include mill‑and‑overlay (with milling depths that may exceed 1 ½ inches or 2 inches to correct rutting), micro‑surfacing or ultra‑thin bonded wearing courses applied early in the maintenance cycle, cold‑in‑place recycling of base limited to a maximum depth of 4 inches with an asphalt overlay not exceeding 1 ½ inches and a specified scratch‑course weight, and ultra‑thin bonded concrete overlays of up to 2 inches as non‑structural wearing courses. For rigid pavements the options comprise full‑depth concrete patching and joint rehabilitation (subject to FWD verification and generally limited to 10 % of area unless cost‑effective), diamond grinding or micro‑surfacing or ultra‑thin bonded wearing course or thin asphalt overlay with slab stabilization, and prescribed thickness overlays such as 1 ½ inches of Superpave 9.5 mm mix or 2 inches of Superpave 12.5 mm mix on appropriate base layers. Each alternative must be justified with the required engineering data—core sampling for milling depth, FWD testing for joint repair, and cost‑effectiveness analysis—to satisfy the design exception documentation procedures. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 12 (pp. 204–205)</small></p>
+<h2 id="decision-criteria">Decision criteria</h2>
+<p>Within the Pavement Policy Manual (Publication 242, Change No. 10) section 12.3 DESIGN GUIDELINES, a design exception for pavement preservation is approved only when the proposed work is shown to be cost‑effective based on PennDOT’s Pavement Management System data; if the percentage of patching or overlay exceeds the listed limits, the exception still must be demonstrated as cost‑effective, and no other decision criteria such as safety, durability, schedule, sustainability, accessibility, performance, or public impact are prescribed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In contrast, the Commonwealth of Pennsylvania Department of Transportation Publication 408/2026 SPECIFICATIONS section SECTION 110—PAYMENT &gt; 110.10 EVALUATION, DISPOSITION, AND ADJUSTED PAYMENT OF LOW STRENGTH CEMENT CONCRETE states that the decision to grant a design exception for low‑strength concrete is driven primarily by structural performance and cost considerations: an engineering analysis must show that the material can meet the minimum compressive strength listed in Table C, and the contractor must accept an adjusted payment equal to exactly 50 % of the contract unit price, with the analysis performed at no expense to the Department; other factors such as durability, schedule, sustainability, accessibility or public impact are not addressed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=9cb0fe12 src=408_2026_1::tab:p118#1 -->
+<p>The table below specifies the payment factors for low strength concrete based on core specimen compressive strength results.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-design-exception-1-cap" tabindex="0"><table class="ct-table" id="ct-design-exception-1">
+<caption id="ct-design-exception-1-cap">Adjusted Payment = A x CUP x LOT: TABLE CLow Strength Concrete Payment Factors, A</caption>
+<thead>
+<tr><th scope="col">Average of Compressive Strength Test Results of Core Specimens, F’(cores)*</th><th scope="col">Payment Factor, A</th></tr>
+</thead>
+<tbody>
+<tr><td>≥ F&#x27;c</td><td>1.00</td></tr>
+<tr><td>≥ F&#x27;(cs) + 400</td><td>0.99</td></tr>
+<tr><td>≥ F&#x27;(cs) + 300</td><td>0.98</td></tr>
+<tr><td>≥ F&#x27;(cs) + 200</td><td>0.96</td></tr>
+<tr><td>≥ F&#x27;(cs) + 100</td><td>0.92</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 118.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 12 (pp. 204–205); [2] — SECTION 100 GENERAL PROVISIONS (pp. 115–122)</small></p>
+<!-- formulas-check:begin 408_2026_1::f:a39cc914b1e1 x design-exception -->
+
+<p>The adjusted payment for serviceable beams is computed as follows:</p>
+<!-- gaps: fcdcdc745c9833d8 -->
+
+<!-- formula-anchor: eq-408-2026-1-a39cc914b1e1 -->
+
+<div class="fc-math" id="eq-408-2026-1-a39cc914b1e1" role="region" aria-label="Formula 1" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="\mathsf { A d j u s t e d P a y m e n t } = [ \left( \mathsf { A } / \mathsf { B } \times 0.50 \right) + 0.50 ] \times \mathsf { F B P }"><mrow><mrow><mi mathvariant="sans-serif">A</mi><mi mathvariant="sans-serif">d</mi><mi mathvariant="sans-serif">j</mi><mi mathvariant="sans-serif">u</mi><mi mathvariant="sans-serif">s</mi><mi mathvariant="sans-serif">t</mi><mi mathvariant="sans-serif">e</mi><mi mathvariant="sans-serif">d</mi><mi mathvariant="sans-serif">P</mi><mi mathvariant="sans-serif">a</mi><mi mathvariant="sans-serif">y</mi><mi mathvariant="sans-serif">m</mi><mi mathvariant="sans-serif">e</mi><mi mathvariant="sans-serif">n</mi><mi mathvariant="sans-serif">t</mi></mrow><mo>&#x0003D;</mo><mo stretchy="false">[</mo><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mrow><mi mathvariant="sans-serif">A</mi></mrow><mo>&#x0002F;</mo><mrow><mi mathvariant="sans-serif">B</mi></mrow><mo>&#x000D7;</mo><mn>0.50</mn><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002B;</mo><mn>0.50</mn><mo stretchy="false">]</mo><mo>&#x000D7;</mo><mrow><mi mathvariant="sans-serif">F</mi><mi mathvariant="sans-serif">B</mi><mi mathvariant="sans-serif">P</mi></mrow></mrow></math></div>
+<p>This formula computes the Adjusted Payment for serviceable prestressed concrete beams that fail initial strength acceptance but pass structural review. The payment rises as the difference between cylinder and required strength increases, falls as the gap between 28-day and required strength widens, and rises with higher fabricated beam prices.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-2" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-2">Symbols: Adjusted payment from strength difference and beam price ([2] PDF p. 123)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Adjusted Payment"><mrow><mi>A</mi><mi>d</mi><mi>j</mi><mi>u</mi><mi>s</mi><mi>t</mi><mi>e</mi><mi>d</mi><mi>P</mi><mi>a</mi><mi>y</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi></mrow></math></td><td>Adjusted Payment</td><td>not stated near this formula</td><td>output</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="A"><mrow><mi>A</mi></mrow></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="F^{\prime}"><mrow><msup><mi>F</mi><mrow><mi>&#x02032;</mi></mrow></msup></mrow></math>(cyl)-<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="F^{\prime}"><mrow><msup><mi>F</mi><mrow><mi>&#x02032;</mi></mrow></msup></mrow></math>(r)</td><td>not stated near this formula</td><td>input</td><td></td><!-- gaps: f8ea280a96274e2b --></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="B"><mrow><mi>B</mi></mrow></math></td><td>not stated near this formula</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="FBP"><mrow><mi>F</mi><mi>B</mi><mi>P</mi></mrow></math></td><td>not stated near this formula</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+</table></div>
+
+<p><small>[2] — PDF p. 123</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats: not stated in the publication near this formula.</p>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<details class="fc-calc"><summary>Calculator: Adjusted payment from strength difference and beam price ([2] PDF p. 123)</summary><iframe src="_apps/408-2026-1-a39cc914b1e1.html" title="Calculator: Adjusted payment from strength difference and beam price ([2] PDF p. 123)" loading="lazy"></iframe><p><a href="_apps/408-2026-1-a39cc914b1e1.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-30.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 1033 words before and 423 words after the formula.</p>
+</details>
+
+<!-- formulas-check:end -->
+
+<!-- formulas-check:begin 408_2026_1::f:0d0ff773175b x design-exception -->
+
+<p>The publication gives Lot Payment as:</p>
+<!-- gaps: 711c5ced51047494 -->
+
+<!-- formula-anchor: eq-408-2026-1-0d0ff773175b -->
+
+<div class="fc-math" id="eq-408-2026-1-0d0ff773175b" role="region" aria-label="Formula 2" tabindex="0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="\mathsf { L o t P a y m e n t } = \mathsf { C p } ( \mathsf { O L P F } ) / 100"><mrow><mrow><mi mathvariant="sans-serif">L</mi><mi mathvariant="sans-serif">o</mi><mi mathvariant="sans-serif">t</mi><mi mathvariant="sans-serif">P</mi><mi mathvariant="sans-serif">a</mi><mi mathvariant="sans-serif">y</mi><mi mathvariant="sans-serif">m</mi><mi mathvariant="sans-serif">e</mi><mi mathvariant="sans-serif">n</mi><mi mathvariant="sans-serif">t</mi></mrow><mo>&#x0003D;</mo><mrow><mi mathvariant="sans-serif">C</mi><mi mathvariant="sans-serif">p</mi></mrow><mo stretchy="false">&#x00028;</mo><mrow><mi mathvariant="sans-serif">O</mi><mi mathvariant="sans-serif">L</mi><mi mathvariant="sans-serif">P</mi><mi mathvariant="sans-serif">F</mi></mrow><mo stretchy="false">&#x00029;</mo><mo>&#x0002F;</mo><mn>100</mn></mrow></math></div>
+<p>The formula computes the Lot Payment using the Contract unit price per lot and the Overall Lot Pay Factor. As the Contract unit price per lot increases, the Lot Payment rises. Similarly, as the Overall Lot Pay Factor increases, the Lot Payment also rises.</p>
+<div class="table-scroll" role="region" aria-labelledby="tbl-cap-3" tabindex="0"><table class="fc-symbols">
+<caption id="tbl-cap-3">Symbols: Lot payment from contract unit price and pay factor ([2] PDF p. 287)</caption>
+<tr><th scope="col">Symbol</th><th scope="col">Meaning</th><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Value or range</th></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="Lot Payment"><mrow><mi>L</mi><mi>o</mi><mi>t</mi><mi>P</mi><mi>a</mi><mi>y</mi><mi>m</mi><mi>e</mi><mi>n</mi><mi>t</mi></mrow></math></td><td>Lot Payment</td><td>not stated near this formula</td><td>output</td><td></td><!-- gaps: cf417b6a4f347499 --></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="C_P"><mrow><msub><mi>C</mi><mi>P</mi></msub></mrow></math></td><td>Contract unit price per lot (unit price times lot quantity)</td><td>not stated near this formula</td><td>input</td><td></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline" alttext="OLPF"><mrow><mi>O</mi><mi>L</mi><mi>P</mi><mi>F</mi></mrow></math></td><td>Overall Lot Pay Factor</td><td>not stated near this formula</td><td>input</td><td></td><!-- gaps: a905f88b8727fa60 --></tr>
+</table></div>
+
+<p><small>[2] — PDF p. 287</small></p>
+<p>Origin: not stated in the publication near this formula.</p>
+<p>Limits and caveats: not stated in the publication near this formula.</p>
+<p>Accuracy: not stated in the publication near this formula.</p>
+<p>Worked example: not stated in the publication near this formula. The calculator below computes one.</p>
+<p>See also:</p>
+<ul>
+<li><a href="asphalt-content.html#eq-408-2026-1-0d0ff773175b">Asphalt Content</a></li>
+<li><a href="in-place-density.html#eq-408-2026-1-0d0ff773175b">In-Place Density</a></li>
+</ul>
+<details class="fc-calc"><summary>Calculator: Lot payment from contract unit price and pay factor ([2] PDF p. 287)</summary><iframe src="_apps/408-2026-1-0d0ff773175b.html" title="Calculator: Lot payment from contract unit price and pay factor ([2] PDF p. 287)" loading="lazy"></iframe><p><a href="_apps/408-2026-1-0d0ff773175b.html">Open the calculator on its own page</a></p></details>
+<details class="fc-source">
+<summary>Source check</summary>
+<p>Added by formulas-check 0.1.0 on 2026-10-30.</p>
+<p>Checked: the formula as read agrees with the publication's printed line at the sample points; status: confirmed.</p>
+<p>Searched 1376 words before and 1415 words after the formula.</p>
+</details>
+
+<!-- formulas-check:end -->
+
+<h2 id="stakeholders-and-constraints">Stakeholders and constraints</h2>
+<p>The ability to obtain a design exception for cross‑slope deficiencies is limited by the minimum cross‑slope criteria set out in Publication 13, Design Manual Part 2, Contextual Roadway Design, Chapters 3 and 4; these criteria apply to new construction, reconstruction, and 3R projects, and any shoulder reconstruction must also satisfy those same requirements together with the provisions of Section 2.6, while superelevations must be verified and corrected if necessary. When the required cross‑slope cannot be achieved under those standards, a design‑exception request must be prepared in accordance with Publication 10X, Appendix P. Design exceptions that involve pavement preservation are constrained by the procedures described in Publication 10C, Design Manual Part 1C, Transportation Engineering Procedures, Chapter 3, Section 3.4.C, which prescribe the documentation and approval steps and require that any pavement‑design related exception be routed to HDTS. For flexible pavements, overlays greater than 2 inches are generally ineligible for consideration as a preservation exception unless a specific allowance applies, and milling depths must be justified by core inspections. For rigid pavements, the allowable overlay depth is limited to 4½ inches when a Superpave 9.5 mm wearing‑course mix is used or to 5 inches when a Superpave 12.5 mm mix is used, and concrete patching may not exceed 10 % of the total area unless cost‑effectiveness can be demonstrated. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="timing-and-implementation">Timing and implementation</h2>
+<p>The decision to grant a Design Exception should be taken at the point where it is determined that the cross‑slope design criteria cannot be satisfied for new construction, reconstruction, or 3R projects. At that moment a formal design exception request must be prepared before any further work proceeds. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60)</small></p>
+<p>The trigger for a Design Exception occurs when the required cross‑slope criteria defined in Publication 13 for new construction, reconstruction, or 3R projects cannot be satisfied; at that point a design exception request must be prepared. Under the 12.3 DESIGN GUIDELINES, action is also triggered whenever a proposed preservation treatment exceeds the listed limits. For flexible pavements any overlay that exceeds 2 inches, or milling or overlay depths beyond 1 ½ inches or 2 inches may be exceeded unless justified by coring to correct rutting; for rigid pavements any scratch overlay that exceeds 4 ½ inches with a Superpave 9.5 mm mix or 5 inches with a Superpave 12.5 mm mix is not eligible as Pavement Preservation and must follow 3R criteria, and any concrete patching that exceeds 10% of the total pavement area is not eligible unless it can be shown that exceeding 10% is cost effective. Additionally, geometric or bridge issues that fall outside these guidelines must follow the documentation procedures in Publication 10C, while pavement‑design related exceptions are directed to HDTS. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 2 (p. 60), Ch. 12 (pp. 204–205)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=3769e658 src=408_2026_1::tab:p116#1 -->
+<p>The table below specifies the minimum concrete compressive strength requirements for various classes and uses. It relates to the section <a href="#decision-criteria">Decision criteria</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-design-exception-2-cap" tabindex="0"><table class="ct-table" id="ct-design-exception-2">
+<caption id="ct-design-exception-2-cap">TABLE BMinimum Concrete Compressive Strength Requirements</caption>
+<thead>
+<tr><th scope="col">Class ofConcrete</th><th scope="col">Use</th><th scope="col">Minimum F&#x27;(cs)(psi)</th></tr>
+</thead>
+<tbody>
+<tr><td>AAAP</td><td>Bridge Deck</td><td>3,500</td></tr>
+<tr><td>AAA</td><td>Other</td><td>3,500</td></tr>
+<tr><td>AA</td><td>Paving</td><td>3,000</td></tr>
+<tr><td>H.E.S.</td><td>Paving</td><td>3,000</td></tr>
+<tr><td>AA</td><td rowspan="4">Structures and Misc.</td><td>3,000</td></tr>
+<tr><td>A</td><td>2,500</td></tr>
+<tr><td>C</td><td>2,000</td></tr>
+<tr><td>H.E.S.</td><td>3,000</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 116.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<style>
+/* FR-MH-21.2: formula-block display math (md->html reverse builder; per-page inject) */
+div.fc-math { overflow-x: auto; margin: 1rem 0; }
+
+/* FR-MH-21.12(a): formula-block calculator disclosure (md->html reverse builder; per-page inject) */
+details.fc-calc { margin: 1rem 0; }
+details.fc-calc > summary { cursor: pointer; }
+details.fc-calc iframe { display: block; box-sizing: content-box; width: calc(100% - 2px);
+  height: 28rem; margin-top: .5rem; border: 1px solid var(--border); }
+</style>
+<script>
+window.addEventListener("message", function (e) {
+  if (!e.data || e.data.type !== "fc-calc-height") return;
+  var frames = document.querySelectorAll("details.fc-calc iframe");
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].contentWindow === e.source) frames[i].style.height = e.data.height + "px";
+  }
+});
+</script>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

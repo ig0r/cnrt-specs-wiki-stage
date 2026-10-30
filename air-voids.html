@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Air Voids</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html" class="active" aria-current="page">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="flexible-pavement.html">Flexible Pavement</a><span class="crumb-sep">›</span><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><span class="crumb-sep">›</span><span class="crumb-current">Air Voids</span></nav>
+<article><h1>Air Voids</h1>
+<div class="meta"><div class="part-of">Part of: <a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a> <span class="edge edge-taxonomic" title="Air Voids is a topic under Asphalt Concrete (HMA).">is-subtopic-of</span></div><div class="edge-reading">Air Voids is a topic under Asphalt Concrete (HMA).</div><div><a class="tag" href="index.html?q=air-voids">air-voids</a><a class="tag" href="index.html?q=air-void-level">air-void-level</a><a class="tag" href="index.html?q=design-air-voids">design-air-voids</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>Air voids are the small pockets of air that exist between coated aggregate particles in a compacted asphalt mixture and are expressed as the percentage of empty space (Vₐ) measured during volumetric analysis of specimens according to AASHTO R 35[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The specified design level—commonly 2.5 % for Asphalt Rich Base Course mixes—provides the highest tensile strength at the bottom of the pavement and improves resistance to bottom‑up cracking and moisture‑induced damage throughout service life[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]]. In gap‑graded or rubberized wearing courses, a relatively larger air‑void content creates stone‑to‑stone contact that accommodates high‑viscosity binders, allowing higher binder contents and thicker film thicknesses without collapsing the void structure[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Air‑void percentages are calculated from bulk specific gravity measurements of compacted specimens and must meet the volumetric tolerances set out in the relevant tables to ensure compliance and durable pavement performance[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#influence-of-production-and-placement">Influence of production and placement</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>Air voids are the small pockets of air that exist between the coated aggregate particles in a compacted asphalt mixture. Air voids (Va) are the measured percentage of empty space trapped between coated aggregate particles in a compacted asphalt mixture, determined during the volumetric analysis of specimens as specified by AASHTO R 35. In the Asphalt Rich Base Course (section 5.9 SUPERPAVE Paving Courses) the mix is required to have design air voids of 2.5%; this level of air voids is intended to give the asphalt base course its highest tensile strength at the bottom of the pavement section and thereby promote better resistance to bottom‑up cracking and moisture‑damage during service life. In a gap‑graded wearing course that incorporates rubberized binder (section 5.16 Asphalt Rubber Gap‑Graded Wearing Course) the air voids represent a relatively larger amount of void space than in conventional dense‑graded mixtures; these voids promote stone‑to‑stone contact and make the high void content feasible for using a high‑viscosity rubberized binder, which allows a higher binder content and a thicker film thickness on the aggregate. For Superpave mixture designs such as plant‑mixed 6.3 mm thin asphalt overlay courses (Section 412), engineers calculate Va together with bulk specific gravity to verify that the mixture’s volumetric properties conform to the tolerances set out in Table C, using air‑void content as an indicator of compliance with design specifications and expected pavement performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–128); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 248–250)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>Air voids are quantified as a design percentage of void space within the asphalt mixture. For Asphalt Rich Base Course (ARBC) materials the specification calls for design air voids of 2.5%, which is intended to give the base course its highest tensile strength at the bottom of the pavement section. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113)</small></p>
+<p>In a Stone Matrix Asphalt (SMA) wearing course, selecting different aggregate materials, employing an aggregate gradation that yields stone‑on‑stone contact, and ensuring the chosen gradation meets or exceeds the minimum voids in mineral aggregate (VMA) requirement all influence how tightly the stones pack and therefore alter the attainable air‑void level [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Because the minimum binder needed is governed by the VMA, adjusting the asphalt content then directly targets the desired air‑void amount [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In an Asphalt Rubber gap‑graded wearing course, a mixture that is low or missing the finer size fractions (minus No. 8 or finer) inherently possesses a relatively larger amount of air voids than conventional dense‑graded mixtures, so changes in aggregate grading directly increase void space [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The high void content makes the use of a higher‑viscosity rubberized binder feasible and allows a higher binder content and thicker film thickness without collapsing the void structure; the rubberized binder must contain at least 15 % crumb rubber by weight and is produced with specialized mixing equipment that agitates and heats the material until the rubber particles swell, yielding a binder of higher viscosity that works within the larger air‑void framework [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Variations in aggregate or asphalt source, composition, or proportioning must be captured in an updated Job‑Mix Formula, and the specification requires a new JMF whenever material sources change; the produced mix must still meet the volumetric tolerances, including the calculated air voids (Va) per AASHTO R 35 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If the resulting mixture fails to satisfy those tolerances, corrective actions—including suspension of production—are required, ensuring that any compositional or processing changes do not degrade the intended air‑void content [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 123–128); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 291–294)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>For Asphalt Rich Base Course (ARBC) mixes the specification calls for design air voids of 2.5%, because that level of void space is intended to give the base course its highest tensile strength at the bottom of the pavement section. In the mixture‑composition portion of Section 419.1, the bulk specific gravity of compacted specimens is determined and used to calculate air voids (Va) and Voids in Mineral Aggregate (VMA) at Ndesign, providing a physical basis for assessing void content. Moisture susceptibility analysis must show that any warm‑mix asphalt (WMA) additive does not impair the mixture’s resistance to water damage, reflecting a chemical durability requirement. The degree of particle coating must reach at least 95.0 % to ensure adequate binder adhesion and prevent stripping, a mechanical property influencing void stability. When a WMA Technology additive is used as the stabilizing agent, the DME/DMM may allow the minimum VMA to be lowered to a minimum of 16.5%, linking aggregate packing to the available air‑void space. The ability of an SMA mix to achieve the required air‑void content is evaluated by testing one set of volumetric specimens for Air Voids at Ndesign (Va) and by determining one maximum specific gravity of the mixture, a key physical property used in the void calculation. Asphalt paving mixtures shall not be placed when surfaces are wet or when the air or surface temperature is 50 °F or lower, because maintaining adequate temperature is essential for proper compaction and air‑void performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=d6871396 src=408_2026_1::tab:p292#2 -->
+<p>Table C specifies the minimum asphalt binder content for SMA mixtures based on combined aggregate bulk specific gravity.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-air-voids-1-cap" tabindex="0"><table class="ct-table" id="ct-air-voids-1">
+<caption id="ct-air-voids-1-cap">TABLE CMinimum Asphalt Binder Requirements for SMA Mixtures</caption>
+<thead>
+<tr><th scope="col">Combined Aggregate Bulk Specific Gravity</th><th scope="col">Minimum Asphalt Content,% by Total Mix Weight(1)</th></tr>
+</thead>
+<tbody>
+<tr><td>2.400 - 2.449</td><td>7.4</td></tr>
+<tr><td>2.450 - 2.499</td><td>7.2</td></tr>
+<tr><td>2.500 - 2.549</td><td>7.1</td></tr>
+<tr><td>2.550 - 2.599</td><td>7.0</td></tr>
+<tr><td>2.600 - 2.649</td><td>6.8</td></tr>
+<tr><td>2.650 - 2.699</td><td>6.7</td></tr>
+<tr><td>2.700 - 2.749</td><td>6.6</td></tr>
+<tr><td>2.750 - 2.799</td><td>6.5</td></tr>
+<tr><td>2.800- 2.849</td><td>6.4</td></tr>
+<tr><td>2.850- 2.899</td><td>6.3</td></tr>
+<tr><td>2.900 - 2.949</td><td>6.2</td></tr>
+<tr><td>2.950 - 2.999</td><td>6.1</td></tr>
+<tr><td>3.000 - 3.049</td><td>6.0</td></tr>
+<tr><td colspan="2">(1)When a WMA Technology additive is used as thestabilizing agent, the DME/DMM may allow the MinimumAsphalt Content to be 0.30 lower than the values in Table C</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 292.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 111–113); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 291–297)</small></p>
+<p>In Asphalt Rich Base Course (ARBC) mixes, the air‑void content is characterized by a design air‑void percentage of 2.5% [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For pervious asphalt pavement systems (Section 420), the mixture’s bulk specific gravity is first established by any method listed in Table B, then the maximum theoretical specific gravity is obtained in accordance with AASHTO T 209; two specimens are gyrated according to AASHTO T 312 and their bulk specific gravities are averaged, after which the selected Table B method is applied to compute the air‑void percentage [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In Superpave mixture design for plant‑mixed asphalt courses (Section 413), a finished mixture is sampled and at least two test cylinders per sample are compacted in accordance with AASHTO T 312, each specimen’s bulk specific gravity is measured, and these values are combined with the theoretical maximum specific gravity to calculate percent air voids (V_a) and Voids in Mineral Aggregate (VMA) following AASHTO R 35 and Bulletin 27; the results are then compared with the tolerance limits set out in Table B [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For thin‑asphalt overlay courses (Section 412), compacted specimens sampled from the finished mixture and prepared per AASHTO T 312 undergo volumetric analysis, the bulk specific gravity is measured and the air‑void percentage (V_a) is calculated at the design density (N_design) using the procedures in AASHTO R 35 and Bulletin 27, with the values checked against the tolerances listed in Table C [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In stone matrix asphalt mixture design (Section 419 – Mixture Composition), air voids are quantified on compacted specimens prepared according to AASHTO T 312; bulk specific gravity is measured and V_a is calculated at N_design using the procedure outlined in AASHTO R 35, and the outcome is verified against the volumetric tolerances specified in Table E for multiple specimens [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During construction of stone matrix asphalt (Section 419 – Construction), laboratory testing of volumetric cores taken from the demonstration placement determines the percentage of air voids expressed as the design air‑void value (N_design = V_a) and also provides the mixture’s maximum specific gravity; testing is performed on three loose mixture samples and three pavement cores obtained from the first 100 tons of placement to ensure that the measured air‑void content meets the specification limits before full production [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=bbd31a37 src=408_2026_1::tab:p248#2 -->
+<p>The table below specifies the volumetric tolerance requirements for plant mixed, laboratory compacted mixtures.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-air-voids-2-cap" tabindex="0"><table class="ct-table" id="ct-air-voids-2" aria-describedby="ct-air-voids-2-sum">
+<caption id="ct-air-voids-2-cap">TABLE C Volumetric Tolerance Requirements of the Plant Mixed, Laboratory Compacted Mixture</caption>
+<thead>
+<tr><td></td><th scope="col">Single Specimen (n = 1)</th><th scope="col">Multiple Specimens (n ≥ 2)</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Air Voids at Ndesign (Va) from Target</th><td>±2.0%</td><td>±1.5%</td></tr>
+<tr><th scope="row">Minimum VMA %</th><td>16.0</td><td>-</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-air-voids-2-sum">Rows list volumetric properties of the mixture, columns give tolerance requirements for single or multiple specimens.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 248.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 111–113); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 248–309)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>In the Asphalt Rich Base Course (ARBC) specification, a design air‑void content of 2.5 % is required for mixes that are limited to &lt; 0.3 million ESAL designs; this low void level is intended to give the base layer its highest tensile strength and thereby improve resistance to bottom‑up cracking under traffic loading as well as to mitigate moisture‑induced damage during service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113)</small></p>
+<p>The relatively larger amount of air voids in gap‑graded mixtures is primarily a physical result of the missing finer size fractions, which creates space for stone‑to‑stone contact. Chemically, the reclaimed ground tire rubber causes binder particles to swell and raises binder viscosity, and because the mixture already contains many voids this high‑viscosity rubberized binder can be used without filling them completely, allowing a higher binder content and thicker film thickness. Mechanically, the stone‑to‑stone contact promoted by the gap grading helps distribute loads while the surrounding air‑void network influences deformation and durability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 128)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>In ARBC mixes the specification calls for design air voids of 2.5 % so that the asphalt base course attains the highest tensile strength at the bottom of the pavement section, which in turn promotes better resistance to bottom‑up cracking and moisture damage during its service life; insufficient or excessive air‑void content can compromise crack resistance and make the layer vulnerable to moisture‑induced deterioration. In SMA mix design the target air‑void content must be achieved by selecting an asphalt binder amount that provides the desired level, but this level can be compromised if the mixture is moisture‑susceptible or if the asphalt cement tends to draindown from the matrix; therefore evaluating both moisture susceptibility and draindown sensitivity is essential for maintaining durable air voids, and proper aggregate selection, a gradation that ensures stone‑on‑stone contact, and meeting the minimum VMA requirements also support the intended air‑void structure and overall pavement durability. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–124)</small></p>
+<p>Lower design air voids—specifically a target of 2.5% in Asphalt Rich Base Course (ARBC) mixes—are intended to give the base layer its highest tensile strength and thereby promote better resistance to bottom‑up cracking and moisture‑damage, which reduces the susceptibility of the air‑void structure to deterioration. Conversely, exposure to very high traffic loads (ESALs greater than 10 million) can increase the risk of rutting, a form of permanent deformation that may be aggravated by inadequate air‑void control, unless a polymer‑modified PG 64E‑22 binder is specified for the wearing course. Additionally, incorporating aramid fibers into the mix may further lessen crack initiation and propagation, provided the fibers are well distributed, which can also help protect the air‑void network from deterioration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–113)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>In the Asphalt Rich Base Course specification, design air voids are set to 2.5 % for mix designs that are less than 0.3 million ESALs, a level intended to give the base course its highest tensile strength at the bottom of the pavement and thereby promote better resistance to bottom‑up cracking and moisture damage, reflecting improved binder‑aggregate adhesion and reduced stripping during service life. In a gap‑graded asphalt mixture, the relatively larger amount of air voids creates space that accommodates the higher viscosity rubberized binder so that a thicker binder film can be placed without compromising compaction; because the void content is high, the blend can contain at least 15 % crumb rubber by weight and still meet the required physical properties, which improves stone‑to‑stone contact while maintaining adequate binder‑aggregate adhesion, and the increased film thickness also helps resist stripping under traffic loading, allowing the mixture to perform similarly to polymer‑modified binders. Air voids are quantified during the volumetric analysis of compacted specimens by calculating Va together with VMA as required by AASHTO R 35, and this measurement is linked to moisture susceptibility because the specification mandates a moisture‑susceptibility analysis to verify that the binder remains adhered to the aggregate and that stripping does not occur. Achieving at least 95.0 % coated particles helps ensure that the mixture can be placed and compacted without stripping, while any warm‑mix asphalt (WMA) technology additive used must not be detrimental to moisture resistance even though the minimum VMA may be lowered to a minimum of 16.5 %. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–128); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 291–294)</small></p>
+<p>The SMA design process calls for selecting an asphalt content that provides the desired air‑void level while also evaluating moisture susceptibility and asphalt‑cement draindown sensitivity, thereby recognizing moisture‑related stripping as a compatibility risk. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For pervious asphalt pavement systems, moisture‑induced stripping is identified as a compatibility risk unless an anti‑strip additive is employed, and the mix must be tested in accordance with ASTM D3625 on a finished specimen that exhibits at least 90 % coating to verify resistance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The specification requires the anti‑strip additive to be blended before mixing, using the manufacturer’s recommended dosage but not less than 0.25 % by weight of the asphalt, and the selected additive must be compatible with both the aggregate and the supplied asphalt so that it does not harm the completed concrete. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Recycled Asphalt Pavement is limited to a maximum of 10 % of the mixture, which controls any stiffness impact from RAP or RAS binders. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For stone matrix asphalt mixtures, a moisture‑susceptibility analysis is required for every SMA mix and any warm‑mix asphalt (WMA) technology additive, modifier or process must not be detrimental to the mixture’s resistance to moisture stripping. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] To avoid stripping, the mix must achieve at least 95 % coated aggregate particles, with the degree of particle coating monitored during production and, if this threshold is not met, plant adjustments such as longer mixing time are required. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Placement of the mix on a wet surface or when the air or surface temperature is 50 °F or lower presents a compatibility concern for air‑void performance because moisture and low temperature can impair proper compaction and increase stripping risk. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Both aggregates and the finished mixture must be free of unburned fuel oil and excess moisture as specified. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 123–124); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 291–309)</small></p>
+<h2 id="influence-of-production-and-placement">Influence of production and placement</h2>
+<p>In the construction of plant‑mixed asphalt courses, variations that cause the mixture’s volumetric properties to fall outside the limits prescribed for each specification are identified as having the strongest influence on long‑term air‑void behavior. For Section 413 mixtures, excess apparent moisture content above 0.5 % in the mix, asphalt‑content or gradation results that fail the tolerances of Table A, a theoretical maximum specific gravity that varies 0.030 or more from the previous test or from the JMF value, and any failure of compacted specimens to meet the air‑void limits in Table B all trigger corrective actions because they directly alter the percentage of voids left unfilled. For Section 412 thin‑asphalt overlay courses, departures from the prescribed volumetric tolerances are also critical: if aggregate gradation (percent passing the listed sieves) or asphalt content fall outside the limits set in Table B, or if bulk specific gravity and calculated air‑void values on one or more specimens do not meet the tolerances in Table C, the resulting mixture will have improper air‑void levels that can compromise durability. In Section 419 stone‑matrix asphalt wearing courses, construction practices that affect mixture quality or compaction are especially sensitive: placing the mix on wet surfaces or when the air or surface temperature is 50 °F or lower, allowing unburned fuel oil or excess moisture in aggregates or the finished blend, and delivering fibers with a proportioning system that deviates more than ±10 % of the required weight can produce non‑uniform void structures; using rollers that are not steel‑wheeled or operating them in vibratory mode without demonstrated absence of aggregate breakage or binder flushing introduces defects that compromise compaction and thus air‑void content; and failure to achieve the specified Air Voids values during the trial demonstration requires a repeat of placement, underscoring how these construction defects directly affect long‑term pavement performance. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 248–297)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>For Asphalt Rich Base Course applications that are used on new or reconstructed pavements where the total base‑course thickness exceeds six inches, the specification requires a design air‑void level of 2.5 % for mix designs whose predicted traffic is less than 0.3 million ESALs; this target is intended to give the base layer its highest tensile strength and to improve resistance to bottom‑up cracking and moisture damage during service life. For a Stone Matrix Asphalt wearing course, the air‑void level is controlled by the binder content after several prerequisite criteria are satisfied: proper aggregate materials must be selected, a stone‑on‑stone gradation must be achieved, and the gradation must meet or exceed the minimum voids in mineral aggregate so that the minimum binder content can be used. Once those conditions are met, the asphalt content is set to achieve the desired air‑void level, after which moisture susceptibility and draindown sensitivity are evaluated. For Superpave mixtures covered by Section 413, the specified air‑void level is governed by the volumetric tolerance limits listed in Table B of Section 413.2.1.d.5; the mix must be produced so that its measured bulk specific gravity determined according to AASHTO T 312 and the resulting air‑void percentage calculated at the design density (Ndesign) using AASHTO R 35 and Bulletin 27 fall within those tolerances. Compliance is demonstrated by averaging the results of all compacted specimens from a sample and confirming that this average meets the multiple‑specimen tolerance criteria. For thin asphalt overlay courses addressed in Section 412, air‑void specifications are driven by the requirement that the compacted mixture meet the volumetric tolerances set out in Table C; air voids (Va) are calculated at Ndesign using AASHTO R35 and the guidance of Bulletin 27, and any deviation from those Table C limits triggers corrective actions as defined in the quality‑control plan. In stone matrix asphalt mixtures described in Section 419, the specification of air voids is governed by the requirement that the compacted mix’s volumetric properties fall within the tolerances set out in Table E; Va must be calculated from the bulk specific gravity of SGC specimens per AASHTO R 35 and judged against the multiple‑specimen limits using the average result, with compliance verified during production by sampling at the frequency defined in the producer’s quality‑control plan, and any deviation triggering corrective action. When a warm‑mix asphalt technology additive serves as the stabilizing agent, the DME/DMM may permit the minimum VMA to be lowered to 16.5 %, which indirectly influences the allowable air‑void ranges. During the trial demonstration required by Section 419 construction, the air‑void content of an SMA mix must be verified against the design target N_design(Va), and the measured values have to fall within the specification limits established for the project; both the single‑sample tolerance and the multiple‑sample tolerance are applied, and if either limit is exceeded the contractor must repeat the demonstration until compliance is achieved. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 111–124); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 248–297)</small></p>
+<p>In the Pavement Policy Manual, adding aramid fiber‑modified courses to Superpave projects can improve the stability of air voids by delaying crack initiation and propagation when the fibers are uniformly distributed throughout the mix; this additive is permitted with PG 58S‑28, PG 64S‑22, and PG 64E‑22 binders for wearing, binder, and eligible base layers [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The manual also specifies that for new or reconstructed pavements whose total base course thickness exceeds six inches, an Asphalt Rich Base Course should be used to provide a bottom lift of three to six inches designed with air voids of 2.5% in order to give the lowest pavement layer the highest tensile strength and better resistance to bottom‑up cracking and moisture damage [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Further guidance in the same source states that improving the air‑void performance of a Stone Matrix Asphalt wearing course relies on proper aggregate selection and a gap‑graded gradation that yields stone‑on‑stone contact, together with a gradation that meets or exceeds the minimum VMA so the minimum binder can be used; incorporation of a fiber or polymer‑modified high‑asphalt‑content matrix and a higher mineral filler dosage placed in a special manner helps attain the target air‑void level, and systematic evaluation of moisture susceptibility and asphalt‑cement draindown sensitivity during production supports achieving and maintaining the desired air voids [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The manual also notes that improving the air‑void structure in a gap‑graded wearing course can be achieved by using an asphalt‑rubber binder that incorporates reclaimed ground tire rubber (crumb rubber modifier) at least 15 % of the total blend weight; the rubber particles, swelled during specialized high‑temperature mixing, are sized up to No. 8 mesh (2.38 mm) and raise the binder viscosity so that a higher binder content and thicker film thickness can be placed without filling the voids, thereby preserving the intended high air‑void level while providing stone‑to‑stone contact, and the resulting rubberized binder must satisfy the physical requirements of ASTM D6114 Table 1 Type II [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the Commonwealth of Pennsylvania Department of Transportation Publication 408/2026 Specifications, the air‑void structure of pervious asphalt mixes may be improved by using polymer additives or ground‑tire rubber in the binder, limiting recycled asphalt pavement to a maximum of 10 % of the mixture, and incorporating a heat‑stable anti‑strip additive blended with cement at not less than 0.25 % by weight of the asphalt; when moisture‑susceptibility testing indicates a need for stabilization, cellulose fibers can be added as a pervious‑asphalt stabilizer at a dosage rate within 0.2 % to 0.4 % by weight of the total mix, and a detailed quality‑control plan that includes air‑void determination using any method from Table B ensures conformity with design tolerances [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The same specification further requires that under Superpave mixture‑design requirements, improvement of air‑void performance is achieved by employing certified Level 1 and Level 2 plant technicians, calibrating all measuring and blending devices, and conducting daily volumetric analysis of compacted specimens to verify that calculated air voids meet Table B tolerances; apparent moisture content should not exceed 0.5 % and coarse‑aggregate water absorption must not exceed 2.0 %, with sampling required if the latter limit is exceeded, while approved warm‑mix asphalt additives or modifiers together with a compatible heat‑stable amine‑based liquid anti‑strip additive may be blended according to manufacturer dosage rates and documented in the producer’s QC plan; when reclaimed materials are used, the total combination of RAM and RAP should be limited to a maximum of 15 % of the mixture by mass unless documentation of SRL compliance is provided [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For thin‑asphalt overlay courses, the specification mandates that the mixture must be produced so that its volumetric properties conform to the tolerances set in Table C, which requires determining bulk specific gravity per AASHTO T 312 and calculating air voids (V_a) and VMA at N_design; any specimen falling outside the single‑ or multiple‑sample tolerances triggers immediate corrective actions followed by resampling of the completed mix within 150 tons of production to verify compliance, and when total asphalt content exceeds seven percent draindown sensitivity is evaluated and fibers may be added to reduce binder draindown if limits in Table A are exceeded; stabilizer types identified in Section 419.2(d) can also be employed, and warm‑mix technologies and anti‑strip additives listed in Sections 413.2(f)–(h) provide additional means to improve mixture stability that indirectly supports consistent air‑void performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The same document states that improvement of air‑void performance in stone‑matrix asphalt mixes is achieved by incorporating an approved warm‑mix asphalt technology additive, modifier or process during production and confirming that it does not impair moisture resistance; a rigorous quality‑control program that includes moisture‑susceptibility analysis, daily draindown testing per AASHTO T 305, and verification that the degree of particle coating is at least 95.0 %—with plant mixing time or other adjustments made when needed—supports target voids, while volumetric properties must meet Table E tolerances with bulk specific‑gravity testing (AASHTO T 312) used to calculate air voids and VMA; when a warm‑mix additive serves as the stabilizing agent, the minimum VMA may be reduced to 16.5 % provided all other specifications are satisfied [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Finally, control of air voids in stone‑matrix asphalt mixtures is further enhanced by modifying the mixing plant to accommodate warm‑mix asphalt technology additives, modifiers or processes that produce a uniform blend, and by installing a stabilizer supply system that meters fibers with devices interlocked to the plant and controlled to ±10 % of the required fiber weight, with calibration demonstrations satisfactory to the Representative; a comprehensive paving‑operation quality‑control plan—including a pre‑placement meeting, a trial demonstration strip, and testing of volumetric specimens for air voids at N_design V_a and maximum specific gravity—provides field verification that design limits are met, and ensuring that both aggregates and the finished mixture are free of unburned fuel oil and excess moisture further mitigates variability that could compromise air‑void performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 111–128); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 248–309)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>In the pervious‑asphalt pavement system (Section 420), air voids are evaluated in the laboratory by determining bulk specific gravity with any method listed in Table B, calculating the maximum theoretical specific gravity according to AASHTO T 209, and obtaining bulk specific gravity by gyrating two specimens in accordance with AASHTO T 312 and averaging the results; the mixture is also tested at the asphalt‑concrete plant laboratory for uniformity and production quality‑control tests are performed pursuant to Table C, after which material certifications that include air‑void results for asphalt content and gradation are submitted to the inspector. For Superpave mixtures (Section 413), the primary laboratory evidence consists of volumetric analysis of compacted specimens in which at least two specimens from each production sample are prepared following AASHTO T 312, their bulk specific gravity is measured per that method and used to calculate air voids (Vₐ) and VMA at the design density in accordance with AASHTO R 35 and Bulletin 27; compliance is demonstrated by meeting the multiple‑specimen tolerances listed in Table B, and the specification does not describe any field or long‑term performance tests for air voids. In the thin‑asphalt overlay courses (Section 412), air‑void evaluation follows a similar laboratory volumetric analysis: the completed mixture is sampled according to PTM No. 1 at the frequency defined in the producer QC Plan, at least two specimens per sample are prepared under AASHTO T 312, bulk specific gravity of each specimen is measured as prescribed in that test method and used to calculate Vₐ and VMA at Ndesign following AASHTO R 35 and Bulletin 27. For stone‑matrix asphalt mixtures (Section 419, Mixture Composition), air voids are assessed by laboratory volumetric analysis of compacted specimens with a minimum of two specimens prepared per AASHTO T 312, bulk specific gravity measured and Vₐ and VMA calculated at Ndesign using the procedures of AASHTO R 35 and Bulletin 27; the resulting values must satisfy the multiple‑specimen tolerances in Table E, and the same compacted specimens produced with a Superpave Gyratory Compactor provide the primary laboratory evidence for air‑void compliance. Field verification of air voids is performed by extracting three pavement cores after placing at least 100 tons of SMA on a trial demonstration strip, testing those cores for density, and confirming that the measured air‑void values meet the specification limits; this core testing complements the laboratory volumetric specimens. No separate long‑term performance tests for air voids are specified in any of the sections. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 248–309)</small></p>
+<p>In Superpave paving courses for Asphalt Rich Base Course (ARBC) mixes, the specification calls for design air voids of 2.5%; this targeted void level is intended to give the asphalt base course its highest tensile strength at the bottom of the pavement, which in turn promotes better resistance to bottom‑up cracking and improves moisture‑damage resistance of the bottom layer throughout service life, thereby enhancing overall durability and performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For Asphalt Rubber gap‑graded wearing courses, a relatively larger amount of air voids promotes stone‑to‑stone contact; together with the high‑viscosity rubberized binder it permits a higher binder content and a thicker film thickness, resulting in performance comparable to polymer‑modified binders and making AR‑GG mixtures appropriate for the same applications as SMA mixtures, while also requiring specialized mixing equipment to properly blend the rubber particles [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Air voids (Va) are calculated from the bulk specific gravity and must fall within the volumetric tolerances set out in Table C for Superpave thin‑asphalt overlay mixtures; producing a mixture with volumetric properties conforming to those tolerances is required for acceptance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If quality‑control test results on a single specimen (n=1) or on multiple specimens (n≥2) are not within the limits of Table C, immediate corrective actions may include suspending production until the cause is resolved, thereby ensuring that the designed density and aggregate structure needed for reliable pavement performance and durability are achieved [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During Stone Matrix Asphalt construction the mix must be verified by testing volumetric specimens for air voids at the design void level N_design(Va) together with the maximum specific gravity; measurements required to fall within specification limits, and if the measured air‑void content or any other parameter exceeds those limits, the contractor must repeat the demonstration strip before proceeding, ensuring that the pavement will be built with an acceptable void structure and thus meet performance expectations [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 111–128); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 248–297)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=e6ef5048 src=408_2026_1::tab:p293#2 -->
+<p>The table below specifies the volumetric tolerance requirements for laboratory compacted mixtures. It relates to the section <a href="#key-material-properties">Key material properties</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-air-voids-3-cap" tabindex="0"><table class="ct-table" id="ct-air-voids-3" aria-describedby="ct-air-voids-3-sum">
+<caption id="ct-air-voids-3-cap">TABLE E Volumetric Tolerance Requirements of the Laboratory Compacted Mix</caption>
+<thead>
+<tr><td></td><th id="ct-air-voids-3-h0-1" scope="col">Single Specimen (n=1)</th><th id="ct-air-voids-3-h0-2" scope="col">Multiple Specimens (n ≥ 2)</th></tr>
+<tr><th id="ct-air-voids-3-h1-0" scope="col">Air Voids at Ndesign (Va)</th><th id="ct-air-voids-3-h1-1" scope="col">±2.0% from JMF</th><th id="ct-air-voids-3-h1-2" scope="col">±1.5% from JMF</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-air-voids-3-h2-0" scope="row">Minimum VMA</th><td headers="ct-air-voids-3-h0-1 ct-air-voids-3-h1-1 ct-air-voids-3-h2-0">17.0(1)</td><td headers="ct-air-voids-3-h0-2 ct-air-voids-3-h1-2 ct-air-voids-3-h2-0">-</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-air-voids-3-sum">Rows list volumetric properties of the laboratory compacted mix. Columns provide tolerance requirements for single and multiple specimens.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 293.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

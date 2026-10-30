@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paving Fabric</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html" class="active" aria-current="page">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="rehabilitation.html">Rehabilitation</a><span class="crumb-sep">›</span><a href="overlay.html">Overlay</a><span class="crumb-sep">›</span><a href="asphalt-overlay.html">Asphalt Overlay</a><span class="crumb-sep">›</span><a href="interlayer.html">Interlayer</a><span class="crumb-sep">›</span><span class="crumb-current">Paving Fabric</span></nav>
+<article><h1>Paving Fabric</h1>
+<div class="meta"><div class="part-of">Part of: <a href="interlayer.html">Interlayer</a> <span class="edge edge-taxonomic" title="Paving Fabric is a topic under Interlayer.">is-subtopic-of</span></div><div class="edge-reading">Paving Fabric is a topic under Interlayer.</div><div><a class="tag" href="index.html?q=paving-fabric">paving-fabric</a><a class="tag" href="index.html?q=geotextile-paving-fabric">geotextile-paving-fabric</a><a class="tag" href="index.html?q=asphalt-saturated-fabric-membrane">asphalt-saturated-fabric-membrane</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>Paving fabric is a needle‑punched, nonwoven geotextile classified as a Type II product under AASHTO M 355/M 355 that contains at least 85 % by weight of stable synthetic fibers such as polyolefins, polyesters or polyamides and has one side heat‑set to limit asphalt bleed‑through [1][2]. When placed as an interlayer beneath a field‑applied hot‑mix asphalt overlay it becomes an asphalt‑saturated membrane that acts as both a moisture barrier and a stress‑absorbing layer, thereby retarding reflective cracking and extending the service life of the pavement [1][2]. Proper performance requires the asphalt binder to be applied at 290 °F–320 °F and saturated at roughly 0.22–0.28 gallons per square yard so that a durable bond forms, while the fabric’s thermal stability, resistance to chemical attack, rot and mildew, and its millability (or designed disintegration) govern durability and recyclability [1][2].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#influence-of-production-and-placement">Influence of production and placement</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>Paving fabric is a needle‑punched nonwoven geotextile that, when embedded in a field‑applied asphalt layer, becomes an asphalt‑saturated fabric membrane. In the Pennsylvania Department of Transportation specifications it is classified as a Type II product under AASHTO M 355/M 355 and consists of a stable‑fiber, needle‑punched, nonwoven fabric containing at least 85 % by weight polyolefins, polyesters or polyamides. Properly installed it serves as a pavement moisture barrier and a stress‑absorbing interlayer that helps retard reflective cracking and thereby extends the pavement’s service life. The fabric is heat‑set on one side so that, when placed as an interlayer before the asphalt cement cools, it reduces asphalt material bleed‑through and minimizes pick‑up of the fabric by construction equipment during installation. The application rate must saturate the geotextile paving fabric to ensure bonding of the fabric to the existing pavement surface. Overlaps are required to be covered with asphalt as well. Do not install geotextile paving fabric in areas where the overlaid asphalt tapers to a minimum compacted thickness of less than 1 1/2 inches. While the material is millable, field experience has shown that large pieces may remain intact and create issues with the recycling process unless the fabric is designed to break down during milling. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>Paving fabric is defined as a needle‑punched nonwoven geotextile that serves as an asphalt‑saturated membrane when embedded in hot mix asphalt, providing a moisture barrier and a stress‑absorbing interlayer to retard reflective cracking and extend pavement life. Both the Pavement Policy Manual and the Pennsylvania Department of Transportation specifications describe the material as being composed of stable synthetic fibers such as polyolefins, polyesters or polyamides. The Pennsylvania specification further requires that at least 85 % by weight of the fabric be these polymer fibers. In composite variants the nonwoven matrix may be mechanically reinforced with a bonded network of glass filaments, enhancing strength. The fabric is heat‑set on one side to limit asphalt bleed‑through and to reduce the likelihood of the material being picked up by construction equipment during placement. It must resist chemical attack, rot and mildew and be free of tears or other defects that could alter its physical properties. Because the fabric is millable, certain products are formulated to break down more completely during milling operations, whereas others are intended to remain intact after milling. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 317)</small></p>
+<p>The paving fabric used as an interlayer is a needle‑punched nonwoven whose performance is governed by the fibers selected, which may be polyolefins, polyesters, polyamides or reinforced glass filaments incorporated in composite grids, and by the density of the needle‑punching that bonds those fibers together [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the specification it must consist of at least 85 % by weight of polyolefins, polyesters or polyamides, and any reduction below that threshold can diminish its resistance to chemical attack and increase the likelihood of tears that would adversely alter its physical properties [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When the fabric is engineered to break down during milling, the particular composition and processing reduce recycling problems, whereas fabrics that remain intact can impede mill recovery, so variations in material makeup, source fibers, needle‑punching intensity, and proportion of reinforcing elements directly influence barrier performance, crack‑reflection mitigation, durability, and compatibility with subsequent milling operations [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The fabric is required to be heat‑set on one side, a processing step that controls asphalt bleed‑through and makes the material less prone to being picked up by construction equipment during installation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For hot‑in‑place recycled (HIR) treatments, the presence of fiber‑based paving fabric within the top 2 inches of an existing pavement renders the pavement unacceptable, and if such fabric has already been installed it must be positioned at least 1½ inches below the specified HIR cut depth to allow successful treatment [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The composition also dictates the asphalt saturation rate needed for full bonding; geotextile paving fabrics and composite reinforcing grids must be saturated at rates roughly between 0.19 and 0.28 gallons per square yard, with the geotextile specifically requiring 0.22‑0.28 gal/yd², while fiberglass mesh grids require only about 0.02‑0.05 gal/yd² [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. These saturation rates are coupled with temperature limits that depend on the fabric type: asphalt material temperature must stay at a minimum of 290 °F and not exceed 320 °F for all interlayer fabrics, and fiberglass mesh additionally requires the pavement surface temperature to be between 40 °F and 140 °F before placement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Consequently, changes in the fabric’s composition or proportioning directly alter the required asphalt application rate, temperature limits, and overlap handling during construction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>Paving fabric is specified as a needle‑punched, nonwoven material whose physical structure derives from a stable‑fiber matrix composed of at least 85 % by weight polyolefins, polyesters or polyamides; this composition supplies the basic physical framework required for pavement applications and underpins its mechanical stability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The fabric must be thermally stable so that it can endure the hot‑mix asphalt placement without loss of properties, and the temperature of the asphalt mix shall not exceed 320 °F to avoid damage to the interlayer system [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Chemical performance is addressed by requiring compatibility with the asphalt binder to develop a strong internal adhesive or mechanical bond within the asphalt matrix, while the material also must resist chemical attack, rot and mildew; together these characteristics help maintain integrity of the interlayer over its service life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Physical durability includes resistance to tearing or other defects that could alter its properties, the ability to survive handling, laying, and paving operations without breakdown, and the capacity to be milled or to break down during recycling as part of its long‑term performance criteria [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The fabric is heat‑set on one side to reduce asphalt bleed‑through and to lessen the likelihood of being picked up by construction equipment, contributing to both moisture barrier function and ease of installation; proper storage requires keeping the material dry, wrapped, elevated off the ground and protected from ultraviolet light, precipitation, chemicals and sparks until placement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Installation guidelines call for mechanical or manual laydown equipment that provides a smooth surface with minimal wrinkling or folding, indicating that the fabric must retain its integrity under handling and installation stresses [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<p>According to the construction specifications, the paving fabric’s classification is established by its ASTM D4873 label, which identifies the product type and performance criteria. Its bonding capacity is characterized by a required saturation application rate that must fully wet the geotextile fabric, specified as 0.22 gallons per square yard to 0.28 gallons per square yard for the geotextile paving fabric. These quantitative rates serve as the primary metric for confirming that the fabric’s absorbency and adhesion properties meet the manufacturer’s recommendations during installation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>In overlay applications, a needle‑punched nonwoven geotextile paving fabric that is embedded in field‑applied asphalt functions as an asphalt‑saturated membrane providing a moisture barrier and a stress‑absorbing interlayer, retarding crack reflection and extending pavement life. The confinement of aggregate by the fabric impedes movement, ensures better compaction, and provides greater bearing capacity so that load transfer occurs with less deformation. Because the material is defined as a stable‑fiber, needle‑punched nonwoven consisting of at least 85 % polyolefins, polyesters or polyamides, it is expected to maintain performance under typical loading conditions encountered in overlay applications. The interlayer must be thermally stable and physically durable to withstand the paving operation and must not exhibit property or performance breakdown over time. Heat‑setting on one side limits asphalt bleed‑through and reduces the likelihood of the fabric being picked up by equipment, indicating a degree of thermal stability during hot‑mix placement. During placement the temperature of the asphalt material bonded to the paving fabric must be kept below 320 °F; higher temperatures can cause damage to the interlayer system. The fabric must stay dry during handling, storage and installation—being stored elevated, wrapped and covered to shield it from precipitation, chemicals and ultraviolet light—and may not be placed on a wet pavement. Freeze‑thaw cycles that cause expansion and contraction of water in the pavement can be mitigated because a thicker overlay with an interlayer system may delay cracking longer in harsh environments. The paving fabric must be resistant to chemical attack, rot and mildew and must be free of tears or defects that could alter its physical properties, ensuring integrity when subjected to stresses of construction and service. Because the fabric is millable, large pieces can remain intact after milling, creating recycling issues; some fabrics are designed to break down more completely during milling to prevent such problems. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<p>In the overlay context described in Section 5.12 OVERLAYS, the physical role of geotextile paving fabric as a moisture barrier and stress‑absorbing interlayer retards reflective cracking and extends pavement life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The fabric also physically confines aggregate particles, improving compaction, bearing capacity and load transfer while limiting deformation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Chemically, the interlayer material must be compatible with the hot mix to provide a strong internal adhesive or mechanical bond within the asphalt matrix [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The material must be resistant to chemical attack, rot and mildew so that its structure does not degrade, and one side is heat‑set to limit asphalt bleed‑through and reduce equipment pick‑up during installation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Thermally, the asphalt binder used to activate the fabric must be kept between a minimum temperature of 290 °F and must not exceed 320 °F so that sufficient tackiness is achieved without damaging the interlayer system (Section 466.3) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Adhesively, the binder must be applied at a rate of approximately 0.22‑0.28 gallons per square yard to fully saturate the geotextile and ensure uniform bonding to the prepared surface (Section 466.3) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Mechanically, installation requires a smooth laydown with minimal wrinkling or folding, using brooming or rubber‑tire rolling, or both, to maximize contact pressure between fabric and pavement surface (Section 466.3) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The fabric must remain free of tears or other defects that would compromise its tensile integrity and overall performance in pavement layers (Section 466.2) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Physically, the fabric is a stable needle‑punched nonwoven composed of at least 85 % polyolefins, polyesters or polyamides (Section 466.2) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The interlayer must be thermally stable and physically durable so that its properties do not break down during paving or over time (Section 5.12 OVERLAYS) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Throughout shipping and storage the material must remain dry, wrapped and protected from ultraviolet light, precipitation, chemicals and sparks to preserve its moisture barrier and structural integrity (Section 466.2) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>For overlay applications, the interlayer fabric must stay thermally stable and physically durable during placement; otherwise it may experience property or performance breakdown over time [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Large intact pieces that resist milling can remain in reclaimed millings and create recycling problems, so fabrics engineered to disintegrate more completely during milling are preferred [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. During storage, handling, or installation the material must be kept dry, wrapped, elevated off the ground and covered so that ultraviolet light, precipitation, chemicals or sparks cannot cause damage; any damaged outer wrap must be discarded before use [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Placement on a wet surface is prohibited because the fabric must never be laid on a wet pavement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The temperature of the hot asphalt binder may not exceed 320 °F, since higher temperatures can damage the interlayer system [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Mechanical injury such as wrinkling, folding, abrupt starts or stops of equipment, or insufficient adhesion requires removal and replacement of the affected fabric [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Chemically, the fabric must be resistant to chemical attack, rot and mildew, and it must have no tears or defects that will adversely alter its physical properties [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. A heat‑set treatment on one side is required to reduce asphalt bleed‑through and to minimise pick‑up by construction equipment during installation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<p>In overlay applications a needle‑punched nonwoven geotextile paving fabric that becomes an asphalt‑saturated membrane provides a moisture barrier and stress‑absorbing interlayer, and its susceptibility to deterioration is reduced when the material is thermally stable, physically durable, compatible with the asphalt binder, and designed to break down during milling; a minimum thickness of 1 ½ inches is recommended for milling grids. Large intact pieces that resist milling can create recycling problems, and exposure to water intrusion or freeze‑thaw cycles can accelerate distress if the moisture‑barrier function is compromised. Locating the fabric less than the required depth increases its susceptibility to damage during cutting, so the fabric must be a minimum of 1 ½ inches below the specified HIR cut depth, and any geosynthetic material placed in the top 2 inches makes the pavement unacceptable for the HIR process, indicating that near‑surface exposure heightens vulnerability. The material specification improves durability when the fabric is a stable‑fiber, needle‑punched nonwoven composed of at least 85 % by weight polyolefins, polyesters or polyamides and is heat‑set on one side, because the heat‑setting limits asphalt bleed‑through and reduces pick‑up during placement. The fabric must also be resistant to chemical attack, rot and mildew and contain no tears or defects that would adversely alter its physical properties; susceptibility rises if those resistances are lacking or any tears or defects are present. During construction the susceptibility of the paving fabric to deterioration increases when it is exposed to ultraviolet light, precipitation, chemicals, sparks, temperatures above 320 °F, or wet pavement, and when its protective outer wrap is damaged before installation. Risk is reduced by keeping the material dry and wrapped, storing it elevated off the ground and covered, discarding any damaged wrap, maintaining asphalt‑material temperature between a minimum of 290 °F and not exceeding 320 °F during placement, and avoiding placement on wet pavement or proceeding with overlay until rainfall has dried all. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>Paving fabric is a needle‑punched nonwoven that becomes an asphalt‑saturated membrane when embedded in the field‑applied mix and acts as a moisture barrier and stress‑absorbing interlayer that retards reflective cracking and extends pavement life. Because the fabric must be compatible with the asphalt, it forms a strong internal adhesive or mechanical bond within the asphalt matrix, which improves binder‑aggregate adhesion and reduces stripping caused by water intrusion. The saturated fabric also embeds into the new overlay, providing tensile and torsional reinforcement that further stabilizes the surface. The paving fabric forms a durable bond with the underlying asphalt binder only when the asphalt material is applied at a rate that fully saturates the geotextile, which is specified as 0.22 – 0.28 gal per square yard. The bond also requires the binder temperature to remain within its required window of at least 290 °F but not exceeding 320 °F so that the fabric can be placed onto a tacky surface before the asphalt cement cools. Placement must extend six inches beyond each side of the fabric and any overlaps must be covered with additional asphalt material to maintain continuous adhesion. The fabric is a stable, needle‑punched nonwoven composed of at least 85 % polyolefins, polyesters or polyamides; it must be resistant to chemical attack, rot and mildew so that it does not degrade when placed against the asphalt binder, and it must have no tears or defects that would adversely alter its physical properties. Because one side of the fabric is heat‑set, asphalt material bleed‑through is reduced and fabric pick‑up by construction equipment during installation is minimized, helping to preserve a clean interface between the binder and the underlying layers and preventing stripping or adhesion problems with the aggregate‑binder mix. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<p>In the context of overlay applications, paving fabric must be compatible with the asphalt binder so that it forms a strong internal adhesive or mechanical bond within the asphalt matrix; otherwise the interlayer will not perform as intended [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The material also has to remain thermally stable and physically durable during paving because any property or performance breakdown over time would compromise the overlay [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. If the moisture‑barrier function of the fabric is lost, water can intrude into the structural section and cause stripping and other distress such as loss of subgrade support [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For construction of asphalt paving interlayer systems, moisture is a compatibility concern because the fabric must be kept dry during shipping and storage and it may not be placed on wet pavement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The temperature of the asphalt material used to saturate the geotextile fabric must be at least 290 °F for performance‑grade binders but must not exceed 320 °F, otherwise the interlayer system can be damaged [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The specification does not address other potential incompatibilities such as binder modifiers or additives, RAP or RAS binder stiffness, deleterious or contaminated aggregates, fuel or solvent contamination, or debonding of dissimilar layers [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<h2 id="influence-of-production-and-placement">Influence of production and placement</h2>
+<p>Because the interlayer fabric bonds to a tacky asphalt coat, the construction temperature of the asphalt must be carefully controlled; the source requires the asphalt material to stay at least 290 °F and not exceed 320 °F, otherwise the fabric can be damaged. The fabric must be laid before the asphalt cools enough to lose tackiness and should never be placed on a wet surface, ensuring full saturation at the specified application rate. Immediate brooming or rubber‑tire rolling after placement maximizes contact and prevents wrinkling, while proper shipping and storage—keeping the material dry, wrapped, and protected from weather—preserves its integrity before installation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<p>The placement method dominates long‑term performance because leaving large fabric pieces intact can hinder later milling and recycling, whereas fabrics designed to break down during milling avoid that problem [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A compatible tack coat and binder must be applied so the interlayer forms a strong internal adhesive bond, and the material itself must be thermally stable and physically durable to prevent property or performance breakdown over time [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Construction practices that impair bonding or physically damage the sheet are identified as the most influential factors on long‑term behavior [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For pavements covered under SECTION 466 – ASPHALT PAVING INTERLAYER SYSTEM &gt; 466.3 CONSTRUCTION, a surface that is not dry, clean and free of dirt, gravel, vegetation, oil or loose debris, and that contains unsealed cracks prevents the tack coat from fully saturating the fabric at the required application rate of 0.22 gal per square yard to 0.28 gal per square yard; this condition can lead to premature delamination [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Placing the interlayer on wet pavement, allowing rain before the overlay is placed, or using asphalt material temperatures that exceed 320°F are actions that may damage the fabric [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Wrinkles or folds equal to or greater than 1 in that remain unrepaired and overlaps shorter than the mandated 1‑inch minimum create stress concentrations that reduce durability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Improper storage, including exposure to moisture, ultraviolet light, chemicals, or a damaged outer wrap, can degrade the fabric prior to installation [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any construction‑induced tear or other defect that adversely alters the fabric’s physical properties compromises its resistance to chemical attack, rot and mildew and may permit premature asphalt bleed‑through [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The fabric is heat‑set on one side; a missing heat‑set treatment increases the likelihood of material pickup by equipment and diminishes the barrier function [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>In selecting a geotextile paving‑fabric interlayer for an overlay, the pavement policy manual advises that the decision be based on pavement‑specific considerations such as the type and severity of existing distresses, the required final surface treatment material and its thickness, prevailing climate and traffic conditions, potential moisture or water damage, and the relative cost benefit. The fabric must be compatible with the asphalt to provide a strong internal adhesive or mechanical bond and it must remain thermally stable and physically durable throughout construction and service life. Because the paving fabric can be milled, the guidance recommends an overlay with a minimum thickness of 1½ inches to mill the grids, and the specifications further prohibit installation where the overlaid asphalt tapers to a compacted thickness of less than 1½ inches. When a Hot‑In‑Place Recycled asphalt overlay is planned, any existing paving fabric must be positioned at least 1½ inches below the specified HIR cut depth so that it does not interfere with the recycled layer. Selection of the fabric material is governed by Bulletin 15 and AASHTO M 355/M 355 for Type II fabrics, which require a stable‑fiber, needle‑punched nonwoven composed of at least 85 % by weight polyolefins, polyesters or polyamides. The fabric must be expressly designed for pavement applications, heat‑set on one side to limit asphalt bleed‑through and to reduce pickup by construction equipment, and it must demonstrate resistance to chemical attack, rot and mildew while being free of tears or other defects that could degrade its physical properties. The construction specification calls for an asphalt tack coat application rate that saturates the fabric at 0.22 to 0.28 gallons per square yard, and the installed width should equal the fabric width plus six inches on each side. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 115–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<p>Selecting paving fabrics engineered to disintegrate during milling can reduce recycling problems [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Ensuring full compatibility of the fabric with the asphalt binder and tack coat promotes a strong internal bond, and manufacturers should verify thermal stability and durability for the paving operation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The Pavement Policy Manual recommends high‑strength fiberglass mesh grids pre‑installed with pressure‑sensitive adhesive or applied with a lightweight carrier fabric as alternatives when both moisture barrier and reinforcement are required [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Composite reinforcing grids that combine polyolefin or polyester nonwovens with reinforced glass filaments provide simultaneous barrier function and tensile reinforcement, serving as another alternative [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Proper quality control under the Manual includes consulting suppliers for correct tack coat and asphalt mix requirements and following installation guidelines that specify a minimum overlay thickness of 1 ½ inches when milling grids [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The specification requires the paving fabric to be a stable, needle‑punched nonwoven composed of at least 85 % by weight polyolefins, polyesters or polyamides, and to be resistant to chemical attack, rot and mildew, free of tears or defects, and heat‑set on one side to reduce asphalt bleed‑through and minimize equipment pick‑up [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Quality‑control measures therefore focus on confirming the fiber composition, inspecting for tears, testing resistance to chemicals, rot and mildew, and verifying that the heat‑setting process has been applied [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When additional reinforcement is desired, a high‑strength open fiberglass mesh grid meeting a minimum aperture of 0.5 inch by 0.5 inch, tensile strength of 560 lb/in by 560 lb/in, maximum elongation of 3 %, melting point of at least 420°F and mass of at least 10 oz per square yard may be substituted [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Alternatively, a composite reinforcing grid that laminates the paving fabric to a high‑modulus glass filament network with a minimum tensile strength of 460 lb/in by 460 lb/in, elongation less than 5 %, melting point of at least 320°F and mass of at least 10 oz per square yard is also permitted [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The specification further mandates strict quality‑control steps such as having a manufacturer’s technical representative present for all installation phases, conducting pre‑placement meetings that cover tack coat type and application rates, storing the material dry, wrapped and labeled to ASTM D4873 standards, and protecting it from ultraviolet light, precipitation, chemicals and sparks [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. During placement the asphalt binder temperature must be maintained between 290°F (minimum) and 320°F (maximum) so that the fabric is not damaged [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The tack coat must be applied at a rate that fully saturates the geotextile, specified as 0.22‑0.28 gal/yd², while alternative grids require 0.02‑0.05 gal/yd² for fiberglass mesh and 0.19‑0.28 gal/yd² for composite reinforcing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Ensuring a clean, dry, level surface, using equipment that minimizes wrinkling, brooming or rubber‑tire rolling to maximize contact, and promptly removing any damaged fabric also mitigate weaknesses [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–120); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>The paving fabric is a stable‑fiber, needle‑punched nonwoven that must contain at least 85 % by weight of polyolefins, polyesters or polyamides, a composition that provides the stiffness and durability needed to reinforce an asphalt overlay and limit reflective cracking [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When embedded in a field‑applied asphalt layer, the needle‑punched fabric becomes an asphalt‑saturated membrane that functions as a moisture barrier and a stress‑absorbing interlayer, thereby retarding reflective cracking and extending pavement life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Because the fabric is millable, designers may consider a thinner overlay, yet the guidance recommends a minimum overlay thickness of 1 ½ inches when milling grids to ensure proper removal [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Fabrics that are engineered to break down during milling are preferred because large intact pieces can remain and create recycling issues [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For Hot‑In‑Place Recycled (HIR) projects, any paving fabric present on the site must be positioned at least 1 ½ inches below the specified HIR cut depth; with typical HIR depths of 1 ½ inches that may range from 1 to 2 inches, this separation preserves the required asphalt thickness and helps the recycled mix perform as intended [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. During construction the geotextile must be saturated with asphalt at a rate of 0.22 gallons per square yard to 0.28 gallons per square yard so that the tacky surface bonds the fabric to the existing pavement, which is essential for stress distribution and resistance to reflective cracking [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The asphalt material temperature must not exceed 320°F and must be at least 290°F for performance‑grade liquid binders; exceeding these limits could damage the interlayer system and reduce durability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Installation requires a smooth laydown with minimal wrinkling, a target width equal to the fabric width plus six inches on each side, avoidance of wet pavement, and an overlay thickness not less than 1 ½ inches, thereby influencing design tolerances and construction sequencing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Any damaged interlayer material must be removed and replaced at no additional cost, allowing maintenance actions to restore performance without extra expense [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 115–133); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 317–319)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

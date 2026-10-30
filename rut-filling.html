@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rut Filling</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html" class="active" aria-current="page">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-preservation.html">Pavement Preservation</a><span class="crumb-sep">›</span><span class="crumb-current">Rut Filling</span></nav>
+<article><h1>Rut Filling</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-preservation.html">Pavement Preservation</a> <span class="edge edge-taxonomic" title="Rut Filling is a topic under Pavement Preservation.">is-subtopic-of</span></div><div class="edge-reading">Rut Filling is a topic under Pavement Preservation.</div><div><a class="tag" href="index.html?q=rut-filling">rut-filling</a><a class="tag" href="index.html?q=rut-filling">rut-filling</a><a class="tag" href="index.html?q=rut-fill">rut-fill</a><a class="tag" href="index.html?q=rut-filler">rut-filler</a><a class="tag" href="index.html?q=fill-ruts">fill-ruts</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>Rut filling is a preservation treatment that targets pavement rutting—depressions or grooves formed under traffic loading on pavements whose underlying structure remains sound and where the distress is not caused by base failure[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It uses a polymer‑modified emulsified asphalt micro‑surfacing system applied with specialized equipment, including a movable steel strike‑off bar, to re‑profile the rutted lane and restore surface smoothness, ride quality and skid resistance without requiring a full structural overlay[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The treatment is limited to shallow (&lt;½ in), moderate (½–1¼ in) or deep (up to 2 in) ruts on sound flexible or concrete pavements, and is performed only after a pre‑placement meeting and under weather constraints of ambient temperatures ≥50 °F with no imminent rain or freezing within 24 hours[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#reference-tables">Reference tables</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>Rut filling is specified to address pavement rutting, a distress manifested as depressions or grooves that develop under traffic loading and related factors and that signals fatigue and loss of surface smoothness, thereby degrading ride quality and skid resistance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The treatment is applied when these ruts are present but the underlying pavement structure remains sound and the distress is not caused by base failure, allowing restoration of surface smoothness without a full resurfacing operation [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. According to the micro‑surfacing guidelines, shallow ruts less than ½ inch, moderate ruts from ½ inch to 1¼ inch, and deep ruts up to 2 inches may be treated, either as a nonsurface leveling course in conjunction with an overlay or as a surface re‑profiling course [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The specification further requires a pre‑placement meeting to identify any pavement sections exhibiting signs of excessive rutting, and mandates furnishing rut‑filling equipment equipped with a movable steel strike‑off bar to re‑profile the surface [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 104–106), Ch. 12 (pp. 204–205); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 338)</small></p>
+<p>In section 5.4, the objective of rut filling with polymer‑modified emulsified asphalt (Micro Surfacing) is to restore the pavement’s functional surface by re‑profiling rutted lanes and regaining smoothness or skid resistance on structurally sound pavements, emphasizing restoration of functionality rather than merely preventing further deterioration. In section 12.3, the Pavement Preservation guidelines state that micro‑surfacing or an ultra‑thin bonded wearing course may be employed for rut filling with the explicit purpose of improving skid resistance and ride quality; because these treatments must occur early in the maintenance cycle before advanced distresses emerge, their main aim is likewise to restore functional performance of the pavement surface. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 104), Ch. 12 (pp. 204–205)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The rutting addressed by micro‑surfacing occurs on four‑lane roadways where only the travel lane is rutted, as well as in special cases such as over trolley tracks, granite blocks, and on sound jointed plain or reinforced concrete pavements. Its extent is limited to those localized depressions rather than a full‑width failure, and because the pavement is structurally sound and the distress is not related to base failure the severity is confined to surface deformation. Although the source does not specify a progression rate, it notes that untreated rutting can degrade ride quality and skid resistance, so micro‑surfacing is applied to re‑profile the surface and restore skid resistance, thereby mitigating safety or operational impacts. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 104)</small></p>
+<p>The source identifies moisture infiltration as a pavement condition that contributes to the distress addressed by rut filling, noting it among the factors considered when selecting a micro‑surfacing project. No other mechanisms such as drainage failure, inadequate structural capacity, weak support, material aging, poor construction, environmental exposure, or heavy loads are mentioned, so the treatment is limited to sealing cracks and filling ruts rather than mitigating those unreferenced causes. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 105)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Rut filling with polymer‑modified emulsified asphalt micro‑surfacing is appropriate for pavements that are structurally sound and do not require a significant amount of base repair, provided the rutting is not caused by base failure. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The method may be used on four‑lane roadways where only the travel lane is rutted, as well as in special site situations such as over trolley tracks or granite blocks, and it can be applied to sound jointed plain or reinforced concrete pavements without needing a structural overlay. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] It performs well under traffic when proper construction controls are maintained. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The treatment is suitable where the pavement exhibits low‑severity cracking, low to medium severity raveling or weathering, friction loss, and moisture infiltration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Rut depth must fall within the mix‑type limits, namely shallow less than ½ inch for Type A, moderate from ½ inch to 1 ¼ inch for Type B, or deep up to 2 inches for Type RF. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Prior to placement a pre‑placement meeting must identify any areas showing signs of fatigue or excessive rutting. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The entire surface to be treated must be dry enough to permit satisfactory penetration and adhesion, the ambient temperature must remain at least 50 °F throughout placement, rain must not be imminent, and no freezing temperatures may occur within 24 hours after application. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Application is prohibited from September 16 to April 30 in Districts 1‑0, 2‑0, 3‑0, 4‑0, 10‑0, and 5‑0 (Monroe, Carbon, Schuylkill Counties) and from October 1 to April 30 in Districts 6‑0, 8‑0, 9‑0, 11‑0, 12‑0, and 5‑0 (Berks, Lehigh, Northampton Counties). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Site preparation must include the required pre‑placement meeting with contractor and PennDOT personnel and use of the specified mixing and spreading equipment to ensure uniform application. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 104–105); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 338)</small></p>
+<p>Within the polymer‑modified emulsified asphalt paving system (micro surfacing) described in section 5.4, rut filling should be avoided when the pavement is not structurally sound, when significant base repair or a structural overlay is required, or when the distress that produced the rut is tied to base failure; in those cases another maintenance, preservation, rehabilitation, or repair method must be selected instead of micro‑surfacing rut fill. In addition, micro surfacing is appropriate only when the road surface exhibits low severity cracking, low to medium severity raveling or weathering, friction loss, and moisture infiltration, and when the rut depth falls within the defined limits—shallow (less than 1/2 inch), moderate (1/2 inch to 1 ¼ inch) or deep up to 2 inches. If any of those low‑severity criteria are exceeded or if ruts are deeper than the maximum of 2 inches, micro surfacing is unsuitable and another maintenance, preservation, rehabilitation, or repair approach should be considered. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 104–105)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>Coring of the existing pavement is required to establish the milling depth needed to eliminate the rut, and the extracted cores are inspected to determine both the rut depth and the integrity of the underlying material; this core inspection confirms whether the remaining structure can accommodate the prescribed overlay or recycling treatment [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The specification requires a pre‑placement meeting on site (or at an acceptable location) attended by both Contractor and PennDOT personnel, during which the pavement is inspected for any areas that exhibit signs of fatigue or excessive rutting, and those identified locations determine where rut filling may be applied [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 12 (pp. 204–205); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 338)</small></p>
+<p>According to the Pavement Policy Manual (Publication 242, Change No. 10), section 12.3 DESIGN GUIDELINES | 5.4 POLYMER‑MODIFIED EMULSIFIED ASPHALT PAVING SYSTEM (MICRO SURFACING) &gt; B. Project Selection, rut filling with micro‑surfacing should be applied only when the pavement remains structurally sound, the distress consists principally of surface ruts, and there is no indication of base failure or a requirement for a structural overlay; under such circumstances the treatment can re‑profile the travel lane without additional resurfacing [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The same manual recommends the treatment when the pavement exhibits low severity cracking, low to medium severity raveling or weathering, friction loss, moisture infiltration, or other minor surface irregularities, and it specifies that the selection of micro‑surfacing type follows rut depth—Type A for shallow ruts less than 1/2 inch, Type B for moderate ruts from 1/2 inch to 1 1/4 inch, and Type RF for deep ruts up to 2 inches; it further states that the treatment should be applied early in the maintenance cycle, before advanced distresses emerge, to restore surface smoothness and preserve structural integrity [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the Commonwealth of Pennsylvania Department of Transportation Publication 408/2026 SPECIFICATIONS, section 483.3 CONSTRUCTION, rut filling is scheduled when a pre‑placement meeting identifies pavement sections that exhibit signs of fatigue or excessive rutting, and placement may proceed only if the entire surface can accept satisfactory penetration and adhesion and the ambient temperature does not fall below 50 °F for the duration of the work with no imminent rain or freezing within 24 hours [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 104–105), Ch. 12 (pp. 204–205); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 338)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Rut filling can be carried out using a polymer‑modified emulsified asphalt paving system, commonly termed Micro Surfacing, on pavements that are structurally sound and do not require extensive base repair, and the treatment may be applied directly to re‑profile rutted travel lanes or special areas such as over trolley tracks and granite blocks. When the existing pavement is jointed plain concrete (JPCP) or jointed reinforced concrete (JRCP), no Superpave scratch or leveling course should be placed before the Micro Surfacing is applied. The micro‑surfacing material is supplied in three mix types—Type A, Type B, and Type RF—each intended for different rut depths. Type A is used to seal cracks, fill voids, and treat shallow ruts less than ½ inch deep; Type B addresses moderate ruts ranging from ½ inch to 1¼ inch and may serve as a scratch, leveling or seal‑coat course; and Type RF is specified for deep ruts up to 2 inches in a single pass. Both Type A and Type B mixes may be employed as alternatives to a 4.75 mm Superpave scratch course. The recommended application procedure normally calls for a double pass unless the road surface is judged to be in excellent condition, and on Interstate facilities a double application of Type A SRL‑E is advised even when conditions are excellent. For quantity estimation, the rut‑filling system uses a Type A or Type B scratch course together with the corresponding surface course, and the material is placed at rates defined in Table 5.3 for either a nonsurface leveling (when an overlay will follow) or a re‑profiling (surface) course; the required micro‑surfacing volume is approximately 30 % of the Superpave leveling quantity, so that a Superpave rate of 90 lb/yd corresponds to roughly 27 lb/yd of micro‑surfacing. An alternative method involves milling the existing surface and placing an overlay, with typical milling and overlay depths of 1½ inches or 2 inches, although these depths may be exceeded as necessary to achieve the depth required to correct the rut. Other viable treatments include applying a micro‑surfacing or ultra‑thin bonded wearing course specifically for rut filling, performing cold in‑place recycling of the base to a maximum depth of 4 inches combined with a maximum 1½‑inch asphalt overlay that incorporates 60 lb per square yard of scratch course, or installing an ultra‑thin bonded concrete overlay that uses a 2‑inch asphalt layer as a non‑structural wearing course for rut repair. Rut filling with the polymer‑modified emulsified asphalt system requires screened aggregates delivered to a continuous‑loading mixing machine, and all screening plants must be equipped with a scalping screen having a maximum square opening of 3/8 inch for Type A material and ½ inch for Type B and Type RF materials. The mixer must incorporate a continuous‑flow, twin‑shafted, multi‑bladed pug mill at least 50 inches long, together with a spray bar that fully wets the aggregate before it enters the pug mill, and a filler feed positioned so that cement coats the aggregate prior to charging. Placement of the mix is accomplished with a mechanical‑type squeegee box attached to the mixer; this device features adjustable paddles, flexible front and rear seals, and a movable steel strike‑off bar designed to produce a uniform, skid‑resistant surface. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=e2b13a12 src=pub_242_change_10::tab:p106#1 -->
+<p>Table: TABLE 5.2POLYMER-MODIFIED EMULSIFIED PAVING SYSTEM SELECTION GUIDE.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-rut-filling-1-cap" tabindex="0"><table class="ct-table" id="ct-rut-filling-1" aria-describedby="ct-rut-filling-1-sum">
+<caption id="ct-rut-filling-1-cap">TABLE 5.2POLYMER-MODIFIED EMULSIFIED PAVING SYSTEM SELECTION GUIDE</caption>
+<thead>
+<tr><th id="ct-rut-filling-1-h0-0" scope="col" rowspan="2">CURRENTADT5</th><th id="ct-rut-filling-1-h0-1" scope="col" colspan="3">NON-SURFACELEVELING COURSE</th><th id="ct-rut-filling-1-h0-4" scope="col" colspan="3">RE-PROFILE COURSE,RUT FILL USED ASSURFACE COURSE</th><th id="ct-rut-filling-1-h0-7" scope="col" colspan="2">WEARINGCOURSE,FULL WIDTH</th></tr>
+<tr><th id="ct-rut-filling-1-h1-1" scope="col">TYPEA</th><th id="ct-rut-filling-1-h1-2" scope="col">TYPEB</th><th id="ct-rut-filling-1-h1-3" scope="col">TYPERF</th><th id="ct-rut-filling-1-h1-4" scope="col">TYPEA</th><th id="ct-rut-filling-1-h1-5" scope="col">TYPEB</th><th id="ct-rut-filling-1-h1-6" scope="col">TYPERF</th><th id="ct-rut-filling-1-h1-7" scope="col">TYPEA</th><th id="ct-rut-filling-1-h1-8" scope="col">TYPEB</th></tr>
+</thead>
+<tbody>
+<tr><td headers="ct-rut-filling-1-h0-0">0 - 5,000</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-1">2</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-2">3</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-3">4</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-4">2</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-5">3</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-6">4</td><td headers="ct-rut-filling-1-h0-7 ct-rut-filling-1-h1-7">Yes</td><td headers="ct-rut-filling-1-h0-7 ct-rut-filling-1-h1-8">Yes</td></tr>
+<tr><td headers="ct-rut-filling-1-h0-0">5,000 - 10,000</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-1">2</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-2">3</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-3">4</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-4">2</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-5">3</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-6">4</td><td headers="ct-rut-filling-1-h0-7 ct-rut-filling-1-h1-7">Yes</td><td headers="ct-rut-filling-1-h0-7 ct-rut-filling-1-h1-8">Yes</td></tr>
+<tr><td headers="ct-rut-filling-1-h0-0">10,001 - 20,000</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-1">2</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-2">3</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-3">4</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-4">2</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-5">3</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-6">4</td><td headers="ct-rut-filling-1-h0-7 ct-rut-filling-1-h1-7">Yes</td><td headers="ct-rut-filling-1-h0-7 ct-rut-filling-1-h1-8">Yes</td></tr>
+<tr><td headers="ct-rut-filling-1-h0-0">Over 20,000</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-1">2</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-2">3</td><td headers="ct-rut-filling-1-h0-1 ct-rut-filling-1-h1-3">4</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-4">No</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-5">3</td><td headers="ct-rut-filling-1-h0-4 ct-rut-filling-1-h1-6">4</td><td headers="ct-rut-filling-1-h0-7 ct-rut-filling-1-h1-7">Yes</td><td headers="ct-rut-filling-1-h0-7 ct-rut-filling-1-h1-8">No</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-rut-filling-1-sum">Rows list CURRENTADT5; columns give NON-SURFACELEVELING COURSE (TYPEA, TYPEB, TYPERF), RE-PROFILE COURSE,RUT FILL USED ASSURFACE COURSE (TYPEA, TYPEB, TYPERF), WEARINGCOURSE,FULL WIDTH (TYPEA, TYPEB).</p>
+<p class="ct-notes">Notes: Numbers in the Table refer to the following notes: 1 - Use only if the existing surface is Superpave asphalt pavement 2 - Use only if wheel ruts or depressions average 1/2 inch or less 3 - Use only if wheel ruts or depressions average more than 1/2 inch and less than 1 1/2 inches 4 - Use only if wheel ruts or depressions average 1 1/2 inches or more 5 - For divided highways, the Current ADT is based on one-way counts.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 106.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 104–106), Ch. 12 (pp. 204–205); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 338)</small></p>
+<p>According to the Pavement Policy Manual, the performance of a rut‑filling treatment using polymer‑modified emulsified asphalt (Micro Surfacing) depends first on the condition of the existing pavement, and the system is appropriate for restoring or resurfacing a pavement that is structurally sound and does not require a significant amount of base repair, and may be used for rut fill when the pavement distress is not related to base failure. The manual further specifies that candidate surfaces should exhibit low severity cracking, low to medium severity raveling/weathering, friction loss, and moisture infiltration. For jointed plain concrete pavement (JPCP) and jointed reinforced concrete pavement (JRCP), a Superpave scratch or leveling course must not be placed before application of Micro Surfacing. The selected mix type must correspond to the rut depth: Type A will be used to seal cracks, fill voids, and shallow ruts that are less than 1/2 inch deep; Type B will be used to fill moderate ruts ranging from 1/2 inch to 1 ¼ inch; and Type RF can fill deep ruts up to 2 inches in a single pass. Compatibility with the roadway classification influences application, and it is recommended that a double application be used unless the road surface is in excellent condition; Interstate projects require a double‑application of Type A SRL‑E even when conditions are excellent. For flexible pavements, any overlay intended for rut filling must not exceed 2 inches unless a mill‑and‑overlay depth of 1½–2 inches is justified by core inspection to determine the existing pavement’s depth and integrity; cores should be inspected to verify condition. For rigid pavements, treatment is permitted only when Falling Weight Deflectometer testing confirms the pavement is sound and total patching does not exceed 10 percent of the area. The Pennsylvania specification requires that areas showing fatigue or excessive rutting be identified at the pre‑placement meeting before placement can proceed. Placement may only proceed when the surface temperature is at least 50°F throughout application and no rain is imminent nor freezing expected within 24 hours, because these weather limits affect penetration and adhesion. All screening plants must be equipped with a scalping screen having a maximum square opening of 3/8‑inch for Type A and a maximum square opening of 1/2‑inch for Types B and RF to ensure the aggregates meet the required screening requirements for compatibility with the mix. The polymer‑modified emulsified asphalt must be introduced beyond the first quarter point of the mixer so that aggregate is fully coated with cement before asphalt addition, ensuring proper bonding. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 104–105), Ch. 12 (pp. 204–205); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 338)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>For rut filling using polymer‑modified emulsified asphalt micro‑surfacing on Jointed Plain Concrete Pavement and Jointed Reinforced Concrete Pavement, the manual specifies that a Superpave scratch or leveling course shall not be placed before applying the micro‑surfacing. The implementation procedure begins with a pre‑placement meeting and an approved Aggregate Delivery Plan to ensure continuous supply of material to the micro‑surfacing machine. The mixture must be produced in a self‑propelled front‑feed continuous‑loading mixing machine equipped with a chain‑dragged conveyor belt aggregate delivery system, a water‑jacketed gear pump, and a twin‑shaft pug mill, and it is applied with a mechanical squeegee box that has adjustable paddles, flexible seals, and a movable steel strike‑off bar. Placement may occur only when the entire surface condition permits satisfactory penetration and adhesion and the ambient temperature remains at least 50 °F for the whole operation. Application must be stopped if rain is imminent or if freezing temperatures are expected within 24 hours after placement. Seasonal restrictions prohibit application from September 16 to April 30 in Districts 1‑0, 2‑0, 3‑0, 4‑0, 10‑0 and 5‑0, and from October 1 to April 30 in Districts 6‑0, 8‑0, 9‑0, 11‑0, 12‑0 and 5‑0. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 104); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 338)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>Materials inspection must verify that aggregates are screened directly into the truck and meet the required screen openings—3/8‑inch maximum for Type A and ½‑inch for Types B and RF—and that each material control device is calibrated before any mix is produced. Preparation inspection includes holding a pre‑placement meeting to review fatigue or excessive rutting, the specification, QC plan, source list and aggregate delivery plan, and confirming weather conditions meet the minimum 50°F temperature with no imminent rain or freezing expected within 24 hours. Installation inspection checks that the mixing unit is a self‑propelled continuous‑loading machine with proper filler feed, spray bar wetting, and a twin‑shafted pug mill at least 50 inches long, and that spreading equipment provides uniform distribution, turbulence to prevent setting, flexible front and rear seals, and a movable steel strike‑off bar to avoid loss on super‑elevated curves. Completed work inspection confirms the finished surface is uniformly skid‑resistant with no skips, lumps or tears, indicating consistent application. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 338)</small></p>
+<p>A satisfactory rut‑filling (micro‑surfacing) treatment must be placed only when the ambient temperature does not fall below 50 °F for the entire placement and it may not be applied if rain is imminent or freezing temperatures are expected within 24 hours after application; the spreading operation must produce a uniform consistency with no skips, lumps, tears, side‑build up, or loss of material on super‑elevated curves, resulting in a uniform, skid‑resistant surface. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 338)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>Using polymer-modified emulsified asphalt micro‑surfacing for rut filling restores the pavement’s surface smoothness by re‑profiling the rutted lane without requiring a structural overlay, thereby improving overall condition. Because the material cures quickly and, when proper controls are maintained, performs well under traffic, it reinstates functional performance such as skid resistance on structurally sound pavements. This rapid cure and traffic-compatible behavior contribute to durable service of the repaired area, although the section does not specify a numeric expected service life. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 104)</small></p>
+<!-- concept-tabular:begin section=reference-tables -->
+
+<h2 id="reference-tables">Reference tables</h2>
+<!-- concept-tabular:begin key=236fa4dd src=pub_242_change_10::tab:p107#1 -->
+<p>Table 5.3 provides rut-filling application rates in pounds per square yard for different mix types and rut depths. It relates to the section <a href="#materials-and-repair-details">Materials and repair details</a>.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-rut-filling-2-cap" tabindex="0"><table class="ct-table" id="ct-rut-filling-2">
+<caption id="ct-rut-filling-2-cap">TABLE 5.3 POLYMER-MODIFIED EMULSIFIED PAVING SYSTEM-RUT-FILL APPLICATION RATE GUIDE(Rut-Filling Yield* Estimates for Design Based on Rut Depth)</caption>
+<thead>
+<tr><th scope="col">AVERAGERUT DEPTH(in)</th><th scope="col">TYPE OFMIXTURE</th><th scope="col">NON-SURFACELEVELING COURSE(lb/sy)</th><th scope="col">RE-PROFILECOURSE(lb/sy)</th></tr>
+</thead>
+<tbody>
+<tr><td>1/4</td><td>A</td><td>10</td><td>15</td></tr>
+<tr><td>3/8</td><td>A</td><td>12</td><td>16</td></tr>
+<tr><td>7/16</td><td>A</td><td>15</td><td>25</td></tr>
+<tr><td>1/2</td><td>B</td><td>23</td><td>28</td></tr>
+<tr><td>9/16</td><td>B</td><td>27</td><td>32</td></tr>
+<tr><td>5/8</td><td>B</td><td>31</td><td>36</td></tr>
+<tr><td>11/16</td><td>B</td><td>35</td><td>40</td></tr>
+<tr><td>3/4</td><td>B</td><td>39</td><td>44</td></tr>
+<tr><td>7/8</td><td>RF</td><td>44</td><td>49</td></tr>
+<tr><td>1</td><td>RF</td><td>49</td><td>54</td></tr>
+<tr><td>1-1/8</td><td>RF</td><td>53</td><td>58</td></tr>
+<tr><td>1-1/4</td><td>RF</td><td>57</td><td>62</td></tr>
+<tr><td>1-1/2</td><td>RF</td><td>61</td><td>66</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-notes">Notes: *Yield is the application of the total mixture for Rut Fill in pounds per square yard. For heavier applications, a second application should be applied. However, proper and complete curing of the first application is necessary before additional application. Item Description in the Schedule of Quantities should indicate a double application quantity when such is planned.</p>
+
+<p><em>Source: Pavement Policy Manual (Publication 242, May 2015 Edition, Change No. 10), untitled table, p. 107.</em> [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<!-- concept-tabular:end section=reference-tables -->
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reclaimed Asphalt Pavement (RAP)</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html" class="active" aria-current="page">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="flexible-pavement.html">Flexible Pavement</a><span class="crumb-sep">›</span><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><span class="crumb-sep">›</span><span class="crumb-current">Reclaimed Asphalt Pavement (RAP)</span></nav>
+<article><h1>Reclaimed Asphalt Pavement (RAP)</h1>
+<div class="meta"><div class="part-of">Part of: <a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a> <span class="edge edge-taxonomic" title="Reclaimed Asphalt Pavement (RAP) is a topic under Asphalt Concrete (HMA).">is-subtopic-of</span></div><div class="edge-reading">Reclaimed Asphalt Pavement (RAP) is a topic under Asphalt Concrete (HMA).</div><div><a class="tag" href="index.html?q=reclaimed-asphalt-concrete">reclaimed-asphalt-concrete</a><a class="tag" href="index.html?q=recycled-asphalt-pavement">recycled-asphalt-pavement</a><a class="tag" href="index.html?q=reclaimed-asphalt-concrete-material">reclaimed-asphalt-concrete-material</a><a class="tag" href="index.html?q=recycled-asphalt-materials">recycled-asphalt-materials</a><a class="tag" href="index.html?q=milled-asphalt-pavement">milled-asphalt-pavement</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>Reclaimed Asphalt Pavement (RAP) is reclaimed asphalt concrete material obtained primarily from milling operations and can be introduced either into a central‑plant feed hopper for cold‑mixed recycled base courses or processed on‑site by Hot In‑Place Recycling (HIR) techniques where it is scarified, heated, blended with a recycling agent and compacted to form an improved base layer[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The reclaimed material retains the original aggregate coated with aged binder, must be milled to a maximum particle size of 1¼ inches (with full‑depth reclamation requiring 95 % passing a 2‑inch sieve) and is blended with freshly metered liquids—emulsified or foamed asphalt, cement and water—within a ±2.0 % weight tolerance to achieve a homogeneous mix that can be compacted to at least 96 % of the PTM 402 target density[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. This resulting base provides an aggregate skeleton and binder content that enhances joint compaction, interlayer bonding and long‑term pavement performance while meeting specified depth requirements for arterial (≥5 in) and collector/local shoulders (≥4 in)[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#influence-of-production-and-placement">Influence of production and placement</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>Reclaimed Asphalt Pavement (RAP) is reclaimed asphalt concrete material that is generally obtained from milling operations and also refers to the existing asphalt pavement that, when processed by Hot In‑Place Recycled (HIR) techniques, is heated, scarified, mixed with a recycling agent and compacted on site. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Reclaimed Asphalt Pavement (RAP) is the reclaimed material introduced into a central plant via a RAP feed hopper, where it is combined with fresh emulsified or foamed asphalt, cement and water additives to form a cold‑mixed recycled asphalt base course. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The reclaimed material must be produced by milling existing pavement to a size not exceeding 1 1/4 inch in accordance with AASHTO MP 38, and for full‑depth reclamation it shall be processed so that 95 % passes a 2‑inch sieve. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] For 3R projects RAP may be used as a recycled component in shoulder base courses; it may be placed in an asphalt recycled base course beneath Type 6, 6‑F, or 6‑S shoulders or as the surface course for Type 7 shoulders on any roadway. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When used on arterial shoulders a minimum depth of 5 inches shall be used, and on collector and local road shoulders a minimum depth of 4 inches shall be used. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In the HIR process the reclaimed pavement is rejuvenated in‑place to remove surface distress and then functions as an improved base layer that provides better joint compaction and enhanced interlayer bonding for longer pavement performance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The resulting cold‑mixed recycled asphalt base course serves as a structural base layer that provides an aggregate skeleton and binder content for pavement construction. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] It is then compacted to at least 96 % of the target density to provide a structural base for subsequent wearing or binder layers. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–226)</small></p>
+<p>For a Central Plant Mix Cold Recycled Asphalt Base Course (CPMCRABC), reclaimed asphalt pavement may be used for the base‑course layer provided placement occurs outside the seasonal prohibitions—specifically, placement is prohibited from September 1 to April 30 in Districts 1‑0, 2‑0, 3‑0, 4‑0, 9‑0, and 10‑0 and from October 1 to April 30 in all other districts—and may be allowed with written approval when no freezing temperatures have occurred for 24 hours and the ambient air temperature is at least 45 °F and rising. When these climate or timing conditions cannot be satisfied, another material should be selected. For a Cold‑Recycled Asphalt Base Course (CRABC), reclaimed asphalt pavement is appropriate only if placement occurs outside the same seasonal prohibitions—again not from September 1 to April 30 in Districts 1‑0, 2‑0, 3‑0, 4‑0, 9‑0, and 10‑0 and not from October 1 to April 30 in all other districts—and only if the ambient air temperature is at least 45 °F and rising with no freezing temperatures for the preceding 24 hours; if these climate limits cannot be satisfied, an alternate material must be used. The source does not provide guidance on traffic conditions, soil classifications, or exposure conditions for RAP. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 221–224)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>Reclaimed Asphalt Pavement (RAP) is reclaimed asphalt concrete material that is generally obtained from milling operations and can be reused either as a cold‑mixed recycled base course or combined with a recycling additive for hot in‑place recycling of pavement shoulders. In the cold‑recycled asphalt base courses produced at a central plant, RAP consists of the original pavement aggregate still coated with aged binder, which is supplied from a RAP feed hopper and blended with freshly metered liquids such as emulsified or foamed asphalt, cement additive, and water to create a homogeneous mixture that retains the asphalt coating on the aggregates without stripping while maintaining sufficient total liquid content for thorough mixing and later compaction. The blending equipment must meter these liquids within a variation of not more than + 2.0 % by weight of liquids. For cold‑in‑place recycling, RAP is generated by milling the existing pavement in a single pass to the design depth, producing reclaimed fragments that must not exceed 1¼ inch as specified by AASHTO MP 38; these milled pieces are subsequently blended with aggregate and an asphalt binder—either emulsified or foamed—and water to achieve a uniform mix that satisfies the cold‑recycled base course design. In full‑depth reclamation, RAP may consist of pulverized existing roadway layers—including bound pavement, aggregate subbase, and subgrade—processed so that ninety‑five percent of the particles pass a two‑inch sieve. When RAP is used in hot in‑place recycling on shoulders classified as Type 6, 6‑F, 6‑S, or 7, the scarified portion of the existing pavement is cut to a depth of at least 1½ inches, blended with a predetermined amount of recycling agent, and heated on‑site by propane‑heated firebrick trucks to approximately 300°F ± 25°F before being spread, compacted, and forming the rejuvenated pavement layer. For Type 6, 6‑F, 6‑S, or 7 shoulders where RAP is placed as a cold‑mixed recycled base, the pavement design shall use a minimum depth of 5 inches on arterials and 4 inches on collectors and local roads. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–226)</small></p>
+<p>Because the cold‑recycled base course relies on precise liquid addition, equipment must meter liquids within ± 2.0 % by weight; exceeding this tolerance can prevent thorough mixing of reclaimed material and binder, jeopardizing the ability to reach the required density. The RAP particles are limited to a maximum size of 1 ¼ inch, ensuring that the milled material can be uniformly blended with emulsified or foamed asphalt. Compaction must achieve at least 96 % of the PTM 402 target density, and curing is required until the average moisture content falls below 2 %, with emulsified‑asphalt mixes needing a minimum two‑week cure before overlay placement; these thresholds control the stability and performance of the finished base. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 221–222)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>The thermal condition required for hot in‑place recycled asphalt is to achieve a temperature of roughly 300 °F ± 25 °F by radiant heating, which softens the reclaimed material and allows heat to penetrate the underlying layer, creating better interlayer bonding (source [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]). For that process the pavement must be scarified to a depth of at least 1½ inches, with lane widths treated between 10 ft and 14½ ft, so that the recycled mix can be properly blended with the added recycling agent (source [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]). Hot pavement joints provide improved joint compaction and thus longer pavement performance (source [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]). The chemical aspect is addressed by adding a predetermined amount of recycling agent to rejuvenate the reclaimed asphalt (source [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]). In cold‑recycled base courses the performance of RAP is linked to the amount of liquid retained, the temperature of the foamed or hot binder, and the ability to achieve a homogeneous blend without stripping the aged asphalt; adequate total liquids must be maintained by adding water to the RAP with a calibrated meter, and continuous temperature monitoring of the hot asphalt in supply tankers is required so that the binder remains within the range needed for foamed‑asphalt stabilization (source [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]). Equipment used to meter liquids shall not vary more than + 2.0 % by weight of liquids, and the foamed‑asphalt system must uniformly inject water into the binder and blend RAP material to meet mix‑design requirements (source [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]). The reclaimed material used in cold‑in‑place recycling shall not exceed 1¼ inch as required by AASHTO MP 38, and liquid additives used to stabilize the mix must be metered within ± 2.0 % by weight (source [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]). During construction the hot asphalt binder temperature is continuously displayed on gauges, the compacted layer must reach at least 96 % of the PTM 402 target density while maintaining a moisture content below 2 %, and this condition is achieved after curing for at least two weeks (source [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]). For full‑depth reclamation processed RAP material must have at least 95 % of the particles pass a 2‑inch sieve, linking performance to gradation (source [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]).</p>
+<p><small>[1] — Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–226)</small></p>
+<p>In the central plant mix cold recycled asphalt base course (Section 342), the RAP mixture’s key properties are quantified on‑site using calibrated instrumentation: liquids added to the reclaimed material must be metered by equipment whose variation does not exceed + 2.0% by weight, a positive displacement pump is required to meter additive flow rates down to 4 gallons per minute, water is introduced to the RAP with a calibrated meter, and hot‑asphalt tankers are equipped with gauges that continuously display asphalt temperature; after placement, depth is verified at designated test locations and any layer whose measured depth deviates by 1/2 inch or more from the specified compacted depth is deemed defective. For cold‑recycled asphalt base courses (Section 341), RAP properties are controlled by equipment accuracy, size limits, density, moisture, and depth measurements: the mixing equipment must meter liquids within a ± 2.0% weight variation, milled RAP shall be limited to a maximum of 1 ¼ inch as specified in AASHTO MP 38, the compacted layer must achieve at least 96% of the PTM 402 target density with in‑place density verified by AASHTO T 310 on each 3,000‑square‑yard segment, and moisture content is required to be less than 2% as determined by PTM 749 before subsequent paving. Reclaimed Asphalt Pavement is characterized primarily by its gradation (Section 344); the specifications require that processed RAP material be fine enough that ninety‑five percent of it passes a two‑inch sieve, a requirement applied both to RAP sourced from other projects and to reclaimed material generated by pulverizing existing roadway layers. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 221–226)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>Under the requirements of Section 342—Central Plant Mix Cold Recycled Asphalt Base Course, RAP may be placed only when no freezing temperatures have occurred for at least 24 hours and the ambient air temperature is 45 °F and rising; placement is prohibited from September 1 to April 30 in Districts 1‑0, 2‑0, 3‑0, 4‑0, 9‑0, and 10‑0, and from October 1 to April 30 in all other districts. For this treatment the contractor shall add water to the RAP with a calibrated meter as necessary to aid mixing and compaction. According to Section 341—Cold Recycled Asphalt Base Course, Cold‑in‑Place, the reclaimed material must be compacted to a minimum of 96 % of the PTM 402 target density, which provides the structural capacity required for traffic loading. The mix shall be cured until the average moisture content drops below 2 %; when the base course is stabilized with emulsified asphalt, curing must continue for at least 2 weeks before a wearing or binder course is placed. Placement under this section also requires that no freezing temperatures occur for 24 hours prior to paving and that the ambient air temperature be 45 °F and rising, and it is prohibited from September 1 to April 30 in Districts 1‑0, 2‑0, 3‑0, 4‑0, 9‑0, and 10‑0, and from October 1 to April 30 in all other districts. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 221–224)</small></p>
+<p>The behavior of reclaimed asphalt pavement (RAP) in hot‑in‑place recycled (HIR) treatments is governed by three interrelated mechanisms: thermal softening of the aged binder, chemical rejuvenation provided by a recycling agent, and mechanical blending followed by compaction. Radiant heating to approximately 300 °F ± 25 °F raises the binder temperature so that heat penetrating the underlying layer provides better interlayer bonding [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The addition of a predetermined amount of recycling agent chemically restores aged binder properties, while scarifying the material to a depth of at least 1 ½ inches allows thorough mixing of the agent with the existing material [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Subsequent mixing and compacting produce a uniformly dense pavement structure, completing the mechanical component of the process [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In central‑plant mixed cold‑recycled asphalt base courses, the performance of RAP is controlled primarily by physical blending with binders and liquids, chemical action of foamed or emulsified asphalt additives, and subsequent mechanical compaction. Continuous mixing must keep the asphalt from stripping while water, cement, and either foamed or emulsified asphalt are metered within a variation of not more than + 2.0 % by weight of liquids [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The foamed‑asphalt system is required to inject water uniformly into hot binder and can meter additive flow as low as 4 gallons per minute, with water added by a calibrated meter to aid mixing and compaction [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For cold‑in‑place recycling of a base course, the same three mechanisms operate, but the controlling factor is the precision of liquid‑additive dosing, which must be metered with a variation of not more than ± 2.0 % by weight, and the maintenance of sufficient liquids to achieve thorough mixing of the reclaimed material with emulsified or foamed asphalt [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After blending, the mixture must be compacted to at least 96 % of the PTM‑402 target density, and then cured for a minimum of two weeks when emulsified asphalt is used—or until the average moisture content drops below 2 %—to ensure that the stabilized base attains the required strength and durability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–224)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>Hot In‑Place Recycled (HIR) asphalt requires protective measures to preserve durability, and a four‑week waiting period must be observed before applying chip seals, micro surfacing, or slurry seal surface treatments, indicating that the rejuvenated mix needs time to gain strength and resist early damage. An overlay is required to be placed on top of the recycled asphalt materials before winter, reflecting a concern that untreated HIR pavement may deteriorate under cold‑weather exposure. The durability of a cold‑recycled asphalt base course that incorporates reclaimed asphalt pavement hinges on meeting several construction controls, including compacting the layer to at least 96 % of the PTM 402 target density; failure to achieve this density may leave the material weak. Curing must continue until the average moisture content drops below 2 %, otherwise the material may remain weak and susceptible to deterioration. Completed portions of the base course that are opened to construction equipment must be protected from marring, distortion, and other damage because such impacts can initiate raveling and loss of integrity. Placement is restricted during cold periods—for example, no CRABC may be placed from September 1 to April 30 in certain districts—to avoid freeze‑related deterioration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–222)</small></p>
+<p>The susceptibility of hot‑in‑place recycled asphalt to deterioration depends on both the reclaimed material’s condition and the exposure it will encounter, and poor existing pavement condition, an unsuitable pavement type, or high ADT increase the risk so these factors must be evaluated when selecting an overlay. Providing a protective overlay before winter reduces weather‑related damage. The scarified depth should reach at least 1 1/2 inches. A four‑week waiting period should be observed before applying chip seals, micro surfacing, or slurry seal surface treatments. Achieving a compacted density of at least 96% of the PTM 402 target density reduces RAP’s susceptibility to deterioration. Curing the recycled base until the average moisture content is less than 2% also reduces susceptibility. Placement in cold weather or during prohibited seasonal windows increases risk; the specification forbids placing CRABC from September 1 to April 30 in Districts 1‑0, 2‑0, 3‑0, 4‑0, 9‑0, and 10‑0, and from October 1 to April 30 in all other districts. Paving may proceed only when the ambient air temperature is 45°F and rising. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–222)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>In hot in‑place recycled asphalt, the pavement is heated to approximately 300 °F ± 25 °F via radiant heat and scarified to a depth of at least 1½ inches; this elevated temperature enables the recycling agent to blend with the aged binder in the reclaimed asphalt, and the heat penetrating the underlying layer provides better interlayer bonding, improving joint compaction and overall performance. In cold‑recycled base construction, reclaimed asphalt pavement is blended with emulsified or foamed asphalt binder (and any cement additive) using equipment that must produce a homogeneous mixture without stripping the asphalt material. Adequate total liquids must be maintained to ensure thorough mixing of the reclaimed material, aggregates and binder, and water may be added to the RAP by a calibrated meter as necessary to aid mixing and compaction. Uniform injection of water into hot binder together with uniform mixing of foamed asphalt, RAP and water satisfies the mix design and promotes consistent bonding between RAP particles, fresh aggregate and binder. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–224)</small></p>
+<p>In SECTION 342—CENTRAL PLANT MIX COLD RECYCLED ASPHALT BASE COURSE, the specification requires that mixing equipment be capable of producing a homogeneous cold‑recycled mix without stripping the asphalt binder, so moisture susceptibility must be controlled during production. Placement of CPMCRABC is prohibited from September 1 to April 30 in Districts 1‑0, 2‑0, 3‑0, 4‑0, 9‑0, and 10‑0, and from October 1 to April 30 in all other districts; only with written approval of the Representative may placement occur when no freezing temperatures have existed for 24 hours before paving and when the ambient air temperature is 45°F and rising. No other compatibility issues such as binder‑modifier incompatibility, stiffness differences, contaminated aggregates, fuel or solvent contamination, or dissimilar layer debonding are addressed in this section.</p>
+<p>In SECTION 341—COLD RECYCLED ASPHALT BASE COURSE, COLD‑IN‑PLACE, the compatibility of RAP is limited by moisture and temperature conditions; the mix must retain enough liquid to achieve thorough blending of reclaimed material with emulsified binder, and after placement the cured layer must be brought to an average moisture content of less than 2 % before any wearing or binder course is installed. Placement is prohibited from September 1 to April 30 in the listed districts, and where placement is allowed it may only occur when the ambient air temperature is at least 45°F and rising; freezing conditions could impair bond strength. If density targets are not met, moisture content must be adjusted and the layer re‑compacted, indicating that excess or insufficient moisture can jeopardize performance. No other compatibility issues such as binder modifiers, stiffness, contaminated aggregates, fuel/solvent contamination, or dissimilar material debonding are mentioned. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 221–224)</small></p>
+<h2 id="influence-of-production-and-placement">Influence of production and placement</h2>
+<p>In hot in‑place recycled asphalt operations the pavement is heated to approximately 300 °F ± 25 °F using propane‑heated firebrick, then scarified to a depth of at least 1 ½ inches, mixed with a predetermined amount of recycling agent and placed with a heated screed; this high temperature and immediate placement keep the mix hot enough for heat to penetrate the underlying layer, which provides better interlayer bonding and improves joint compaction for longer pavement performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. After placement the material is compacted on‑site. For cold recycled asphalt base courses, proper plant mixing shall employ equipment that can meter liquids within ±2 % by weight and that is capable of automatically metering liquids with a variation of not more than ± 2.0 % by weight; the equipment must continuously display the hot‑asphalt temperature so that foamed or emulsified binder is introduced at a controlled temperature and adequate total liquid content is retained to ensure thorough blending of reclaimed material, aggregates and fresh asphalt [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The mixed RAP blend shall be hauled in clean, tightly sealed vehicles and spread with mechanical spreaders to achieve a uniform depth [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Placement may occur only after no freezing temperatures have been recorded for at least 24 hours and when the ambient air temperature is 45 °F and rising, or when placement falls outside the prohibited September‑1 to April‑30 window in applicable districts; it shall be limited to daylight hours with protective measures taken to avoid damage that could degrade performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Compaction of the base course shall be performed in lifts ranging from 2 inches to 5 inches using rollers specified in Section 108.05(c) and must achieve a minimum of 96 % of the PTM 402 target density; any area not meeting this density shall be scarified, moisture‑adjusted and re‑compacted [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After compaction, the material shall be cured for at least 2 weeks or until the average moisture content falls below 2 %, allowing the required strength to develop before the wearing course is placed [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For hot in‑place recycled asphalt, a four‑week waiting period must be observed before chip seals, microsurfacing or slurry seal treatments, while no wait is required for HMA, WMA or ultra‑thin bonded overlays; an overlay is required to be placed before winter [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–224)</small></p>
+<p>In Section 342—Central Plant Mix Cold Recycled Asphalt Base Course, the long‑term performance of the cold‑recycled asphalt base course is most sensitive to the accuracy of liquid additive dosing and to the achieved layer thickness. The specification requires that liquid additives be metered with a variation not more than + 2.0 % by weight; larger deviations can upset mix homogeneity and later durability. Any placed depth that is deficient 1/2 inch or more from the indicated compacted depth is declared defective and must be removed, because insufficient thickness compromises structural integrity over time. In Section 341—Cold Recycled Asphalt Base Course, Cold‑in‑Place, the long‑term behavior of RAP in a cold‑recycled base course is most strongly affected by construction variations that disturb mix uniformity, compaction, moisture control, and surface smoothness. The liquid metering must stay within ± 2.0 % by weight, milling depth must not be deficient by ½ inch or more, compaction must reach at least 96 % of the PTM‑402 target density, curing must lower average moisture to less than 2 %, and surface tolerances must remain under a half‑inch; deviations in any of these areas can lead to weak, uneven, or raveling pavement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 221–224)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>On projects classified under the 3R (Resurfacing, Restoration, and Rehabilitation) framework, reclaimed asphalt concrete obtained from milling operations may be specified for shoulder base courses when the shoulder type matches the intended use; it is permissible to place the material in an asphalt recycled base course for Type 6, 6‑F, or 6‑S shoulders or as an asphalt surface course for Type 7 shoulders on any roadway [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When a cold‑mixed recycled base course is selected for such shoulders, the specification shall require a minimum depth of five inches for arterial roadways and four inches for collector and local roads [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The decision to apply an overlay using RAP should consider the existing pavement condition, the specific pavement type, and the average daily traffic, and the overlay must be placed before winter to ensure adequate performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Selection and specification of RAP in central‑plant mixed cold recycled asphalt base courses are governed by equipment capability and liquid‑metering accuracy; the plant must be equipped with a feed hopper, pugmill, and mixers capable of producing a homogeneous blend without stripping the binder, and it must meter liquids within plus 2.0 percent of weight using a positive‑displacement pump that can deliver flow rates as low as four gallons per minute [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Water may be added only by calibrated meters, the blended material must be transported in sealed vehicles and placed with mechanical spreaders, and placement is prohibited from September 1 to April 30 in Districts 1‑0, 2‑0, 3‑0, 4‑0, 9‑0, and 10‑0 (and from October 1 to April 30 in all other districts) unless a written waiver is obtained; when a waiver is granted the work may proceed only if no freezing temperatures have occurred for twenty‑four hours before paving and the ambient air temperature is at least forty‑five degrees Fahrenheit and rising [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For cold‑in‑place recycled asphalt base courses, RAP must be milled so that no individual particle exceeds one ¼ inch; its post‑curing moisture content must remain below two percent before a wearing or binder layer can be placed, and the compacted mix must achieve at least ninety‑six percent of the PTM 402 target density [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Placement of these mixes is further limited to periods when the ambient air temperature is forty‑five degrees Fahrenheit and rising, subject to the same seasonal prohibitions described for central‑plant mixes [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In full‑depth reclamation projects, RAP may be specified only after processing that results in at least ninety‑five percent of the material passing a two‑inch sieve; the selected RAP must then be incorporated into an approved mix design and any stabilizing additive shall be chosen on the basis of the composition of the existing roadway materials as required by Publication 242 Pavement Policy Manual, with the completed mix design submitted for full‑depth reclamation work in accordance with Section 108.03 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–226)</small></p>
+<p>Improving the performance of reclaimed asphalt pavement in a hot‑in‑place recycled (HIR) treatment relies on heating the existing surface to approximately 300°F +/- 25°F with radiant propane burners, scarifying it to a depth of at least 1 ½ inches, and then adding a predetermined amount of recycling agent before mixing and laying the rejuvenated material with a heated screed; these steps promote better interlayer bonding and joint compaction. A four‑week waiting period before applying chip seals, micro surfacing, or slurry seal surface treatments is required to allow the recycled mix to stabilize, while an overlay must be placed prior to winter to protect the HIR layer from cold‑weather deterioration. In cold‑recycled base courses, performance can be enhanced by integrating measured liquid binders and additives at a central plant where a twin‑shaft pugmill mixes RAP with metered emulsified or foamed asphalt together with optional cement and water additives; equipment must meter all liquids to within + 2.0 % by weight and a positive displacement pump must be capable of delivering flow rates as low as 4 gallons per minute, and an interlock shall shut off the pump when material is absent. A calibrated water‑meter adds just enough moisture to ensure thorough blending and compaction, and continuous monitoring of additive flow through dedicated meters provides quantitative control; maintaining all plant equipment per Section 108.05(c) and verifying compacted depth at one test location per 3 000 square yards further safeguards mix uniformity and performance. For cold‑recycled asphalt base course placed in‑place, the RAP performance is enhanced by dosing a stabilizing binder—either emulsified asphalt or foamed asphalt—with equipment that automatically meters liquids within ± 2.0 % by weight, and by supplying additional water through a calibrated meter to keep the mixture sufficiently moist for thorough coating of the reclaimed material; uniform milling to a 1¼‑inch maximum size and constant cutting depth, followed by compaction to at least 96 % of the PTM 402 target density verified with AASHTO T 310, provide the required structural integrity, while curing until the average moisture content drops below 2 % (or a minimum two‑week period for emulsified asphalt) ensures binder set before overlay and a fog seal such as CSS‑1h or SS‑1h may be applied to control dust and raveling. In full‑depth reclamation, RAP must first be processed so that at least ninety‑five percent passes a two‑inch sieve, providing a consistent base for stabilization; one or more stabilizing additives—such as emulsified asphalt (Class CMS‑2, SS‑1h, CSS‑1h, SS‑1hP, HFMS‑2 or CSS‑1hP), Portland cement slurry with any required admixtures, hydrated lime, supplementary cementitious material, lime pozzolan, calcium chloride, or project‑approved magnesium chloride—are incorporated according to an FDR mix design that selects the additive(s) based on the existing roadway composition; fine or coarse aggregate may also be supplied from approved producers or reclaimed aggregate meeting the specified size (e.g., AASHTO No. 57) as required by the approved mix design, ensuring the overall mixture meets the prescribed specifications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–226)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>In Section 342—Central Plant Mix Cold Recycled Asphalt Base Course, the field evaluation of reclaimed‑asphalt base is performed by designating one test location in each 3,000 square yards of completed CPMCRABC and recording a single depth measurement; when the measured depth is deficient by 1/2 inch or more from the indicated compacted depth, the pavement is deemed defective and must be removed. In addition, the equipment used to meter liquids shall maintain a variation of not more than + 2.0 % by weight, providing a controlled laboratory‑type verification of mix proportions. In Section 341—Cold Recycled Asphalt Base Course, Cold‑in‑Place, field performance is assessed by confirming that compaction reaches at least 96 % of the PTM 402 target density and by determining the in‑place density of each 3,000‑square‑yard area according to AASHTO T 310. Milling depth shall be checked at least once per 3,000‑square‑yard segment to ensure the specified depth was achieved. Curing quality is judged by a minimum two‑week period or until the average moisture content falls below 2 %, which is verified on three randomly selected 1,200‑gram core samples tested according to PTM No. 749; the moisture content of each sample shall be determined according to PTM No. 749. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (pp. 221–224)</small></p>
+<p>Reclaimed asphalt concrete material obtained from milling operations may be used as a base course in 3R shoulder rehabilitation projects, allowing designers to specify RAP for Type 6, 6‑F, 6‑S or Type 7 shoulders on any roadway. When placed as a cold‑mixed recycled base on arterial, collector, or local road shoulders the design shall provide a minimum depth of 5 inches on arterials and 4 inches on collectors and local roads, thereby meeting the required structural thickness for those shoulder types. In Hot In‑Place Recycled (HIR) applications the scarified pavement is heated to approximately 300 °F ± 25 °F and mixed with a recycling agent; this temperature range permits heat to penetrate the underlying layer for better interlayer bonding. The process requires scarifying the material to a depth of at least 1 ½ inches, which ensures adequate incorporation of the recycled mix. Hot pavement joints provide improved joint compaction, which can yield longer pavement performance. After HIR treatment the rejuvenated surface must wait four weeks before chip seals, micro surfacing, or slurry seal treatments, and an overlay is required to be placed on top of the recycled asphalt materials before winter. In the central‑plant mix cold recycled asphalt base course RAP must be blended into a homogeneous mix, and the equipment is required to meter liquids with a variation of not more than + 2.0 % by weight while adding water as needed for thorough mixing and compaction because precise moisture control helps prevent stripping of the asphalt binder and supports consistent strength development. Placement of the cold‑recycled base is restricted to periods when freezing temperatures have not occurred for at least 24 hours, when the ambient air temperature is 45°F and rising, and it may not be placed from September 1 to April 30 in certain districts; these conditions ensure that the RAP mixture can achieve proper density and durability. Depth control tolerances of one‑half inch are enforced because any deficiency beyond this limit renders the pavement defective and triggers removal, directly linking handling accuracy to long‑term performance. For cold‑in‑place recycling reclaimed pavement must be milled to no more than 1 ¼ inch per AASHTO MP 38 and then uniformly blended with foamed or emulsified asphalt and water so that the total liquid content ensures thorough mixing; the layer is required to be compacted to at least 96 % of the PTM 402 target density and cured until the average moisture falls below 2 %. If the specified density cannot be achieved, scarifying, adjusting moisture content, and re‑compacting are mandated, influencing the structural performance of the RAP‑based base. In full‑depth reclamation RAP must be processed so that 95 % passes a 2‑inch sieve, providing a gradation compatible with the surrounding mix; because reclaimed material can include bound pavement, subbase, and subgrade components, its composition may vary, requiring the selection of one or more stabilizing additives based on that composition to achieve desired durability. Consequently, a formal design protocol should be followed to develop an appropriate mix design that optimizes the performance of the rehabilitated pavement. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 61–62), Ch. 5 (p. 131); [2] — SECTION 300 BASE COURSES (pp. 221–226)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

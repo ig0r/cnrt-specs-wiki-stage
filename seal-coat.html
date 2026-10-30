@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seal Coat</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html" class="active" aria-current="page">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-preservation.html">Pavement Preservation</a><span class="crumb-sep">›</span><span class="crumb-current">Seal Coat</span></nav>
+<article><h1>Seal Coat</h1>
+<div class="meta"><div class="part-of">Part of: <a href="pavement-preservation.html">Pavement Preservation</a> <span class="edge edge-taxonomic" title="Seal Coat is a topic under Pavement Preservation.">is-subtopic-of</span></div><div class="edge-reading">Seal Coat is a topic under Pavement Preservation.</div><div><a class="tag" href="index.html?q=seal-coat">seal-coat</a><a class="tag" href="index.html?q=seal-coats">seal-coats</a><a class="tag" href="index.html?q=chip-seals">chip-seals</a><a class="tag" href="index.html?q=chip-sealing">chip-sealing</a><a class="tag" href="index.html?q=shoulder-seal-coat">shoulder-seal-coat</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>Seal coat is a polymer‑modified emulsified‑asphalt surface treatment applied as a thin protective coating to flexible pavements, typically on shoulders or micro‑surface sections. It is scheduled in life‑cycle cost analyses as a periodic maintenance action that corrects minor surface deficiencies—such as minor rutting, minor cracking and loss of fine aggregate—and thereby limits traffic‑user delay while restoring skid resistance and preventing moisture intrusion [1]. The process involves applying an emulsified asphalt tack coat followed within minutes by a single layer of coarse aggregate (often reclaimed asphalt pavement) which is compacted with pneumatic rollers to achieve proper embedment, filling shallow to moderate ruts (½ in. to 1¼ in.) and sealing cracks and voids [2]. Because it addresses only surface‑level distress, seal coat is limited to non‑Interstate roads classified as Type 1, 1S, 3, 4, 6 or 6S, requires a minimum three‑month warm‑weather densification on high‑void FB‑1/FB‑2 courses, and must not be used where structural upgrading is needed [1][2].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#purpose-and-treatment-objectives">Purpose and treatment objectives</a></li><li><a href="#distress-characterization-and-causes">Distress characterization and causes</a></li><li><a href="#applicability-and-treatment-selection">Applicability and treatment selection</a></li><li><a href="#condition-assessment-and-timing">Condition assessment and timing</a></li><li><a href="#materials-and-repair-details">Materials and repair details</a></li><li><a href="#treatment-procedures">Treatment procedures</a></li><li><a href="#quality-and-workmanship">Quality and workmanship</a></li><li><a href="#performance-and-service-life">Performance and service life</a></li><li><a href="#monitoring-and-follow-up">Monitoring and follow-up</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="purpose-and-treatment-objectives">Purpose and treatment objectives</h2>
+<p>In life‑cycle cost analysis for new construction or reconstruction, seal coat is scheduled as a periodic maintenance activity to protect the pavement and keep traffic‑user delay caused by surface deterioration within acceptable limits. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For asphalt surfaces that exhibit only minor distress, seal coat is applied to correct surface deficiencies such as minor rutting, minor cracking, and loss of fine aggregate, and it is not suitable for pavements that require structural upgrading. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] When the wearing courses are FB‑1 or FB‑2, whose high void content leaves the pavement vulnerable to deterioration, a seal coat (or surface treatment) must be placed after the recommended minimum three months of warm‑weather traffic densification to protect the porous layer. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In micro‑surfacing projects, seal coat is used on pavements that display low‑severity cracking, low‑to‑medium severity raveling or weathering, friction loss, moisture infiltration, and moderate ruts ranging from one‑half inch to 1 ¼ inches deep; by sealing cracks, filling voids and shallow to moderate surface defects it helps restore skid resistance and protects the asphalt from further water intrusion and wear. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The micro‑surfacing specification defines a Type B polymer‑modified emulsified asphalt treatment in which seal coat functions to fill moderate ruts of one‑half inch to 1 ¼ inches and to provide a surface seal or protective coating for the pavement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 71–72), Ch. 5 (pp. 103–105); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 336)</small></p>
+<p>The purpose of applying a seal coat, either alone or with a scratch course, is to correct surface deficiencies such as minor rutting, minor cracking, and loss of fine aggregate. By addressing these early‑stage distresses the treatment repairs damage and restores the pavement’s functional condition, but it is not intended for pavements that require structural upgrading. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 103)</small></p>
+<h2 id="distress-characterization-and-causes">Distress characterization and causes</h2>
+<p>The distress addressed by seal coat occurs on the pavement shoulders, where the maintenance schedule specifies applying a seal‑coat (or micro surface) to roughly 500 lineal feet per mile at each prescribed interval; this treatment is intended to preserve the surface and limit traffic user delay that can result from shoulder deterioration. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 71–72)</small></p>
+<p>Seal coat is applied to address surface‑level distress mechanisms such as minor rutting, minor cracking, loss of fine aggregate, low‑severity cracking, low‑to‑medium severity raveling or weathering, friction loss and moisture infiltration [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The high void content of FB‑1 and FB‑2 wearing courses makes the surface vulnerable because the voids permit water to infiltrate the surface layers; this moisture ingress accelerates crack formation and reduces skid resistance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Moisture infiltration introduces water into the surface layers, while raveling or weathering reflects aggregate matrix deterioration caused by environmental exposure, both of which speed further cracking and loss of friction [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The distress that seal‑coat treatments aim to mitigate also originates from water intrusion when rain occurs during or shortly after placement of emulsified asphalt, and from temperature extremes such as freezing within twenty‑four hours after application; these conditions can prevent proper curing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Premature vehicular loads applied before the coating has attained adequate stability and adhesion can cause distortion, flushing of the emulsified binder to the surface, and loss of aggregate, thereby contributing to surface deterioration [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Inadequate embedment of coarse aggregate—when less than fifty percent is set in the asphalt—is identified as a construction shortfall that may require additional fog sealing to prevent further distress [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Open joints and cracks constitute pathways for water infiltration; therefore sealing those openings with an acceptable crack sealer or emulsion before seal‑coat placement addresses a primary mechanism of moisture‑related distress [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Seal coats shall not be used on pavements requiring structural upgrading, indicating that inadequate structural capacity is beyond its corrective scope [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 103–105); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–335)</small></p>
+<h2 id="applicability-and-treatment-selection">Applicability and treatment selection</h2>
+<p>Seal coat may be applied only on non‑Interstate roads, and its suitability must be evaluated according to Table 5.1 (Section 5.2) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. It is appropriate for pavements that exhibit only minor surface deficiencies—such as minor rutting, minor cracking, or loss of fine aggregate—and shall not be placed on a pavement that requires structural upgrading [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Within the FB surface‑course context (Section 5.3), seal coat is appropriate on FB‑1 and FB‑2 surface courses, which are characterized by a high void content, provided that the underlying pavement is structurally sound and the FB surface itself is in satisfactory condition [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Before application, at least three months of warm‑weather traffic densification should occur; however, if the pavement remains sound the seal coat may be postponed for up to three years [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For roadways where an FB wearing course is used independently, the average daily traffic must not exceed 1,500 vehicles [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A seal coat or surface treatment is not required on a FB Modified surface for at least four years [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Seal coat may be placed on an asphalt pavement that has been cleared of unsuitable material and whose cracks have been sealed, provided the entire surface can accept satisfactory penetration and adhesion and the air, surface, and aggregate temperatures are above 60 °F [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Application must be avoided if rain is imminent or if freezing temperatures are expected within 24 hours after placement [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. RS‑2P or CRS‑2P emulsions may not be used between September 15 (or October 1 for certain districts) and May 1 unless a written exemption is granted [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Traffic must be kept off the freshly treated area until the seal coat has achieved adequate stability and curing, especially in shaded sections that may need longer set times [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Seal coat using RAP aggregate may be applied only when the temperature of the existing roadway surface exposed to direct sunlight is below 120 °F; if the material begins to adhere to the tires of the delivery trucks, placement must be halted until the surface cools below that same threshold [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Placement of seal coat aggregate from RAP on a road is prohibited when the average daily traffic exceeds 5,000 vehicles; if the road carries more than 1,000 ADT, the placement must be approved in writing by the District Executive and must be accompanied by SRL documentation of the unprocessed RAP material signed by the DME/DMM confirming a Bulletin 14‑approved source [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=85db636d src=408_2026_1::tab:p323#1 -->
+<p>The table below specifies the application temperature limits for various polymer-modified emulsified asphalt materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-seal-coat-1-cap" tabindex="0"><table class="ct-table" id="ct-seal-coat-1" aria-describedby="ct-seal-coat-1-sum">
+<caption id="ct-seal-coat-1-cap">470.2 MATERIAL— (table)</caption>
+<thead>
+<tr><th id="ct-seal-coat-1-h0-0" scope="col" rowspan="2">Class of Material</th><th id="ct-seal-coat-1-h0-1" scope="col" rowspan="2">Type of Material</th><th id="ct-seal-coat-1-h0-2" scope="col" colspan="2">Application Temperature F</th></tr>
+<tr><th id="ct-seal-coat-1-h1-2" scope="col">Minimum</th><th id="ct-seal-coat-1-h1-3" scope="col">Maximum</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-seal-coat-1-h2-0" scope="row">RS-2P</th><td headers="ct-seal-coat-1-h0-1 ct-seal-coat-1-h2-0">Polymer-Modified Emulsified Asphalt</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-2 ct-seal-coat-1-h2-0">140</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-3 ct-seal-coat-1-h2-0">175</td></tr>
+<tr><th id="ct-seal-coat-1-h3-0" scope="row">CRS-2P</th><td headers="ct-seal-coat-1-h0-1 ct-seal-coat-1-h3-0">Polymer-Modified Cationic Emulsified Asphalt</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-2 ct-seal-coat-1-h3-0">140</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-3 ct-seal-coat-1-h3-0">175</td></tr>
+<tr><th id="ct-seal-coat-1-h4-0" scope="row">HFRS-2P</th><td headers="ct-seal-coat-1-h0-1 ct-seal-coat-1-h4-0">Polymer-Modified High Float Emulsified Asphalt</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-2 ct-seal-coat-1-h4-0">140</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-3 ct-seal-coat-1-h4-0">175</td></tr>
+<tr><th id="ct-seal-coat-1-h5-0" scope="row">RS-2(1)</th><td headers="ct-seal-coat-1-h0-1 ct-seal-coat-1-h5-0">Emulsified Asphalt</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-2 ct-seal-coat-1-h5-0">140</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-3 ct-seal-coat-1-h5-0">175</td></tr>
+<tr><th id="ct-seal-coat-1-h6-0" scope="row">CRS-2(1)</th><td headers="ct-seal-coat-1-h0-1 ct-seal-coat-1-h6-0">Cationic Emulsified Asphalt</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-2 ct-seal-coat-1-h6-0">140</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-3 ct-seal-coat-1-h6-0">175</td></tr>
+<tr><th id="ct-seal-coat-1-h7-0" scope="row">HFRS-2(1)</th><td headers="ct-seal-coat-1-h0-1 ct-seal-coat-1-h7-0">High-Float Emulsified Asphalt</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-2 ct-seal-coat-1-h7-0">140</td><td headers="ct-seal-coat-1-h0-2 ct-seal-coat-1-h1-3 ct-seal-coat-1-h7-0">175</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-seal-coat-1-sum">Rows list Class of Material; columns give Type of Material, Application Temperature F (Minimum, Maximum).</p>
+<p class="ct-notes">Notes: (1) Only for use on municipal projects and State projects approved by the District Executive in writing.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 323.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 103–104); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–330)</small></p>
+<p>In the life‑cycle cost analysis framework, seal coat is limited to pavements classified as Type 1, 1S, 3, 4, 6 or 6S; when a pavement does not belong to one of those types the maintenance plan substitutes other treatments such as Clean &amp; Seal, Crack Seal, asphalt overlay, or concrete patching at the scheduled intervals (for example, 15‑year and 20‑year actions) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Seal coats, slurry seals, and surface treatments must not be used on the Interstate system, and they shall not be placed on a pavement that requires structural upgrading; for all other roads their suitability is determined in accordance with Table 5.1 and the treatment is intended only to correct minor rutting, minor cracking or loss of fine aggregate [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. A seal coat should not be applied to an FB Modified surface for at least four years after placement, and on FB‑1 or FB‑2 surfaces it must wait until a minimum of three months of warm‑weather traffic densification have occurred; when the underlying pavement is structurally sound and the FB surface is in satisfactory condition, the seal coat may be postponed for up to three years, indicating that other maintenance or preservation actions should be used during that period [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Seal coat should be avoided when the pavement surface cannot ensure satisfactory penetration and adhesion, which includes any condition in which air, surface, or aggregate temperatures are not above 60 °F, rain is imminent, or freezing temperatures are expected within 24 hours after application [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Seal coat must not be used with RS‑2P or CRS‑2P during the district‑specific prohibited date ranges of September 15 to May 1 in Districts 1‑0 through 5‑0 and October 1 to May 1 in Districts 6‑0, 8‑0, and 5‑0 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. After placement, if the Representative finds that less than 50 percent of the aggregate is embedded in the asphalt, the Representative may require a fog seal or another preservation method instead of relying on the seal coat alone [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Seal coat that uses RAP aggregate should not be applied on roads carrying more than 5,000 ADT; for routes with more than 1,000 ADT the use of RAP seal‑coat aggregate must first receive written approval from the District Executive and be documented as meeting the required SRL level, indicating that when these traffic thresholds are exceeded another maintenance or rehabilitation approach should be used [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (p. 75), Ch. 5 (pp. 103–104); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–330)</small></p>
+<h2 id="condition-assessment-and-timing">Condition assessment and timing</h2>
+<p>The Pavement Policy Manual states that determining the need for a seal‑coat micro‑surfacing treatment requires inspecting the pavement for low‑severity cracking, evaluating raveling or weathering as low to medium severity, measuring friction loss (skid resistance), and checking for moisture infiltration; when these conditions are present the surface is considered suitable for seal‑coating. The Pennsylvania Department of Transportation specifications require a temperature inspection of the existing pavement surface that is exposed to direct sunlight, and seal coat may be placed only when that surface temperature is below 120 °F; if material starts to stick to the tires of reclaimed seal‑coat aggregate delivery trucks, placement must be halted until the existing roadway temperature is below 120 °F. The same specifications also require an average daily traffic check: for routes with more than 1,000 ADT, placement of seal coat aggregate from RAP must be approved in writing by the District Executive, and do not use seal coat aggregate from RAP on roads over 5,000 ADT. Provide documentation of the SRL of the unprocessed RAP material, signed by the DME/DMM, confirming that the RAP is from a Bulletin 14 approved source and indicating the SRL. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 105); [2] — SECTION 400 FLEXIBLE PAVEMENTS (p. 330)</small></p>
+<p>In the 50‑year life‑cycle analysis, seal coat is scheduled as a routine maintenance action at the Clean and Seal intervals of 5 yr, 10 yr, 20 yr, 30 yr, 40 yr and 45 yr for pavements classified as Type 1, 1S, 3, 4, 6 or 6S, performed together with crack sealing and shoulder work before significant deterioration occurs [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the 30‑year analysis for concrete pavement rehabilitation and asphalt overlay, seal coat is listed at the 10‑yr, 15‑yr and 25‑yr service‑life points for the same pavement types when all transverse joints have been treated and micro‑surface shoulders are addressed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Seal coat may be applied only to pavements that exhibit minor surface deficiencies—such as minor rutting, minor cracking or loss of fine aggregate—and that do not require structural upgrading; it shall not be placed on any pavement needing structural repair and must not be used on the Interstate system [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For friction‑course (FB) surfaces, seal coat is required on FB‑1 or FB‑2 layers after a minimum of three months of warm‑weather traffic densification; if the underlying pavement remains structurally sound and the FB surface stays in satisfactory condition, application may be deferred for up to three years [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Seal coat is indicated when low‑severity cracking, low‑to‑medium severity raveling or weathering, friction loss, moisture infiltration, or moderate ruts ranging from one‑half inch to one and one‑quarter inches are observed; under those conditions a Type B micro‑surfacing mix is used to provide the seal coat treatment [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When using RAP‑derived aggregate for asphalt seal coat, placement shall occur only when the surface temperature of the existing pavement exposed to direct sunlight is below 120 °F; if the material begins to adhere to the tires of the delivery trucks, placement must be halted until the roadway temperature again falls below 120 °F [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For polymer‑modified emulsified asphalt micro‑surfacing, seal coat should be applied when the pavement shows shallow distress such as cracks, voids, or ruts that are less than one‑half inch deep (addressed by a Type A micro‑surfacing application) or when moderate ruts ranging from one‑half inch to one and one‑quarter inches are present and a seal coat is specified as part of the Type B treatment [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 3 (pp. 71–75), Ch. 5 (pp. 103–105); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 330–336)</small></p>
+<h2 id="materials-and-repair-details">Materials and repair details</h2>
+<p>Seal coat is applied as a protective coating on pavement shoulders or micro‑surface shoulders at a rate of 500 lineal feet per mile during scheduled clean‑and‑seal intervals, and when specified the coating shall be placed to a thickness of either 1.5 inches or 2.0 inches. For concrete pavement rehabilitation and asphalt overlay projects with a 30‑year analysis period, seal coat shall be applied to all transverse joints on pavements classified as Type 1, 1S, 3, 4, 6 or 6S, and may also be placed on shoulders at the same rate of 500 lineal feet per mile; no further material or thickness requirements are prescribed for those locations. In projects that select a polymer‑modified emulsified asphalt micro‑surfacing system, seal coat can be provided using Type B mix to fill moderate ruts ranging from ½ inch to 1¼ inch and may serve as a surface treatment, leveling course, scratch course, or seal coat; a double application of this mix is recommended unless the pavement condition is judged excellent. When the micro‑surfacing project is on an Interstate, a double application of Type A SRL‑E is specified even if the road surface is in excellent condition. Seal coat requires an emulsified asphalt material as defined in Section 702 together with a coarse aggregate produced from reclaimed asphalt pavement (RAP) that must be crushed, screened, and graded to satisfy the Table A gradation and be free of deleterious construction debris. The RAP aggregate shall be documented as originating from a Bulletin 14‑approved source, sampled on the first day of production and at least once every 1,000 tons produced, and any clumps or oversized particles retained on the 12.5 mm (½ inch) sieve must be removed by reprocessing; aggregate stored in uncovered stockpiles for more than one month—or in covered stockpiles for more than three months—must also be reprocessed. Emulsified asphalt is applied first and, without delay, a single layer of the RAP‑derived coarse aggregate is spread at a design rate of 15 to 25 lb per square yard using a calibrated mechanical spreader; placement may occur only while the existing roadway surface exposed to direct sunlight is below 120 °F. Within five minutes after applying the emulsified asphalt, the aggregate must be rolled with pneumatic‑tire rollers overlapping each pass by one foot, making at least two passes at a speed of ≤10 mph and a contact pressure of 40 to 50 psi. Emulsified asphalt may be placed only when air, surface, and aggregate temperatures exceed 60 °F and rain or freezing within 24 hours is not expected; traffic is prohibited until the surface cures, with a minimum cure period of two days before fog sealing may be applied. Fog seal must be placed within two to thirty days after the last day of seal‑coat placement, using an emulsified asphalt applied at a residual rate of 0.02–0.05 gallon per square yard, and a 100‑foot test strip shall first be constructed to set the field rate. For routes with average daily traffic over 1,000 ADT, placement of RAP‑derived seal coat must be approved in writing by the District Executive, accompanied by documentation of the SRL of the unprocessed RAP material signed by the DME/DMM; seal‑coat aggregate from RAP may not be used on roads with ADT over 5,000. The polymer‑modified emulsified asphalt micro‑surfacing system may also be classified as Type A for sealing cracks, filling voids, and shallow ruts less than ½ inch deep, or as Type B for moderate ruts from ½ inch to 1¼ inch deep; both types may require a double application when specified to meet the total design pounds per square yard. When a slurry seal is used, a mechanically‑operated squeegee‑type distributor integrally assembled with the slurry mixer and equipped with a flexible‑lined strike‑off for grade and cross‑slope control, as well as a pressure system and fog‑type spray bar capable of applying up to 0.05 gallon per square yard of water immediately before spreading, is required; the slurry mixture temperature must be kept between not less than 50 °F and not more than 125 °F. Prior to seal‑coat placement, unsuitable material must be removed, open joints and cracks sealed with an acceptable crack sealer or emulsion, heavy paint buildup removed, and raised pavement markers protected or replaced. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=86a7bab5 src=408_2026_1::tab:p329#2 -->
+<p>Table A specifies the gradation requirements for seal coat aggregate from reclaimed asphalt pavement.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-seal-coat-2-cap" tabindex="0"><table class="ct-table" id="ct-seal-coat-2">
+<caption id="ct-seal-coat-2-cap">TABLE AGradation Requirements of Seal Coat Aggregate from RAP</caption>
+<thead>
+<tr><th scope="col">Sieve Size</th><th scope="col">% Passing by Weight*</th></tr>
+</thead>
+<tbody>
+<tr><td>12.5 mm (1/2 inch)</td><td>100</td></tr>
+<tr><td>9.5 mm (3/8 inch)</td><td>85- 100</td></tr>
+<tr><td>4.75 mm (No. 4)</td><td>0-30</td></tr>
+<tr><td>2.36 mm (No. 8)</td><td>0-15</td></tr>
+<tr><td>1.18 mm (No. 16)</td><td>0-10</td></tr>
+<tr><td>75 μm (No. 200)*</td><td>0-1</td></tr>
+<tr><td colspan="2">Determined by PTM No. 100 (Material finer than 75 µm (#200) by wash)</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 329.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 3 (pp. 71–75), Ch. 5 (p. 105); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–336)</small></p>
+<p>Seal coats are required to be applied only on flexible pavements that have flexible bases, and the pavement surface must not exhibit excessive cracking or extensive alligator cracks. When seal‑coat aggregate is derived from reclaimed asphalt pavement (RAP), it must be free of deleterious construction debris, satisfy the gradation requirements set out in Table A, and originate from a Bulletin 14 approved source; a quality‑control plan shall sample and test the gradation on the first day of production and at least once every 1 000 tons produced. Any clumps or material larger than 12.5 mm (½ inch) identified in the RAP aggregate stockpile or during vehicle loading must be reprocessed to remove the oversized particles. RAP aggregate that is stored in uncovered stockpiles must be used within one month of production, and if stored in covered stockpiles it must be used within three months; otherwise the material must be reprocessed before use. Seal‑coat placement using RAP aggregate may proceed only when the temperature of the existing pavement surface exposed to direct sunlight is below 120 °F, and operations shall be halted if the material begins to adhere to the tires of delivery trucks until the surface temperature falls beneath that limit. For routes with average daily traffic exceeding 1 000 ADT, the use of RAP aggregate requires written approval from the District Executive together with signed documentation showing the SRL of the unprocessed RAP and confirming its Bulletin 14 approval; seal coats shall not be placed on roads carrying more than 5 000 ADT. Emulsified asphalt can be applied only when the surface is capable of satisfactory penetration and adhesion and when air, surface, and aggregate temperatures are above 60 °F; placement must be avoided if rain is imminent or freezing temperatures are expected within 24 hours after application. The coarse aggregate used in a seal coat must be either dry or damp but must not contain excessive free moisture. Any change in the source, gradation, or type of aggregate—or any alteration to the asphalt binder—necessitates submission of a new seal‑coat design. After emulsified asphalt is discharged, the coarse aggregate must be spread within five minutes and compacted with rolling equipment traveling at speeds not greater than 10 mph while applying a contact pressure of 40–50 psi to achieve proper embedment; if less than 50 % embedment occurs, a fog seal may be required. A fog seal shall be placed on an asphalt seal coat that has cured for at least two days and must be applied between two and thirty days after the seal‑coat placement; during fog sealing ambient, surface, and aggregate temperatures must remain above 60 °F and rain or freezing conditions must be avoided within eight hours of application. Prior to fog sealing the pavement surface shall be clean and dry, excess aggregate removed by sweeping without damaging the underlying cover sand, and fine aggregate (cover sand) spread uniformly within five minutes of applying the emulsified asphalt at a rate of two to five pounds per square yard. Compatibility of the seal‑coat system also requires use of an emulsified‑asphalt distributor that meets the specifications of Section 460.3(b). Seal coats, slurry seals, and surface treatments shall not be used on the Interstate system, and they may be applied only where the existing pavement exhibits minor distresses such as minor rutting, minor cracking, or loss of fine aggregate; they shall not be placed on pavements that require structural upgrading. The applicability of seal coats under life‑cycle cost analysis maintenance strategies is limited to pavements classified as Type 1, 1S, 3, 4, 6, or 6S, and the treatment is applied to all transverse joints—or micro‑surface shoulders—during scheduled maintenance intervals. For FB‑1 or FB‑2 surface courses, the high void content of those mixes mandates that a seal coat be placed on the FB surface; a minimum of three months of warm‑weather traffic densification of the FB surface is recommended before applying the seal coat to achieve proper compatibility, although when the underlying pavement is structurally sound and the FB surface is satisfactory the application may be postponed for up to three years. On FB Modified surfaces a seal coat or surface treatment is not required for at least four years after placement of the FB layer. The performance of polymer‑modified micro‑surfacing seal‑coat treatments depends primarily on existing pavement condition; low severity cracking, low to medium severity raveling or weathering, friction loss, and moisture infiltration must be present for the project to be suitable, and a double application is recommended unless the road surface is in excellent condition. For polymer‑modified micro‑surfacing, Type B mix is specified because it can provide a seal‑coat function among other treatments. The condition of existing pavement, especially rut depth, determines which polymer‑modified micro‑surfacing mix is appropriate: Type A for shallow ruts less than ½ inch, Type B for moderate ruts ranging from ½ inch to 1¼ inch, and Rut Fill mix for deep ruts of 2 inch; when a double application is specified it must be employed to meet the total design pounds per square yard required for the surface course. Thermal cracks in the existing pavement may not be spaced more than 15 feet apart, and the seal‑coat design shall provide at least the manufacturer‑specified depth, which for SAM/SAMI requires a minimum of two courses of material. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 2 (pp. 62–63), Ch. 3 (p. 75), Ch. 5 (pp. 103–105); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–336)</small></p>
+<h2 id="treatment-procedures">Treatment procedures</h2>
+<p>The crew begins by preparing the existing pavement. For standard asphalt seal coats (Section 470) the surface is first prepared by removing and disposing of all unsuitable material and sealing any cracks as required; for slurry seals (Section 482) open joints and cracks must be sealed with an acceptable crack sealer or emulsion, heavy paint buildup is removed, and raised pavement markers are protected or replaced. In addition, before fog sealing a seal coat (Section 472) the pavement must be clean and dry, which is achieved by sweeping it with a motorized broom to remove excess aggregate, debris and dust and by protecting manholes or sensors from adhesion; similarly, preparation for precoated‑aggregate seal coats (Section 471) calls for sweeping the surface with a power broom to remove loose chips before applying the seal coat and again after traffic is reopened.
+When air, surface and aggregate temperatures are above 60 °F and rain is not imminent, emulsified asphalt is applied as a tack or prime coat. For standard seal coats (Section 470) the emulsified asphalt is applied with a distributor at a rate within ±10 % of the design rate, and the application must be completed before freezing conditions could occur within 24 hours; for fog seals (Section 472) the emulsified asphalt is sprayed with a calibrated distributor to achieve a residual rate between 0.02 and 0.05 gallons per square yard after the underlying seal coat has cured at least 2 days, and fog sealing may only be performed within 2 to 30 days of the original placement; for slurry seals (Section 482) a fog coat of water is applied immediately prior to spreading using a pressure system and spray bar at no more than 0.05 gallon per square yard.
+Within five minutes of applying the emulsified asphalt, the specified dry or damp coarse aggregate is uniformly spread in a single layer at 15‑25 lb per square yard for standard seal coats (Section 470), while fog seals may require fine‑aggregate (cover sand) applied uniformly at 2 to 5 lb per square yard within five minutes if indicated (Section 472). For slurry seals the mixture is placed using a mechanically‑operated squeegee distributor whose strike‑off can be vertically adjusted for grade and cross‑slope, with the slurry temperature maintained between 50 °F and 125 °F during placement; transverse joints are formed by overlapping fresh slurry or lightly wetting the area, and longitudinal joints are treated by pulling a burlap device over uncured material or wetting cured seams as specified.
+After aggregate placement for standard seal coats, the surface is rolled with pneumatic‑tire rollers overlapping each pass by one foot, making at least two passes at a speed not to exceed 10 mph and a contact pressure of 40‑50 psi; no compaction step is required for fog seals or slurry seals beyond the rolling of aggregate where applicable.
+The surface is protected from traffic until the coating has set and cured sufficiently, especially in shaded areas. For fog seals a final sweep is performed before reopening to traffic, and permanent pavement markings may only be placed after three days from the last fog‑seal day (Section 472). For standard seal coats the crew performs a final sweeping and evaluation after curing; for precoated‑aggregate seal coats the surface is swept again after traffic is reopened.
+The fog seal must fully cure, with shaded areas checked, before traffic is allowed; permanent markings may only be placed after three days from the last fog‑seal day. For standard seal coats the coating must set and cure sufficiently before traffic is permitted, and for emulsified‑asphalt seal coats sufficient curing time must be allowed before opening the road to all traffic (Section 471). Slurry seals prohibit traffic until the seal has fully cured to a firm condition that prevents pick‑up of the mixture.
+Throughout the process manholes or sensors are protected from adhesion, raised pavement markers are protected or replaced, and any loose chips are removed both before and after traffic reopening. The fog seal application must occur when air, surface and aggregate temperatures exceed 60 °F, and the underlying seal coat must have cured at least two days; the fog seal also must be applied within a window of two to thirty days after its placement. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=0b63576e src=408_2026_1::tab:p327#1 -->
+<p>The table below specifies application temperature limits for fog seal materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-seal-coat-3-cap" tabindex="0"><table class="ct-table" id="ct-seal-coat-3" aria-describedby="ct-seal-coat-3-sum">
+<caption id="ct-seal-coat-3-cap">TABLE A Fog Seal Materials</caption>
+<thead>
+<tr><td colspan="2"></td><th id="ct-seal-coat-3-h0-2" scope="col" colspan="2">Application Temperature (F)</th></tr>
+<tr><th id="ct-seal-coat-3-h1-0" scope="col">Class of Material</th><th id="ct-seal-coat-3-h1-1" scope="col">Type of Material</th><th id="ct-seal-coat-3-h1-2" scope="col">Minimum</th><th id="ct-seal-coat-3-h1-3" scope="col">Maximum</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-seal-coat-3-h2-0" scope="row">CSS-1h</th><td headers="ct-seal-coat-3-h1-1 ct-seal-coat-3-h2-0">Cationic Emulsified Asphalt</td><td headers="ct-seal-coat-3-h0-2 ct-seal-coat-3-h1-2 ct-seal-coat-3-h2-0">70</td><td headers="ct-seal-coat-3-h0-2 ct-seal-coat-3-h1-3 ct-seal-coat-3-h2-0">150</td></tr>
+<tr><th id="ct-seal-coat-3-h3-0" scope="row">SS-1h</th><td headers="ct-seal-coat-3-h1-1 ct-seal-coat-3-h3-0">Emulsified Asphalt</td><td headers="ct-seal-coat-3-h0-2 ct-seal-coat-3-h1-2 ct-seal-coat-3-h3-0">70</td><td headers="ct-seal-coat-3-h0-2 ct-seal-coat-3-h1-3 ct-seal-coat-3-h3-0">150</td></tr>
+<tr><th id="ct-seal-coat-3-h4-0" scope="row">SS-1hP</th><td headers="ct-seal-coat-3-h1-1 ct-seal-coat-3-h4-0">Polymer-Modified EmulsifiedAsphalt</td><td headers="ct-seal-coat-3-h0-2 ct-seal-coat-3-h1-2 ct-seal-coat-3-h4-0">70</td><td headers="ct-seal-coat-3-h0-2 ct-seal-coat-3-h1-3 ct-seal-coat-3-h4-0">150</td></tr>
+<tr><th id="ct-seal-coat-3-h5-0" scope="row">CSS-1hP</th><td headers="ct-seal-coat-3-h1-1 ct-seal-coat-3-h5-0">Cationic Polymer-ModifiedEmulsified Asphalt</td><td headers="ct-seal-coat-3-h0-2 ct-seal-coat-3-h1-2 ct-seal-coat-3-h5-0">70</td><td headers="ct-seal-coat-3-h0-2 ct-seal-coat-3-h1-3 ct-seal-coat-3-h5-0">150</td></tr>
+<tr><th id="ct-seal-coat-3-h6-0" scope="row" colspan="4">If required or directed, dilute emulsified materials using emulsion and water or a compatibleemulsifying solution. Do not exceed dilution of less than 38% asphalt residue. All dilutionmust be done by the emulsified asphalt supplier at the emulsified asphalt supplier plantlocation. Provide a Bill of Lading from the emulsified asphalt supplier certifying the baseemulsified asphalt properties before dilution, the quantity of emulsified asphalt, and thewater added for dilution, or certify the diluted product. Diluted emulsified asphalt must beapplied within 48 hours after dilution. Dilution of asphalt emulsion in the field is not allowed.</th></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-seal-coat-3-sum">Rows list classes of emulsified asphalt materials, columns provide their types and application temperature ranges.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 327.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–335)</small></p>
+<p>Seal coats may not be applied to the Interstate system and their use on any other road must be determined in accordance with the criteria set out in Table 5.1 of section 5.2. For FB‑1 and FB‑2 surface courses a period of warm‑weather traffic densification is required, with the guidance recommending at least three months of such densification before applying a seal coat or any surface treatment. When the underlying pavement is structurally sound and the FB surface is satisfactory, the seal coat application can be postponed for up to three years. A FB Modified surface may not require a seal coat for at least four years. Implementation of a seal coat that uses reclaimed asphalt pavement (RAP) begins with crushing, screening, and grading the material so that it meets the gradations listed in Table A, and a quality‑control plan must be submitted annually. During production the aggregate’s gradation is sampled on the first day of production and at least once for every 1,000 tons produced. Before shipment the stockpile and truck loading are inspected for clumps or oversized particles, and any material that retains clumps or oversize on the 12.5 mm sieve is reprocessed; aggregate stored uncovered for more than one month or covered for more than three months must also be reprocessed before use. The existing surface must be prepared and cracks sealed prior to any seal‑coat application. Emulsified asphalt may be applied only when air, surface, and aggregate temperatures are above 60 °F, no rain is imminent, and freezing temperatures are not expected within 24 hours; seasonal prohibitions apply to RS‑2P or CRS‑2P products in designated districts between mid‑September (or early October) and May 1. Fog seal may be placed only after the underlying seal coat has cured for a minimum of two days, must be applied within two to 30 days after the last day of seal‑coat placement, and also requires air, surface, and aggregate temperatures above 60 °F with no imminent rain or freezing expected within eight hours. Emulsified asphalt is placed with a mechanically‑operated squeegee‑type distributor calibrated to deliver the design rate within ±10 % of that rate. Within five minutes after emulsion application, dry or damp coarse aggregate is spread uniformly using a calibrated mechanical spreader capable of delivering 15–25 lb per square yard, and the stone is then rolled with pneumatic‑tire rollers traveling no faster than 10 mph, overlapping passes by one foot and making at least two passes at a contact pressure of 40–50 psi. A power broom is used to sweep the pavement before traffic is allowed and again after traffic resumes to remove loose chips. Traffic may not be permitted on the new surface until the material has achieved adequate stability and curing, especially in shaded areas; flaggers, pilot vehicles, and a shadow vehicle equipped with a power broom are required to control speeds and prevent aggregate distortion during opening. When seal‑coat aggregate from RAP is placed on routes with average daily traffic exceeding 1,000 vehicles, written approval from the District Executive together with documentation of the SRL of the unprocessed RAP material signed by the DME/DMM is required, and seal‑coat aggregate from RAP must not be used on roads where average daily traffic exceeds 5,000 vehicles. Placement of RAP aggregate must be timed so that the sun‑heated pavement surface temperature is below 120 °F; if the emulsion begins to adhere to the tires of delivery trucks, operations are halted until the surface temperature falls below this threshold. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=a9bff237 src=408_2026_1::tab:p329#1 -->
+<p>The table below specifies the minimum and maximum application temperatures for various polymer-modified emulsified asphalt materials.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-seal-coat-4-cap" tabindex="0"><table class="ct-table" id="ct-seal-coat-4" aria-describedby="ct-seal-coat-4-sum">
+<caption id="ct-seal-coat-4-cap">473.2 MATERIAL— (table)</caption>
+<thead>
+<tr><td colspan="2"></td><th id="ct-seal-coat-4-h0-2" scope="col" colspan="2">Application Temperature (F)</th></tr>
+</thead>
+<tbody>
+<tr><th id="ct-seal-coat-4-h1-0" scope="row">Class of Material</th><th id="ct-seal-coat-4-h1-1" scope="row">Type of Material</th><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h1-0 ct-seal-coat-4-h1-1">Minimum</td><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h1-0 ct-seal-coat-4-h1-1">Maximum</td></tr>
+<tr><th id="ct-seal-coat-4-h2-0" scope="row">RS-2P</th><th id="ct-seal-coat-4-h2-1" scope="row">Polymer-Modified Emulsified Asphalt</th><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h2-0 ct-seal-coat-4-h2-1">140</td><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h2-0 ct-seal-coat-4-h2-1">175</td></tr>
+<tr><th id="ct-seal-coat-4-h3-0" scope="row">CRS-2P</th><th id="ct-seal-coat-4-h3-1" scope="row">Polymer-Modified Cationic Emulsified Asphalt</th><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h3-0 ct-seal-coat-4-h3-1">140</td><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h3-0 ct-seal-coat-4-h3-1">175</td></tr>
+<tr><th id="ct-seal-coat-4-h4-0" scope="row">HFRS-2P</th><th id="ct-seal-coat-4-h4-1" scope="row">Polymer-Modified High Float Emulsified Asphalt</th><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h4-0 ct-seal-coat-4-h4-1">140</td><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h4-0 ct-seal-coat-4-h4-1">175</td></tr>
+<tr><th id="ct-seal-coat-4-h5-0" scope="row">RS-2</th><th id="ct-seal-coat-4-h5-1" scope="row">Emulsified Asphalt</th><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h5-0 ct-seal-coat-4-h5-1">140</td><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h5-0 ct-seal-coat-4-h5-1">175</td></tr>
+<tr><th id="ct-seal-coat-4-h6-0" scope="row">CRS-2</th><th id="ct-seal-coat-4-h6-1" scope="row">Cationic Emulsified Asphalt</th><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h6-0 ct-seal-coat-4-h6-1">140</td><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h6-0 ct-seal-coat-4-h6-1">175</td></tr>
+<tr><th id="ct-seal-coat-4-h7-0" scope="row">HFRS-2</th><th id="ct-seal-coat-4-h7-1" scope="row">High-Float Emulsified Asphalt</th><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h7-0 ct-seal-coat-4-h7-1">140</td><td headers="ct-seal-coat-4-h0-2 ct-seal-coat-4-h7-0 ct-seal-coat-4-h7-1">175</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-seal-coat-4-sum">Rows list the items in the first column; columns give Application Temperature (F).</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 329.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 103–104); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–335)</small></p>
+<h2 id="quality-and-workmanship">Quality and workmanship</h2>
+<p>Seal‑coat inspection begins with the materials. The emulsified asphalt used shall be verified against the requirements of Section 702, and any RAP‑derived coarse aggregate must be free of deleterious construction debris, satisfy the gradation limits shown in Table A, and be accompanied by source certification (Section 473.2). For projects that employ RAP aggregate, the inspector must also confirm the material’s SRL level and that it originates from a Bulletin 14‑approved source with documentation signed by the DME/DMM; placement on routes carrying more than 1,000 ADT requires written approval of the District Executive, and use on roads exceeding 5,000 ADT is prohibited (Section 473.3). The design of the seal coat must correspond to the actual materials; any change in aggregate source, gradation, or asphalt type triggers a requirement for a new design (Section 470.3).</p>
+<p>Preparation checks require that all unsuitable material be removed, cracks and joints be sealed with an acceptable crack sealer or emulsion, and the pavement surface be clean and dry before application. A power‑broom sweep is required to remove loose chips both prior to and after opening the road to traffic (Section 471.3). The air, surface, and aggregate temperatures must exceed 60 °F, rain must not be imminent, and freezing temperatures must not be expected within eight hours of application for fog seal work (Section 472.3) or within twenty‑four hours for general seal‑coat placement (Section 470.3). For slurry‑type seals the temperature of the slurry components must be maintained between 50 °F and 125 °F during placement (Section 482.3(d)). Aggregates shall be free of excessive moisture, and any clumps or material larger than 12.5 mm retained on the sieve must be removed by reprocessing; stockpiled RAP aggregate stored uncovered for more than one month or covered for more than three months also requires reprocessing (Section 473.2). Gradation sampling shall be performed on the first day of production and at least once every 1,000 tons produced (Section 473.2).</p>
+<p>Installation inspection verifies that the distributor rate is within ±10 % of the design rate and that spreader calibration is confirmed (Section 470.3). For fog‑seal applications a 100‑foot test strip must show a residual asphalt rate between 0.02 and 0.05 gallons per square yard, and the fine aggregate must be spread uniformly at 2 to 5 pounds per square yard within five minutes of emulsified‑asphalt placement (Section 472.3). Rolling shall provide a minimum of two passes, a speed not greater than 10 mph, a contact pressure of 40–50 psi, and the required overlap (Section 470.3). When a mechanically‑operated squeegee‑type distributor is used, it must be integrally assembled with the slurry mixer, include a flexible‑lined strike‑off, provide vertical adjustment for grade and cross‑slope, and have a pressure system capable of applying water fog at no more than 0.05 gallon per square yard; required hand squeegees, shovels, surface‑cleaning machines, and other auxiliary equipment must be present (Section 482.3(d)).</p>
+<p>The completed work is inspected for full cure before any traffic is permitted, with particular attention to shaded areas (Section 472.3). For emulsified‑asphalt seal coats the inspector shall confirm that sufficient curing time has elapsed (Section 471.3). After curing the surface is evaluated; if less than 50 % of the aggregate is embedded in the asphalt, a fog seal may be required before traffic is allowed (Section 470.3). Full curing must also be verified for slurry seals prior to opening the roadway (Section 482.3(d)). [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–335)</small></p>
+<p>According to the Pavement Policy Manual, a seal coat is considered satisfactory when it is applied at a rate of 500 lineal feet per mile on pavement shoulders or micro‑surface for each scheduled maintenance interval. The manual further states that seal coats may be used only to correct minor rutting, minor cracking, or loss of fine aggregate and shall not be placed on any pavement that requires structural upgrading. Use of seal coat on the Interstate system is prohibited, and application on other roads must follow the determination set out in Table 5.1 of the same manual. For seal coats that incorporate reclaimed asphalt pavement (RAP) aggregate, the quality‑control plan required by Section 106.03(b)2 must be followed, with a gradation sample taken on the first day of production and at least once for every 1,000 tons produced. The Representative shall inspect the stockpile and truck loading to verify that no clumps or material larger than a 12.5 mm (½‑inch) sieve remain, and any aggregate failing this check must be reprocessed. Processed RAP seal‑coat aggregate stored uncovered for more than one month after production, or stored covered for more than three months, must also be reprocessed to eliminate retained clumps or oversized particles. Seal‑coat placement is acceptable only when the existing pavement surface exposed to direct sunlight is below 120 °F; operations shall be halted if the material begins to adhere to delivery‑truck tires and may resume only after the surface temperature falls back below that threshold. Placement on routes with an average daily traffic (ADT) exceeding 1,000 vehicles requires written approval from the District Executive together with documentation of the SRL of the unprocessed RAP material signed by the DME/DMM confirming a Bulletin 14 approved source; seal‑coat aggregate from RAP may not be used on roads where ADT exceeds 5,000 vehicles. The seal coat shall be applied only when air, surface, and aggregate temperatures are above 60 °F and rain is not imminent nor freezing expected within the next 24 hours (or within eight hours for subsequent fog sealing). The emulsified‑asphalt application rate must be kept within ±10 % of the design rate, while coarse aggregate shall be spread in a single layer at a rate between 15 and 25 pounds per square yard. Rolling shall begin within five minutes of placement using pneumatic‑tire rollers traveling at no more than 10 miles per hour with a contact pressure of 40 to 50 pounds per square inch; passes must overlap by one foot and at least two roller passes shall be made. The Representative evaluates the finished surface one day after completion, and if less than 50 percent of the aggregate is embedded in the asphalt, a fog seal may be required. The seal coat must cure for a minimum of two days before any fog sealing, and the fog seal shall be placed between two and thirty days after the last day of seal‑coat placement, again only under temperatures above 60 °F and with no rain expected within eight hours. The residual asphalt rate is targeted between 0.02 and 0.05 gallons per square yard, and when fine aggregate is used its application rate shall be between 2 and 5 pounds per square yard; the maximum water application rate is 0.05 gallon per square yard. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 3 (pp. 71–72), Ch. 5 (p. 103); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–335)</small></p>
+<h2 id="performance-and-service-life">Performance and service life</h2>
+<p>For seal‑coat applications that use aggregate reclaimed from asphalt pavement (RAP), a recurring distress is the presence of clumps and oversized particles that remain on the 12.5 mm (½ inch) sieve; such material must be removed because it can compromise the protective layer. These defects typically develop when the processed seal‑coat aggregate from RAP is stored in uncovered stockpiles for longer than one month or in covered stockpiles for longer than three months, or when inspection of the stockpile and truck loading fails to identify clumped material. The required quality‑control plan calls for sampling and testing the gradation of the finished seal‑coat aggregate from RAP on the first day of production and at least once every 1,000 tons produced to ensure compliance before placement. When traffic or loads are permitted before the seal coat has achieved adequate stability and adhesion, distortion, flushing of emulsified asphalt to the surface, and loss of aggregate may develop; likewise, if less than 50 percent of the aggregate is set in the asphalt, the work is considered deficient and a fog seal may be required. These distresses are influenced by several controllable factors: emulsified asphalt must be applied only when air, surface, and aggregate temperatures exceed 60 °F and rain or freezing conditions are not imminent; the application rate must stay within ±10 % of the design rate; rolling of the spread aggregate must begin within five minutes of emulsion placement, use at least two passes at a speed less than or equal to 10 mph with a contact pressure of 40–50 psi, and be overlapped by one foot; aggregates should be dry or only damp without excessive free moisture; shaded areas may need longer set times before traffic is allowed. A further recurring distress for RAP‑based seal coat is premature adhesion of the material to the tires of delivery trucks; this occurs when the temperature of the existing roadway surface exposed to direct sunlight exceeds 120 °F, at which point placement must be halted until the surface cools below that limit. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–330)</small></p>
+<h2 id="monitoring-and-follow-up">Monitoring and follow-up</h2>
+<p>After the seal coat and any fog seal are placed, the surface must be inspected for full cure before vehicles are allowed; shaded portions should be checked to confirm that the fog seal has cured completely, protective coverings removed, and a motorized broom used to sweep away excess material and debris. Traffic may not be permitted on the emulsified asphalt until it has cured. After the seal coat has been placed and the final sweep completed, the Representative must evaluate the finished surface one day later; the inspection checks that the emulsified asphalt has properly set—especially in shaded areas—and verifies aggregate embedment, and if less than 50 percent of the aggregate is embedded in the asphalt, a fog seal may be required before traffic is allowed. After applying the seal coat, the treated area should be swept with a power broom to remove any loose chips both before and after the road is opened to traffic, and for emulsified asphalt the seal coat must be given sufficient time to fully cure before traffic is allowed. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–328)</small></p>
+<p>Seal coats are applied primarily to address minor distresses such as minor rutting, minor cracking, and loss of fine aggregate. When those distress levels exceed the &ldquo;minor&rdquo; classification or when a pavement is judged to require structural upgrading, seal coating alone shall not be placed and additional maintenance, repair, or rehabilitation must be pursued. After placement, the Representative evaluates the completed seal coat surface one day later, after final sweeping, and if the aggregate layer is observed to be less than fifty percent embedded in the asphalt, this condition signals inadequate adhesion. In that situation the Representative may require the application of a fog seal as specified in Section 472 as further maintenance. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 103); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 323–324)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

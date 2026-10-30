@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Superpave Mixture Size (NMAS)</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html" class="active" aria-current="page">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="mix-design.html">Mix Design</a><span class="crumb-sep">›</span><a href="superpave.html">Superpave</a><span class="crumb-sep">›</span><span class="crumb-current">Superpave Mixture Size (NMAS)</span></nav>
+<article><h1>Superpave Mixture Size (NMAS)</h1>
+<div class="meta"><div class="part-of">Part of: <a href="superpave.html">Superpave</a> <span class="edge edge-taxonomic" title="Superpave Mixture Size (NMAS) is a topic under Superpave.">is-subtopic-of</span></div><div class="edge-reading">Superpave Mixture Size (NMAS) is a topic under Superpave.</div><div><a class="tag" href="index.html?q=nominal-maximum-aggregate-size">nominal-maximum-aggregate-size</a><a class="tag" href="index.html?q=superpave-mixture-size">superpave-mixture-size</a><a class="tag" href="index.html?q=nominal-maximum-aggregate-sizes">nominal-maximum-aggregate-sizes</a><a class="tag" href="index.html?q=sp-4-75-mm">sp-4-75-mm</a><a class="tag" href="index.html?q=superpave-9-5-mm-mix">superpave-9-5-mm-mix</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>Superpave Mixture Size (NMAS) is defined as the nominal maximum aggregate size—the largest sieve through which most of the aggregate must pass—in an ultra‑thin bonded wearing course [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. It governs the lift thickness, which is placed in a single lift at a final depth equal to one to one‑and‑a‑half times the diameter of the coarsest aggregate, and thereby links the gradation type (Type A, B, or C) to the intended duty level and traffic conditions, with 6.3 mm, 9.5 mm and 12.5 mm representing light‑duty urban surfaces through heavy‑duty high‑speed applications [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By establishing this aggregate grading, NMAS controls surface texture, seals the pavement to reduce oxidation and weathering, and contributes directly to resistance against fatigue, low‑temperature cracking, and overall durability of the treatment [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>In section 5.5 Ultra‑Thin Bonded Wearing Course, Superpave Mixture Size—expressed as the nominal maximum aggregate size (NMAS)—is defined as the largest sieve size that most of the aggregate must pass. The NMAS is specified as 6.3 mm for Type A, 9.5 mm for Type B, and 12.5 mm for Type C. The NMAS controls the thickness of the hot‑mix asphalt layer, which is placed in one lift at a final depth equal to one to one‑and‑a‑half times the diameter of the coarsest aggregate, thereby helping the UTWC seal the pavement and reduce oxidation, weathering, fatigue cracking and low‑temperature cracking. Consequently, the NMAS contributes directly to the durability and performance of the surface treatment. A 6.3 mm NMAS mix (Type A) is considered to be the lightest duty mix and provides a fine surface texture for urban and suburban applications with light truck traffic. A 9.5 mm NMAS mix (Type B) is durable enough to handle moderate to heavy traffic and truck traffic on highways with moderate speeds. The 12.5 mm NMAS mix (Type C) is the most heavy‑duty mix that can be used for any application, regardless of traffic levels, and is recommended for high speed, high traffic applications. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 107–108)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>The Superpave Mixture Size (NMAS) is defined by the nominal maximum aggregate size that governs the largest sieve through which the majority of aggregate must pass [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In the ultra‑thin bonded wearing course, three mix types are specified: Type A employs an NMAS of 6.3 mm to produce a fine surface texture for light‑duty urban applications; Type B uses an NMAS of 9.5 mm and is intended for moderate to heavy traffic on highways; and Type C utilizes an NMAS of 12.5 mm, the most heavy‑duty option suitable for high‑speed, high‑traffic conditions [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The UTWC is placed in a single lift with a final thickness that equals one to one‑and‑a‑half times the diameter of the coarsest or maximum sized aggregate, directly linking NMAS to the physical thickness of the surface treatment [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For a 6.3 mm NMAS mix, the aggregate fractions must be sized and uniformly graded before being combined with an asphalt binder and any approved warm‑mix asphalt (WMA) technology additive, modifier, or process; these components are proportioned to satisfy the material, gradation, and volumetric Superpave design requirements of Bulletin 27 [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The resulting joint mix formula must also meet moisture‑susceptibility criteria per Bulletin 27 and must include calibration factors for both asphalt content and the 75 µm (No. 200) sieve [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 107–108); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 246–247)</small></p>
+<p>In SECTION 314—SUPERPAVE ASPHALT MIXTURE DESIGN for standard construction of an asphalt rich base course, any increase in the mixture’s composition such as adding reclaimed asphalt pavement is limited to a maximum of 20 % by weight; RAP may not exceed this limit and recycled asphalt shingle material is prohibited. The Job Mix Formula must enumerate each material source so that aggregate fractions, binder, and any warm‑mix additive or modifier are proportioned in accordance with the design, thereby ensuring that the produced mixture conforms to the specified nominal maximum aggregate size and the required design equivalent single axle loads. Processing steps that employ warm‑mix technology are excluded from the volumetric design; they may only be applied after the JMF is approved and solely for moisture‑susceptibility testing, while plant mechanical modification can be used instead when temperature, workability, and compaction are achievable without additives.</p>
+<p>In SECTION 412—SUPERPAVE MIXTURE DESIGN for plant‑mixed 6.3 mm thin asphalt overlay courses, altering any of the aggregate fractions, changing the binder type, or incorporating a warm‑mix technology requires a revision of the proportions used to develop a Job Mix Formula that satisfies the material, gradation and volumetric Superpave requirements for a 6.3 mm NMAS mix. Any laboratory‑procedure modifications needed for warm‑mix production must be addressed by the WMA Technology manufacturer’s technical representative to obtain a uniform blend and must not degrade moisture resistance. When the source of any material changes, a completely new Job Mix Formula, together with a new Form TR‑448A, must be submitted to confirm that the mixture still conforms to the specification. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (p. 216), SECTION 400 FLEXIBLE PAVEMENTS (pp. 246–247)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>In the ultra‑thin bonded wearing course, the nominal maximum aggregate size governs the physical dimension of the surface treatment because the final thickness is placed at 1 to 1.5 times the diameter of the coarsest aggregate, producing a thickness of 1/2 inch for Type A and 3/4 inch for Types B and C [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The UTWC seals the pavement, which reduces oxidation and weathering, providing a chemical benefit that helps preserve the mix’s durability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. This reduction in oxidation allows the pavement to remain resilient to fatigue and low‑temperature cracking, mechanical and thermal properties that are critical for long‑term performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By mitigating surface distresses such as raveling and moderate rutting, the treatment supports an expected service life of 8 to 10 years [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For a Superpave mixture designed to the specified NMAS, the blend must be produced at a temperature that provides adequate workability and compaction, a thermal requirement that can be satisfied through plant mechanical modification without the use of warm‑mix asphalt additives [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The composition is controlled by limiting recycled asphalt pavement content to no more than 20 percent by weight, which influences the mixture’s overall properties [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Moisture susceptibility must be evaluated during design because water sensitivity can degrade the blend, and only the WMA technology additive, modifier, or process may be used to assess results from moisture‑susceptibility testing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (p. 107); [2] — SECTION 300 BASE COURSES (p. 216)</small></p>
+<p>In the ultra‑thin bonded wearing course specification, the Superpave mixture size is classified by its nominal maximum aggregate size into three gradation types—Type A, Type B, and Type C. Type A is defined as a 6.3 mm NMAS mix and is regarded as the lightest‑duty option for urban and suburban surfaces with light truck traffic; Type B is defined as a 9.5 mm NMAS mix that provides durability for moderate to heavy traffic and can also be used in lighter‑duty applications when a slightly thicker lift or more surface distress is present; and Type C is defined as a 12.5 mm NMAS mix, identified as the most heavy‑duty mix suitable for any application, especially high‑speed, high‑traffic situations with moderate rutting. The mix thickness is related to the coarsest aggregate, being placed in one lift with a final thickness equal to 1 to 1.5 times the diameter of the maximum sized aggregate. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 107–108)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>For ultra‑thin bonded wearing courses, the NMAS determines the duty level of the mix: a 6.3 mm nominal maximum aggregate size (Type A) provides a light‑duty surface suitable for urban or suburban areas with light truck traffic; a 9.5 mm nominal maximum aggregate size (Type B) offers durability sufficient for moderate to heavy traffic and can be used where a slightly thicker lift is desired; and a 12.5 mm nominal maximum aggregate size (Type C) is the most heavy‑duty option, recommended for high‑speed, high‑traffic applications and situations with moderate rutting. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 108)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>In ultra‑thin bonded wearing courses, the specified nominal maximum aggregate sizes of 6.3 mm, 9.5 mm, and 12.5 mm for Types A, B, and C respectively are subject to oxidation and weathering of the surface, but the UTWC membrane seals the pavement, reducing oxidation and weathering [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The reduction in oxidation allows the pavement to remain resilient to fatigue and low‑temperature cracking while also addressing surface distresses such as raveling and moderate rutting that may also be corrected [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Type A, with a 6.3 mm nominal maximum aggregate size, provides a light‑duty mix whose fine texture makes it suitable for urban and suburban applications with light truck traffic, yet because it is not recommended for highways that are borderline candidates for preventive maintenance it may be prone to premature distress under higher loads [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Type B, employing a 9.5 mm nominal maximum aggregate size, offers durability sufficient for moderate‑to‑heavy traffic and highway speeds and is recommended for high‑speed, high‑traffic applications as well as for applications with moderate rutting [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Type C uses the largest nominal maximum aggregate size of 12.5 mm, representing the most heavy‑duty mix that can be used in any application, including high‑speed, high‑traffic conditions and those with moderate rutting, indicating that larger NMAS improves resistance to rutting and overall durability [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Section 314—Superpave Asphalt Mixture Design for the asphalt rich base course, the durability of a Superpave mixture produced for the designated NMAS can be reduced by moisture damage, so any warm‑mix asphalt (WMA) technology additive, modifier, or foaming process must be evaluated through moisture‑susceptibility testing during mix design [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The specification also limits recycled asphalt pavement in ARBC mixtures to not exceed 20 percent by weight, indicating that higher RAP levels could adversely affect performance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In Section 412—Superpave Mixture Design for plant‑mixed 6.3 mm thin asphalt overlay courses, moisture susceptibility is identified as the primary durability concern for a 6.3 mm NMAS Superpave mix; consequently the mixture must undergo moisture‑susceptibility analysis in accordance with Bulletin 27 using a sample that includes any WMA technology, and the WMA additive, modifier, or process must not be detrimental to the mixture’s moisture resistance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 107–108); [2] — SECTION 300 BASE COURSES (p. 216), SECTION 400 FLEXIBLE PAVEMENTS (pp. 246–247)</small></p>
+<p>According to the Pavement Policy Manual (section 5.5), a 6.3 mm nominal maximum aggregate size (Type A) is described as the lightest‑duty mix with fine surface texture and is suitable only for urban or suburban areas with light truck traffic; it is not recommended for highways that are borderline candidates for preventive maintenance, so under moderate to heavy traffic conditions this smaller NMAS increases susceptibility to deterioration. The same manual states that a 9.5 mm nominal maximum aggregate size (Type B) is durable enough to handle moderate‑to‑heavy traffic and truck traffic on highways with moderate speeds, and can also be used in lighter duty applications when a thicker lift or more surface distress is present, indicating that the larger NMAS reduces susceptibility under those exposures. Furthermore, the manual notes that a 12.5 mm nominal maximum aggregate size (Type C) is the most heavy‑duty mix and may be used for any application, including high‑speed, high‑traffic pavements and situations with moderate rutting, further showing that increasing NMAS size generally lowers the risk of deterioration. The Pennsylvania Department of Transportation specifications require a moisture susceptibility analysis for a 6.3 mm NMAS Superpave mix, indicating that moisture exposure is a key factor influencing its durability. Those specifications also require that any Warm Mix Asphalt additive, modifier, or process used in the mixture must not be detrimental to its moisture resistance; therefore, selecting WMA technologies that preserve or improve moisture resistance reduces the mix’s susceptibility to deterioration, whereas additives that compromise moisture resistance increase it. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 108); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 246–247)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>A 6.3 mm NMAS mix must be sized, uniformly graded and combined with asphalt binder and any approved warm‑mix additive so that the resulting blend meets all Department requirements while maintaining adequate moisture resistance; therefore a moisture susceptibility analysis is required for the mixture that includes the WMA technology, and the additive or process may not be detrimental to the mixture’s moisture resistance. This ensures that the aggregate size interacts properly with the binder and any modifiers to avoid stripping. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 246–247)</small></p>
+<p>In Section 314—Superpave Asphalt Mixture Design, Standard Construction, Asphalt Rich Base Course, the ARBC mixture specifications limit compatibility concerns by restricting recycled content: RAP may be included but must not exceed 20 percent by weight, and any manufacturer waste recycled asphalt shingles (RAS) are prohibited. Because moisture susceptibility can be affected by additives, the WMA Technology additive or modifier is permitted solely for evaluating moisture‑susceptibility test results after a JMF has been developed without it; it may not be incorporated during the volumetric design. Exceeding these RAP limits, using RAS, or introducing WMA additives before the JMF could create incompatibilities that compromise binder performance. In Section 412—Superpave Mixture Design, Construction of Plant‑Mixed 6.3 mm Thin Asphalt Overlay Courses, a moisture‑susceptibility analysis is required for any 6.3 mm NMAS mix that incorporates a warm‑mix asphalt (WMA) technology, and the WMA additive, modifier, or process shall not be detrimental to the mixture’s moisture resistance. This section does not address other potential compatibility issues such as RAP stiffness, deleterious aggregates, fuel contamination, dissimilar layers, or temperature susceptibility. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (p. 216), SECTION 400 FLEXIBLE PAVEMENTS (pp. 246–247)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>In ultra‑thin bonded wearing courses the NMAS is chosen based on the gradation type specified for the mix, with three predefined types that link a particular nominal maximum aggregate size to expected traffic conditions and performance requirements [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Type A designates a 6.3 mm NMAS and is used for the lightest‑duty, urban or suburban surfaces with light truck traffic but is not recommended on highways that are borderline candidates for preventive maintenance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Type B designates a 9.5 mm NMAS, suits moderate to heavy traffic and highway speeds, and can also be applied in lighter‑duty situations when a thicker lift or greater surface‑distress tolerance is desired [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Type C designates a 12.5 mm NMAS, the most heavy‑duty option, and may be used for any application, especially high‑speed, high‑traffic roads or where moderate rutting is expected [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The selected NMAS also governs the allowable layer thickness, which is limited to 1 to 1.5 times the diameter of the coarsest aggregate; consequently a paver‑placed surface‑treatment thickness of 1/2 inch results for Type A and 3/4 inch for Types B and C [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For standard construction of an asphalt rich base course the NMAS is taken from the mix design and must correspond to the design traffic loading expressed as ESALs while also satisfying the Superpave material, gradation and volumetric requirements set out in Bulletin 27, subject to any Table 1 modifications [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. If a Warm‑Mix Asphalt (WMA) Technology Manufacturer Technical Representative provides procedural changes, those may adjust how the NMAS is applied, but the mixture still has to be produced for the indicated NMAS and meet the required design criteria [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. For plant‑mixed thin asphalt overlay courses that are limited to a 6.3 mm NMAS, selection of the NMAS is driven by the requirement to design a 6.3 mm NMAS mix that meets all Department requirements, using uniformly graded aggregate fractions combined with asphalt binder and an approved WMA technology in proportions that produce a Job Mix Formula conforming to the material, gradation and volumetric Superpave Asphalt Mixture Design criteria set out in Bulletin 27 Chapter 2A as modified by Table A [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. The mix must also pass moisture‑susceptibility analysis according to Bulletin 27, with the WMA technology incorporated without reducing moisture resistance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<!-- concept-tabular:begin key=d21dc0da src=408_2026_1::tab:p216#1 -->
+<p>Table 1 specifies the volumetric mix design requirements for asphalt rich base courses with a 25 mm NMAS.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-superpave-mixture-size-nmas-1-cap" tabindex="0"><table class="ct-table" id="ct-superpave-mixture-size-nmas-1" aria-describedby="ct-superpave-mixture-size-nmas-1-sum">
+<caption id="ct-superpave-mixture-size-nmas-1-cap">TABLE 1 Mix Design Requirements for Asphalt Rich Base Courses</caption>
+<thead>
+<tr><th scope="col">Volumetric Mix Design Property</th><th scope="col">25 mmNMAS</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Design Gyrations (Ndesign) for All Ranges of Design ESALs</th><td>50</td></tr>
+<tr><th scope="row">Design Air Voids (Va) for All Specified Ranges of Design ESALs (Percent)</th><td>2.5</td></tr>
+<tr><th scope="row">Voids in Mineral Aggregate (VMA) Minimum for All Specified Design ESALs and Production QC Samples (Percent)</th><td>13.0</td></tr>
+<tr><th scope="row">Voids Filled with Asphalt (VFA) for All Ranges of Design ESALs (Percent)</th><td>80-85</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-superpave-mixture-size-nmas-1-sum">Rows list volumetric mix design properties for asphalt rich base courses. Columns provide the requirements or values corresponding to a 25 mm NMAS.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 216.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 107–108); [2] — SECTION 300 BASE COURSES (p. 216), SECTION 400 FLEXIBLE PAVEMENTS (pp. 246–247)</small></p>
+<p>In Section 314—Superpave Asphalt Mixture Design for asphalt‑rich base courses, limiting recycled asphalt pavement to no more than twenty percent by weight in ARBC mixtures and prohibiting the use of manufacturer waste recycled asphalt shingles helps keep the aggregate structure within the intended NMAS range; when workability or compaction cannot be achieved solely through plant mechanical modification that produces foamed asphalt, incorporating either WMA Technology additives or modifiers can enhance mixture performance, while special additives may be omitted if the temperature, workability and compaction targets are met by mechanical means alone. Quality control is reinforced by preparing a Job Mix Formula that conforms to the Superpave volumetric requirements for the specified NMAS, having it signed by a certified Asphalt Level 2 plant technician, attaching calibration factors and moisture‑susceptibility test results, and obtaining DME/DMM approval before production. In Section 412—Superpave Mixture Design for plant‑mixed 6.3 mm thin asphalt overlay courses, performance of the 6.3 mm NMAS Superpave mix can be enhanced by incorporating an approved Warm‑Mix Asphalt technology—additive, modifier, or process—directly into the Job Mix Formula during production; moisture susceptibility analysis according to Bulletin 27 must confirm that the WMA Technology does not impair the mixture’s moisture resistance. The specification also requires a producer quality‑control plan, certification of plant technicians, annual verification of the Job Mix Formula, and submission of calibrated asphalt content and fine‑aggregate factors before production to ensure consistent mix properties. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (p. 216), SECTION 400 FLEXIBLE PAVEMENTS (pp. 246–247)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>Evaluation of the nominal maximum aggregate size (NMAS) relies on laboratory moisture‑susceptibility test results and field documentation of the Job Mix Formula (JMF); the JMF must meet Superpave volumetric requirements, include calibration factors per PTM No. 757, and be reviewed and approved by the DME/DMM before production, while no specific long‑term performance evidence is referenced. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 300 BASE COURSES (p. 216)</small></p>
+<p>The nominal maximum aggregate sizes of 6.3 mm, 9.5 mm and 12.5 mm determine the lift thickness for ultra‑thin bonded wearing courses because the final thickness is defined as one to one‑point‑five times the diameter of the coarsest or maximum sized aggregate; consequently a larger NMAS yields a proportionally thicker surface layer [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. By sealing the pavement, an ultra‑thin bonded wearing course reduces oxidation and weathering of the surface, which helps the pavement remain resilient to fatigue and low‑temperature cracking and may also correct surface distresses such as raveling and moderate rutting, providing an expected service life of eight to ten years that reflects a durability benefit linked to the chosen NMAS and associated thickness [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Within this treatment family Type A uses the 6.3 mm nominal maximum aggregate size, is considered the lightest‑duty mix, provides a fine surface texture that works well in urban and suburban settings with light truck traffic, but it is not recommended for highways that are borderline candidates for preventive maintenance where a coarser gradation should be used [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Type B employs the 9.5 mm nominal maximum aggregate size, is durable enough to handle moderate to heavy traffic on highways with moderate speeds, and can also be applied in lighter‑duty situations if a slightly thicker lift or more surface distress is present [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Type C utilizes the 12.5 mm nominal maximum aggregate size, represents the most heavy‑duty mix, may be used for any application regardless of traffic levels, and is recommended for high‑speed, high‑traffic projects where moderate rutting is expected [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In overlay design the chosen Superpave mixture size must correspond to the pavement course thickness and whether the layer is a scratch or leveling type as indicated in Table 10.5; selecting the appropriate NMAS ensures that the overlay meets the prescribed minimum thicknesses for each material, which supports the intended structural performance over its design life [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Consequently correct NMAS selection guides construction practices and helps achieve durable, long‑lasting pavement surfaces [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+<p>In SECTION 314—SUPERPAVE ASPHALT MIXTURE DESIGN, STANDARD CONSTRUCTION, ASPHALT RICH BASE COURSE, selecting the nominal maximum aggregate size establishes an aggregate grading that is uniformly sized and combined so that the Superpave volumetric design requirements are satisfied; this enables the mixture to meet the specified design ESALs and thereby supports the intended pavement performance and durability [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Because the job‑mix formula must document the NMAS used and be approved before production, NMAS also directly influences construction planning and quality‑control procedures [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. In SECTION 412—SUPERPAVE MIXTURE DESIGN, CONSTRUCTION OF PLANT‑MIXED 6.3 mm THIN ASPHALT OVERLAY COURSES, for a 6.3 mm NMAS mix the aggregate must be sized, uniformly graded and combined with binder and any approved warm‑mix asphalt technology so that the resulting job‑mix formula satisfies the material, gradation and volumetric Superpave design requirements; meeting those requirements is how the NMAS influences pavement performance because it ensures the mixture conforms to departmental specifications and retains moisture resistance [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 107–108), Ch. 10 (pp. 176–177); [2] — SECTION 300 BASE COURSES (p. 216), SECTION 400 FLEXIBLE PAVEMENTS (pp. 246–247)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

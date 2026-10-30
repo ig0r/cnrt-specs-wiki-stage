@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asphalt Rubber</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1c1c1c;
+  --ink: #1c1c1c;
+  --muted: #5b6472;
+  --sub: #5b6472;
+  --border: #e4e0da;
+  --line: #e4e0da;
+  --table-border: #8a857d;
+  --chip: #f1ede6;
+  --code: #f4f4f0;
+  --accent: #7a4a63;
+  --link: #2456c7;
+  --sidebar-bg: #23222a;
+  --sidebar-ink: #eae7e2;
+  --sidebar-sub: #9d97a8;
+  --sidebar-line: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #c98fa8;
+  --sidebar-width: 300px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* a11y: focus-visible (light content + dark sidebar) + skip link (FR-OB-14.1) */
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sidebar :focus-visible { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--bg);
+  color: var(--link); padding: .5rem 1rem; border: 1px solid var(--border); z-index: 100; }
+.skip-link:focus { left: 0; }
+
+/* layout shell (adapted from example/00_table_of_contents.html) */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width); height: 100vh; overflow-y: auto; background: var(--sidebar-bg);
+  color: var(--sidebar-ink); padding: 28px 20px 40px;
+  font-family: "Helvetica Neue", Arial, sans-serif; }
+.sidebar-head { margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--sidebar-line); }
+.brand-kicker { margin: 0 0 6px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: .72rem; color: var(--sidebar-active); font-weight: 700; }
+.brand-title { margin: 0 0 8px; font-size: 1.1rem; line-height: 1.3; font-weight: 700;
+  color: var(--sidebar-ink); }
+.brand-count { margin: 0; font-size: .8rem; color: var(--sidebar-sub); }
+.sidebar-filter { width: 100%; padding: .5rem .7rem; margin: 0 0 16px; font: inherit;
+  font-size: .85rem; color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-line); border-radius: 6px; }
+.sidebar-filter::placeholder { color: var(--sidebar-sub); }
+.content { flex: 1 1 auto; min-width: 0; padding: 48px 56px 120px; max-width: none; }
+.nav-toggle { display: none; }
+
+/* sidebar hierarchy tree: native <details>, indent capped for 375px (FR-OB-6.4) */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree li { padding: 1px 0; }
+.tree ul { margin-left: .3rem; padding-left: .6rem; border-left: 1px solid var(--sidebar-line); }
+.tree a { display: inline-block; color: var(--sidebar-sub); text-decoration: none;
+  padding: 3px 6px; border-radius: 5px; overflow-wrap: break-word; word-break: break-word; }
+.tree a:hover { color: var(--sidebar-ink); background: rgba(255, 255, 255, 0.06); }
+.tree a.active { color: var(--sidebar-ink); font-weight: 700;
+  border-left: 3px solid var(--sidebar-active); padding-left: 6px;
+  background: rgba(201, 143, 168, 0.16); }
+.tree details { display: inline; }
+.tree summary { list-style: none; cursor: pointer; color: var(--sidebar-sub);
+  user-select: none; padding: 0 4px; display: inline-block; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree details[open] > summary { color: var(--sidebar-ink); }
+.tree li[hidden] { display: none; }
+
+/* content typography */
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* WCAG 1.4.1 (FR-OB-14.2, amended 2026-09-29): a link in running text is underlined, not
+   marked by colour alone. `:where` keeps the rule at the weight of `a`, so `sup a` and `.tag`
+   keep their own style; nav (breadcrumb, page TOC, sidebar) is chrome. */
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)) {
+  text-decoration: underline; }
+:where(main :is(p, li, td, th, caption, figcaption, .meta):not(nav *, .index *)) a:where(:not(.tag)):hover {
+  text-decoration-thickness: 2px; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: .1em 0 .4em;
+  border-bottom: 3px solid var(--accent); padding-bottom: .35em; color: var(--ink); }
+h2 { font-size: 1.25rem; color: var(--accent); margin-top: 2rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; color: var(--sub); }
+p, li { color: var(--ink); }
+blockquote { margin: 1rem 0; padding: .1rem 1rem; border-left: 3px solid var(--border);
+  color: var(--muted); }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code); padding: .75rem 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* tables keep display:table; each sits in a focusable, named div.table-scroll region that
+   scrolls instead (FR-OB-5.1, amended 2026-09-28) */
+table { border-collapse: collapse; }
+div.table-scroll { overflow-x: auto; margin: 1rem 0; }
+div.table-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+th, td { border: 1px solid var(--table-border); padding: .35rem .65rem; text-align: left; }
+th { background: var(--chip); color: var(--fg); }
+caption { text-align: left; font-weight: 600; padding-bottom: .35rem; color: var(--fg); }
+
+/* images capped to the content column (FR-OB-3.4) */
+img { max-width: 100%; height: auto; display: block; margin: 1rem 0;
+  border: 1px solid var(--border); border-radius: 4px; }
+article img { max-width: 100%; height: auto; }
+figure { margin: 1.4em 0; }
+figcaption { font-size: .86rem; color: var(--sub); margin-top: .5em; font-style: italic; }
+
+/* concept-viewer content classes, retuned to the light content palette */
+nav { margin-bottom: 1.5rem; font-size: .9rem; }
+.muted { color: var(--muted); }
+.meta { margin: .25rem 0 1.75rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.meta div { margin-top: .2rem; }
+.tag { display: inline-block; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 .6em; font-size: .74rem; color: var(--muted);
+  margin: 0 .15rem .15rem 0; white-space: nowrap; }
+a.tag:hover { text-decoration: none; color: var(--fg); border-color: var(--muted); }
+.src { font-size: .78em; color: var(--muted); }
+a.src { color: var(--link); }
+.missing { color: var(--muted); border-bottom: 1px dotted var(--muted); cursor: help; }
+.breadcrumb { color: var(--muted); }
+.breadcrumb a { color: var(--link); }
+.breadcrumb .crumb-sep { margin: 0 .35em; color: var(--muted); }
+.breadcrumb .crumb-current { color: var(--fg); }
+.part-of { color: var(--muted); }
+.part-of::before { content: "\2193 "; }
+.subconcepts { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts::before { content: "\25b8 "; }
+
+/* citation rules */
+sup a { text-decoration: none; color: var(--link); }
+.references { margin-top: 2.5rem; font-size: .9rem; }
+.references li { margin: .35rem 0; overflow-wrap: anywhere; }
+.references li:target { background: var(--chip); outline: 2px solid var(--accent); }
+.page-toc { border: 1px solid var(--border); border-radius: 6px; padding: .55rem .9rem;
+  margin: 1.25rem 0 1.75rem; background: var(--chip); font-size: .9rem; }
+.page-toc-title { margin: 0 0 .3rem; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+.page-toc ul { margin: 0; padding-left: 1.15rem; }
+.page-toc ul ul { padding-left: 1rem; }
+.page-toc li { margin: .12rem 0; }
+.sources-toggle { margin: .2rem 0; }
+.sources-toggle > summary { cursor: pointer; color: var(--muted); }
+.sources-toggle > summary:hover { color: var(--fg); }
+.sources-body { margin-top: .35rem; }
+.subconcepts-toggle { font-size: .92rem; color: var(--muted); margin: 0 0 1.6rem; }
+.subconcepts-toggle > summary { cursor: pointer; }
+.subconcepts-body { margin-top: .4rem; }
+
+/* responsive: off-canvas sidebar */
+@media (max-width: 900px) {
+  .content { padding: 40px 24px 100px; max-width: 100%; }
+}
+@media (max-width: 760px) {
+  .nav-toggle { display: block; position: fixed; top: 14px; left: 14px; z-index: 40;
+    background: var(--sidebar-bg); color: var(--sidebar-ink); border: none;
+    border-radius: 20px; padding: 10px 16px; font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .shell { display: block; }
+  .sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 30;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3); }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 84px 20px 100px; }
+}
+
+/* print */
+@media print {
+  .sidebar, .nav-toggle { display: none; }
+  .shell { display: block; }
+  .content { padding: 0; max-width: 100%; }
+}
+
+/* reduced motion (FR-OB-14.3) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+/* figures: neat max size + centered, with its caption; click-to-zoom lightbox overlay.
+   Inert on figure-free pages (no `article img` -> no handlers). Self-contained, no loads. */
+article img { max-width: 100%; max-height: 20rem; width: auto; height: auto;
+  margin: 1.1rem auto; display: block; cursor: zoom-in; border-radius: 6px;
+  border: 1px solid rgba(128,128,128,.28); }
+article p:has(img) { text-align: center; }
+article p:has(img) em { color: var(--sub); font-size: .9rem; line-height: 1.5; }
+#lightbox { position: fixed; inset: 0; z-index: 3000; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  padding: 3rem 1.5rem; background: rgba(0,0,0,.9); cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 94vw; max-height: 80vh; width: auto; height: auto;
+  object-fit: contain; border-radius: 4px; box-shadow: 0 8px 44px rgba(0,0,0,.6); }
+#lightbox .lb-cap { color: #f1f1f1; max-width: 58rem; text-align: center;
+  font-size: .95rem; line-height: 1.5; }
+#lightbox .lb-close { position: fixed; top: .6rem; right: 1rem; color: #fff;
+  font: 400 2.2rem/1 system-ui, sans-serif; background: none; border: 0;
+  cursor: pointer; opacity: .85; }
+#lightbox .lb-close:focus-visible { outline: 2px solid #ffffff; }
+/* concept-compliance figures (FR-OB-14.8): the image centred and capped by `article img`; the
+   figcaption styled as the `<p><img><em>` caption line; the long description a native
+   disclosure (ring: :focus-visible). */
+figure.cmp-figure { text-align: center; }
+figure.cmp-figure figcaption { color: var(--sub); font-size: .9rem; line-height: 1.5;
+  font-style: italic; }
+details.cmp-longdesc > summary { cursor: pointer; color: var(--muted); }
+/* the lightbox opener LIGHTBOX_JS puts after each image: a native button, shown while it has
+   keyboard focus (mouse users click the image, as before) */
+.lb-open { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lb-open:focus-visible { position: static; display: block; width: auto; height: auto;
+  margin: 0 auto 1rem; padding: .2rem .7rem; overflow: visible; clip-path: none;
+  font: inherit; font-size: .85rem; color: var(--link); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: zoom-in; }
+
+/* FR-MH-5.1: parent_relation typed-edge chip + reading sub-line (md->html reverse builder) */
+.edge { display: inline-block; margin-left: .5em; padding: 0 .55em; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--chip); color: var(--muted);
+  font-size: .72rem; white-space: nowrap; vertical-align: baseline; }
+.edge-taxonomic { border-color: #6b7fd7; color: #4a5fc0; }
+.edge-evaluative { border-color: #d78f6b; color: #b5673f; }
+.edge-attributive { border-color: #6bb2d7; color: #3f86b5; }
+.edge-compositional { border-color: #7ac07a; color: #4a9a4a; }
+.edge-causal { border-color: #c07a9a; color: #a04a72; }
+.edge-reading { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+/* FR-MH-17: per-page under-construction badge (md->html reverse builder) */
+#uc-banner{position:fixed;top:14px;right:14px;z-index:100000;display:inline-flex;align-items:center;
+  gap:.45em;padding:.5em .9em;background:#ffcf33;color:#1a1a1a;border:2px solid #1a1a1a;border-radius:10px;
+  font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.03em;
+  text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none;user-select:none}
+@media (prefers-reduced-motion:no-preference){#uc-banner{animation:uc-bob 1.8s ease-in-out infinite}
+  @keyframes uc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}}
+@media (max-width:760px){#uc-banner{top:10px;right:10px;font-size:.72rem;padding:.4em .7em}}
+</style>
+</head>
+<body>
+<!-- Generated by output-builder 1.0 from corpus: /private/var/folders/xw/2czr5dw570s6ch6fmb3rxllh0000gn/T/tmp.UP7GT3A0ET -->
+<a class="skip-link" href="#content">Skip to content</a>
+<button id="navToggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776; Concepts</button>
+<div class="shell">
+<nav class="sidebar" id="sidebar" aria-label="Concept hierarchy">
+<div class="sidebar-head">
+<p class="brand-kicker">Wiki</p>
+<p class="brand-title">Concepts</p>
+<p class="brand-count">245 concepts</p>
+</div>
+<input id="filter" class="sidebar-filter" type="search" aria-label="Filter concepts by title, tag, or alias" placeholder="Filter concepts…">
+<ul class="tree" id="tree"><li><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-condition-assessment.html">Pavement Condition Assessment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="deflection.html">Deflection</a></li><li><a href="distress.html">Distress</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bleeding.html">Bleeding</a></li><li><a href="broken-slab.html">Broken Slab</a></li><li><a href="corner-break.html">Corner Break</a></li><li><a href="corrugation-and-shoving.html">Corrugation and Shoving</a></li><li><a href="cracking.html">Cracking</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="crack-width.html">Crack Width</a></li><li><a href="diagonal-cracking.html">Diagonal Cracking</a></li><li><a href="fatigue-cracking.html">Fatigue Cracking</a></li><li><a href="longitudinal-crack.html">Longitudinal Crack</a></li><li><a href="mid-slab-cracking.html">Mid-Slab Cracking</a></li><li><a href="reflective-cracking.html">Reflective Cracking</a></li><li><a href="shrinkage-cracking.html">Shrinkage Cracking</a></li><li><a href="slippage-cracking.html">Slippage Cracking</a></li><li><a href="thermal-cracking.html">Thermal Cracking</a></li><li><a href="transverse-crack.html">Transverse Crack</a></li></ul></details></li><li><a href="depression-settlement.html">Depression / Settlement</a></li><li><a href="distress-severity.html">Distress Severity</a></li><li><a href="faulting.html">Faulting</a></li><li><a href="joint-deterioration.html">Joint Deterioration</a></li><li><a href="pumping.html">Pumping</a></li><li><a href="raveling.html">Raveling</a></li><li><a href="rutting.html">Rutting</a></li><li><a href="slab-migration.html">Slab Migration</a></li><li><a href="spalling.html">Spalling</a></li><li><a href="stripping.html">Stripping</a></li><li><a href="void-loss-of-support.html">Void (loss of support)</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="slab-rocking.html">Slab Rocking</a></li><li><a href="subgrade-consolidation.html">Subgrade Consolidation</a></li></ul></details></li><li><a href="wheel-path.html">Wheel Path</a></li></ul></details></li><li><a href="falling-weight-deflectometer.html">Falling Weight Deflectometer</a></li><li><a href="functional-condition.html">Functional Condition</a></li><li><a href="pavement-condition-survey.html">Pavement Condition Survey</a></li><li><a href="pavement-core.html">Pavement Core</a></li><li><a href="ride-quality.html">Ride Quality</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-profile.html">Pavement Profile</a></li></ul></details></li><li><a href="skid-resistance.html">Skid Resistance</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="hydroplaning.html">Hydroplaning</a></li><li><a href="polishing.html">Polishing</a></li><li><a href="texturing.html">Texturing</a></li></ul></details></li><li><a href="structural-capacity.html">Structural Capacity</a></li></ul></details></li><li><a href="pavement-design.html">Pavement Design</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="18-kip-esal.html">18-kip ESAL</a></li><li><a href="aashto-1993-design-guide.html">AASHTO 1993 Design Guide</a></li><li><a href="cross-slope.html">Cross-Slope</a></li><li><a href="darwin-aashtoware.html">DARWin / AASHTOWare</a></li><li><a href="design-exception.html">Design Exception</a></li><li><a href="design-life.html">Design Life</a></li><li><a href="flexible-pavement.html">Flexible Pavement</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-voids.html">Air Voids</a></li><li><a href="asphalt-binder.html">Asphalt Binder</a><details open><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-rubber.html" class="active" aria-current="page">Asphalt Rubber</a></li><li><a href="emulsified-asphalt.html">Emulsified Asphalt</a></li><li><a href="performance-grade-pg-binder.html">Performance Grade (PG) Binder</a></li><li><a href="polymer-modified-binder.html">Polymer-Modified Binder</a></li></ul></details></li><li><a href="fb-1-fb-2-mixes.html">FB-1 / FB-2 Mixes</a></li><li><a href="mixing-plant.html">Mixing Plant</a></li><li><a href="reclaimed-asphalt-pavement-rap.html">Reclaimed Asphalt Pavement (RAP)</a></li><li><a href="stone-matrix-asphalt.html">Stone Matrix Asphalt</a></li></ul></details></li><li><a href="full-depth-asphalt-pavement.html">Full-Depth Asphalt Pavement</a></li></ul></details></li><li><a href="flexible-pavement-design.html">Flexible Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-number.html">Structural Number</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="structural-layer-coefficient.html">Structural Layer Coefficient</a></li></ul></details></li></ul></details></li><li><a href="frost-heave.html">Frost Heave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="differential-heaving.html">Differential Heaving</a></li><li><a href="freeze-thaw-cycle.html">Freeze-Thaw Cycle</a></li><li><a href="frost-penetration.html">Frost Penetration</a></li><li><a href="frost-susceptible-soil.html">Frost-Susceptible Soil</a></li><li><a href="spring-thaw.html">Spring Thaw</a></li></ul></details></li><li><a href="functional-classification.html">Functional Classification</a></li><li><a href="mix-design.html">Mix Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-entrainment.html">Air Entrainment</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="air-content.html">Air Content</a></li></ul></details></li><li><a href="asphalt-content.html">Asphalt Content</a></li><li><a href="coarse-aggregate.html">Coarse Aggregate</a></li><li><a href="gradation.html">Gradation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="dense-graded-mixture.html">Dense-Graded Mixture</a></li><li><a href="fines-content-no-200-sieve.html">Fines Content (No. 200 Sieve)</a></li><li><a href="gap-graded-mixture.html">Gap-Graded Mixture</a></li></ul></details></li><li><a href="reactive-aggregate.html">Reactive Aggregate</a></li><li><a href="superpave.html">Superpave</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="fine-graded-mixture-9-5-mm-fg.html">Fine-Graded Mixture (9.5 mm FG)</a></li><li><a href="superpave-mixture-size-nmas.html">Superpave Mixture Size (NMAS)</a></li></ul></details></li></ul></details></li><li><a href="pavement-base-drain.html">Pavement Base Drain</a></li><li><a href="pavement-design-submission.html">Pavement Design Submission</a></li><li><a href="pavement-performance.html">Pavement Performance</a></li><li><a href="pavement-structure.html">Pavement Structure</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="base-course.html">Base Course</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-base.html">Aggregate Base</a></li><li><a href="asphalt-base-course.html">Asphalt Base Course</a></li><li><a href="concrete-base.html">Concrete Base</a></li></ul></details></li><li><a href="binder-course.html">Binder Course</a></li><li><a href="brick-pavement.html">Brick Pavement</a></li><li><a href="compaction.html">Compaction</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="in-place-density.html">In-Place Density</a></li><li><a href="maximum-dry-density.html">Maximum Dry Density</a></li></ul></details></li><li><a href="geogrid.html">Geogrid</a></li><li><a href="geosynthetic.html">Geosynthetic</a></li><li><a href="geotextile.html">Geotextile</a></li><li><a href="lift.html">Lift</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paver.html">Paver</a></li></ul></details></li><li><a href="shoulder.html">Shoulder</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-shoulder.html">Asphalt Shoulder</a></li><li><a href="concrete-shoulder.html">Concrete Shoulder</a></li><li><a href="lateral-support.html">Lateral Support</a></li><li><a href="safety-edge.html">Safety Edge</a></li><li><a href="shoulder-drop-off.html">Shoulder Drop-Off</a></li><li><a href="shoulder-types.html">Shoulder Types</a></li></ul></details></li><li><a href="subbase.html">Subbase</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="2a-subbase.html">2A Subbase</a></li></ul></details></li><li><a href="subgrade.html">Subgrade</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-soil-classification.html">AASHTO Soil Classification</a></li><li><a href="california-bearing-ratio.html">California Bearing Ratio</a></li><li><a href="resilient-modulus.html">Resilient Modulus</a></li><li><a href="rock-capping.html">Rock Capping</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aashto-no-1-aggregate.html">AASHTO No. 1 Aggregate</a></li></ul></details></li><li><a href="subgrade-evaluation.html">Subgrade Evaluation</a></li><li><a href="subgrade-stabilization.html">Subgrade Stabilization</a></li><li><a href="undercutting.html">Undercutting</a></li></ul></details></li><li><a href="wearing-course.html">Wearing Course</a></li></ul></details></li><li><a href="pavement-thickness.html">Pavement Thickness</a></li><li><a href="pavement-type-selection.html">Pavement Type Selection</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="alternate-pavement-type-bidding.html">Alternate Pavement Type Bidding</a></li></ul></details></li><li><a href="pavement-widening.html">Pavement Widening</a></li><li><a href="rigid-pavement.html">Rigid Pavement</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="composite-pavement.html">Composite Pavement</a></li><li><a href="construction-joint.html">Construction Joint</a></li><li><a href="continuously-reinforced-concrete-pavement.html">Continuously Reinforced Concrete Pavement</a></li><li><a href="contraction-joint.html">Contraction Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="saw-cutting.html">Saw Cutting</a></li></ul></details></li><li><a href="dowel-bar.html">Dowel Bar</a></li><li><a href="expansion-joint.html">Expansion Joint</a></li><li><a href="joint.html">Joint</a></li><li><a href="joint-spacing.html">Joint Spacing</a></li><li><a href="jointed-plain-concrete-pavement.html">Jointed Plain Concrete Pavement</a></li><li><a href="jointed-reinforced-concrete-pavement.html">Jointed Reinforced Concrete Pavement</a></li><li><a href="load-transfer.html">Load Transfer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="aggregate-interlock.html">Aggregate Interlock</a></li></ul></details></li><li><a href="long-life-concrete-pavement.html">Long-Life Concrete Pavement</a></li><li><a href="longitudinal-joint.html">Longitudinal Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="pavement-shoulder-joint.html">Pavement-Shoulder Joint</a></li></ul></details></li><li><a href="portland-cement-concrete.html">Portland Cement Concrete</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="class-aa-concrete.html">Class AA Concrete</a></li><li><a href="curing.html">Curing</a></li><li><a href="elastic-modulus.html">Elastic Modulus</a></li><li><a href="fiber-reinforced-concrete.html">Fiber-Reinforced Concrete</a></li><li><a href="modulus-of-rupture.html">Modulus of Rupture</a></li></ul></details></li><li><a href="precast-concrete-pavement.html">Precast Concrete Pavement</a></li><li><a href="roller-compacted-concrete.html">Roller-Compacted Concrete</a></li><li><a href="tie-bar.html">Tie Bar</a></li><li><a href="transverse-joint.html">Transverse Joint</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="intermediate-joint.html">Intermediate Joint</a></li></ul></details></li><li><a href="widened-lane.html">Widened Lane</a></li></ul></details></li><li><a href="rigid-pavement-design.html">Rigid Pavement Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="load-transfer-coefficient-j.html">Load Transfer Coefficient (J)</a></li><li><a href="modulus-of-subgrade-reaction-k-value.html">Modulus of Subgrade Reaction (k-value)</a></li><li><a href="slab-thickness.html">Slab Thickness</a></li></ul></details></li><li><a href="roadway-construction-standards-pub-72m.html">Roadway Construction Standards (Pub 72M)</a></li><li><a href="service-life.html">Service Life</a></li><li><a href="serviceability.html">Serviceability</a></li><li><a href="subsurface-drainage.html">Subsurface Drainage</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="drainage-coefficient.html">Drainage Coefficient</a></li><li><a href="drainage-structure.html">Drainage Structure</a></li><li><a href="permeability.html">Permeability</a></li><li><a href="permeable-base.html">Permeable Base</a></li><li><a href="positive-drainage.html">Positive Drainage</a></li><li><a href="subgrade-drain.html">Subgrade Drain</a></li><li><a href="water-infiltration.html">Water Infiltration</a></li></ul></details></li><li><a href="traffic-loading.html">Traffic Loading</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="average-daily-traffic-adt.html">Average Daily Traffic (ADT)</a></li><li><a href="traffic-growth-rate.html">Traffic Growth Rate</a></li><li><a href="vehicle-classification.html">Vehicle Classification</a></li></ul></details></li><li><a href="truck-factor.html">Truck Factor</a></li><li><a href="typical-section.html">Typical Section</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="curb-and-gutter.html">Curb and Gutter</a></li></ul></details></li></ul></details></li><li><a href="pavement-management.html">Pavement Management</a></li><li><a href="pavement-preservation.html">Pavement Preservation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-patching.html">Asphalt Patching</a></li><li><a href="base-repair.html">Base Repair</a></li><li><a href="concrete-patching.html">Concrete Patching</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="full-depth-patching.html">Full-Depth Patching</a></li><li><a href="partial-depth-repair.html">Partial-Depth Repair</a></li><li><a href="patch-joint.html">Patch Joint</a></li><li><a href="patching-material.html">Patching Material</a></li><li><a href="percent-patching.html">Percent Patching</a></li><li><a href="slab-replacement.html">Slab Replacement</a></li></ul></details></li><li><a href="corrective-maintenance.html">Corrective Maintenance</a></li><li><a href="crack-sealing.html">Crack Sealing</a></li><li><a href="cross-stitching.html">Cross-Stitching</a></li><li><a href="diamond-grinding.html">Diamond Grinding</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="grooving.html">Grooving</a></li></ul></details></li><li><a href="dowel-bar-retrofit.html">Dowel Bar Retrofit</a></li><li><a href="high-friction-surface-treatment.html">High Friction Surface Treatment</a></li><li><a href="joint-rehabilitation.html">Joint Rehabilitation</a></li><li><a href="joint-sealing.html">Joint Sealing</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="joint-sealant.html">Joint Sealant</a></li></ul></details></li><li><a href="maintenance-cycle.html">Maintenance Cycle</a></li><li><a href="micro-surfacing.html">Micro Surfacing</a></li><li><a href="preventive-maintenance.html">Preventive Maintenance</a></li><li><a href="rut-filling.html">Rut Filling</a></li><li><a href="seal-coat.html">Seal Coat</a></li><li><a href="slab-stabilization.html">Slab Stabilization</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-undersealing.html">Asphalt Undersealing</a></li><li><a href="cement-grout.html">Cement Grout</a></li><li><a href="slabjacking.html">Slabjacking</a></li></ul></details></li><li><a href="slurry-seal.html">Slurry Seal</a></li><li><a href="surface-treatment.html">Surface Treatment</a></li></ul></details></li><li><a href="rehabilitation.html">Rehabilitation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="3r-project.html">3R Project</a></li><li><a href="cold-in-place-recycling.html">Cold In-Place Recycling</a></li><li><a href="crack-and-seat.html">Crack and Seat</a></li><li><a href="fractured-pcc-slab.html">Fractured PCC Slab</a></li><li><a href="full-depth-reclamation.html">Full Depth Reclamation</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="stabilizing-agent.html">Stabilizing Agent</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-stabilization.html">Asphalt Stabilization</a></li></ul></details></li></ul></details></li><li><a href="hot-in-place-recycling.html">Hot In-Place Recycling</a></li><li><a href="overlay.html">Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="asphalt-overlay.html">Asphalt Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="interlayer.html">Interlayer</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="paving-fabric.html">Paving Fabric</a></li></ul></details></li><li><a href="milling.html">Milling</a></li><li><a href="saw-and-seal.html">Saw and Seal</a></li><li><a href="tack-coat.html">Tack Coat</a></li><li><a href="thin-asphalt-overlay.html">Thin Asphalt Overlay</a></li><li><a href="ultra-thin-bonded-wearing-course.html">Ultra-Thin Bonded Wearing Course</a></li></ul></details></li><li><a href="concrete-overlay.html">Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="bond-breaker.html">Bond Breaker</a></li><li><a href="bonded-concrete-overlay.html">Bonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="debonding.html">Debonding</a></li></ul></details></li><li><a href="unbonded-concrete-overlay.html">Unbonded Concrete Overlay</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="separation-layer.html">Separation Layer</a></li></ul></details></li></ul></details></li><li><a href="leveling-course.html">Leveling Course</a></li><li><a href="overlay-design.html">Overlay Design</a><details><summary aria-label="Toggle sub-concepts">▸</summary><ul><li><a href="overlay-thickness.html">Overlay Thickness</a></li></ul></details></li><li><a href="resurfacing.html">Resurfacing</a></li><li><a href="structural-overlay.html">Structural Overlay</a></li><li><a href="surface-preparation.html">Surface Preparation</a></li></ul></details></li><li><a href="pavement-reconstruction.html">Pavement Reconstruction</a></li><li><a href="rehabilitation-strategy.html">Rehabilitation Strategy</a></li><li><a href="rubblization.html">Rubblization</a></li><li><a href="scarifying.html">Scarifying</a></li></ul></details></li></ul></details></li></ul>
+</nav>
+<main class="content" id="content" tabindex="-1">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">All concepts</a><span class="crumb-sep">›</span><a href="penndot-pavement-policy-manual.html">PennDOT Pavement Policy Manual (Publication 242)</a><span class="crumb-sep">›</span><a href="pavement-design.html">Pavement Design</a><span class="crumb-sep">›</span><a href="flexible-pavement.html">Flexible Pavement</a><span class="crumb-sep">›</span><a href="asphalt-concrete-hma.html">Asphalt Concrete (HMA)</a><span class="crumb-sep">›</span><a href="asphalt-binder.html">Asphalt Binder</a><span class="crumb-sep">›</span><span class="crumb-current">Asphalt Rubber</span></nav>
+<article><h1>Asphalt Rubber</h1>
+<div class="meta"><div class="part-of">Part of: <a href="asphalt-binder.html">Asphalt Binder</a> <span class="edge edge-taxonomic" title="Asphalt Rubber is a topic under Asphalt Binder.">is-subtopic-of</span></div><div class="edge-reading">Asphalt Rubber is a topic under Asphalt Binder.</div><div><a class="tag" href="index.html?q=asphalt-rubber">asphalt-rubber</a><a class="tag" href="index.html?q=asphalt-rubber-binder">asphalt-rubber-binder</a><a class="tag" href="index.html?q=asphalt-rubber-binders">asphalt-rubber-binders</a><a class="tag" href="index.html?q=crumb-rubber-modified-asphalt-binder">crumb-rubber-modified-asphalt-binder</a><a class="tag" href="index.html?q=rubber-modified-asphalt-binder">rubber-modified-asphalt-binder</a></div><div>Created 2026-10-30 · Updated 2026-10-30</div></div>
+<p>Asphalt Rubber is a high‑viscosity binder produced by blending hot asphalt cement with reclaimed ground‑tire crumb rubber (CRM) at a minimum of 15 % by weight, where the rubber particles swell during wet‑process mixing to sizes up to No. 8 mesh (2.38 mm)[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The resulting rubberized binder meets ASTM D6114 Table 1 Type II requirements and, because of its elevated viscosity, can be placed in gap‑graded wearing courses with a thicker film and higher stiffness that deliver performance comparable to polymer‑modified binders[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Its elasticity provides good elastic recovery, increased durability, long‑term resistance to rutting, cracking, aging and oxidation, and it also reduces roadway noise, making it appropriate for high‑traffic interstate wearing or binder courses when applied via the wet process with a maximum layer thickness of 2½ inches[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>].</p>
+
+<nav class="page-toc" aria-label="On this page"><p class="page-toc-title">Contents</p><ul><li><a href="#material-purpose-and-applicability">Material purpose and applicability</a></li><li><a href="#composition-and-characteristics">Composition and characteristics</a></li><li><a href="#key-material-properties">Key material properties</a></li><li><a href="#behavior-and-mechanisms">Behavior and mechanisms</a></li><li><a href="#durability-and-deterioration">Durability and deterioration</a></li><li><a href="#material-interactions-and-compatibility">Material interactions and compatibility</a></li><li><a href="#selection-specification-and-improvement">Selection, specification, and improvement</a></li><li><a href="#performance-evaluation-and-implications">Performance evaluation and implications</a></li></ul></nav>
+<details class="sources-toggle"><summary>Sources (2)</summary><div class="sources-body"><a href="#ref-1">Pavement Policy Manual (2025)</a>, <a href="#ref-2">Publication 408/2026 Specifications (2026)</a></div></details>
+
+<h2 id="material-purpose-and-applicability">Material purpose and applicability</h2>
+<p>Asphalt Rubber is a high‑viscosity binder produced by blending asphalt cement with reclaimed ground‑tire rubber, referred to as crumb rubber modifier (CRM), in which the rubber constitutes at least 15 % of the total blend weight and exists as particles up to No. 8 mesh (2.38 mm) size[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. When the CRM is blended with hot asphalt cement at a refinery or storage terminal, the resulting binder—having smaller particle size and lower viscosity than conventional neat binders—can be shipped to the mixing plant for incorporation into dense‑graded mixtures where limited void space exists[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In a gap‑graded wearing course, this rubberized binder is mixed with coarse aggregate, permitting higher void content, greater binder proportion, thicker film thickness, and stone‑to‑stone contact, thereby delivering performance comparable to polymer‑modified binders and enhancing the durability and serviceability of the pavement surface[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The elasticity of the high‑viscosity binder provides good elastic recovery, increased durability, improved long‑term resistance to rutting, cracking, aging, and oxidation, raises stiffness for additional rut resistance, and reduces roadway noise[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. Asphalt Rubber binders should be considered for projects that would normally use gap‑graded wearing or binder courses with polymer‑modified PG 64E‑22 binder; for new construction they are required as a wearing course on asphalt, concrete, or composite pavements, especially on Interstates and Interstate look‑alikes exceeding &gt; 25,000 ADT, &gt; 10 million ESALs (20‑year design life), and &gt; 50,000 square yards[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The mixture must be produced using the wet process in which the CRM is blended with the asphalt binder before the binder is mixed with aggregates, and the layer thickness should not exceed 2 ½ inches[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In Pennsylvania specifications, Asphalt Rubber refers to crumb rubber derived from processing recycled tires, supplied as a processed free‑flowing material that must meet gradation limits and a maximum total contaminant content of 2.5 % (including up to 1.0 % iron, 1.0 % fiber, and 0.5 % other contaminants)[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Within the stone matrix asphalt mixture it functions as a stabilizer additive, added at the dosage rate prescribed in Table B to prevent draindown and help maintain mixture stability[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 128–130); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 289–291)</small></p>
+<h2 id="composition-and-characteristics">Composition and characteristics</h2>
+<p>Asphalt Rubber is a blended binder consisting of asphalt cement, certain additives, and reclaimed ground‑tire crumb rubber (CRM), with the rubber comprising at least 15 % by weight of the total blend.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In the wet process used for gap‑graded wearing courses, the CRM is mixed with hot asphalt binder before aggregate addition, producing a high‑viscosity binder that contains rubber particles up to No. 8 mesh (2.38 mm) and exhibits higher viscosity than conventional neat binders.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The resulting binder must satisfy the physical requirements of ASTM D6114, Table 1, Type II.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] This high‑viscosity, rubber‑modified binder provides good elastic recovery, increased durability, and long‑term resistance to rutting, cracking, aging and oxidation while also reducing roadway noise.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For dense‑graded applications the material is referred to as Crumb Rubber Modified Asphalt Binder (CRMAB), which uses a lower crumb rubber content and finer particles of #30 mesh or smaller, yielding a binder with reduced viscosity that can be incorporated into aggregates with limited void space.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] The CRMAB must meet the physical requirements of the AASHTO M 320 (PG 64E‑22) specification.[<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] In stone matrix asphalt mixtures, Asphalt Rubber is supplied as crumb rubber (CR), a processed free‑flowing material derived from recycled tires or retread tire buffings and used as a stabilizer.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The CR must meet the gradation requirements of ASTM D5461 using 200 mm sieves and may not exceed a loss after sieve analysis of 7.65 %.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Contaminant levels in the CR are limited to a total of 2.5 % by weight, with no more than 1.0 % each for iron and fiber and 0.5 % for other contaminants.[<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=827b851e src=408_2026_1::tab:p291#1 -->
+<p>The table below specifies the gradation requirements for crumb rubber used in stone matrix asphalt mixtures.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-asphalt-rubber-1-cap" tabindex="0"><table class="ct-table" id="ct-asphalt-rubber-1">
+<caption id="ct-asphalt-rubber-1-cap">CR Gradation</caption>
+<thead>
+<tr><th scope="col">Sieve Size</th><th scope="col">Percent Passing</th></tr>
+</thead>
+<tbody>
+<tr><td>4.75 mm (No. 4)</td><td>100</td></tr>
+<tr><td>2.36 mm (No. 8)</td><td>98-100</td></tr>
+<tr><td>75 µm (No. 200)</td><td>0-3</td></tr>
+</tbody>
+</table></div>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 291.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 128–130); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 289–291)</small></p>
+<p>When the crumb‑rubber modifier is blended at the required minimum of 15 % by weight, the rubber particles swell during the specialized heating and agitation process to a size up to No. 8 mesh (2.38 mm), producing a binder that exhibits higher viscosity than conventional neat asphalt binders; this increased viscosity can be accommodated by the high‑air‑void structure of gap‑graded mixtures, which in turn permits a greater overall binder content and a thicker film thickness, yielding performance comparable to polymer‑modified binders. Adding crumb‑rubber to a conventional PG 64S‑22 binder raises the binder’s stiffness, directly improving rut resistance, while the resulting high‑viscosity rubber‑modified binder also provides good elastic recovery, increased durability, long‑term resistance to cracking, aging and oxidation, and it reduces roadway noise. The mixture must be produced using the wet process in which the crumb‑rubber modifier is blended with the asphalt binder before aggregate addition; incorporating reclaimed asphalt pavement or reclaimed asphalt shingle material alters the stiffness of the resulting AR‑GG mix, making it unsuitable for projects that require significant handwork or raking. Because the mixture is a premium product and typically more expensive than a conventional Superpave blend, it should only be selected when traffic and size criteria—greater than 25 000 average daily traffic, greater than 10 million equivalent single axle loads over a 20‑year design life, and an area exceeding 50 000 square yards—indicate that its performance benefits will outweigh the cost, and the layer thickness should not exceed 2 1/2 inches to maintain acceptable structural behavior. In dense‑graded courses, using a lower crumb‑rubber content together with a finer gradation of #30 mesh or smaller produces a CRMAB whose particles are smaller and whose viscosity is reduced; this lower viscosity permits incorporation of the binder into dense‑graded aggregates that have limited void space while still delivering performance comparable to polymer‑modified binders, provided the binder meets the physical requirements of AASHTO M 320 (PG 64E‑22) as modified in Bulletin 25 or AASHTO M 332. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 128–130)</small></p>
+<h2 id="key-material-properties">Key material properties</h2>
+<p>The Asphalt Rubber binder used in gap‑graded wearing courses must contain at least 15 % by weight of rubber modifier, and the swollen crumb particles are limited to sizes up to No. 8 mesh (2.38 mm), which raises the binder’s viscosity above that of conventional neat asphalt binders and satisfies the physical requirements of ASTM D6114 Table 1 Type II. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] This elevated viscosity provides good elastic recovery, increased durability, and a higher stiffness that can improve rut resistance, thereby contributing to long‑term resistance to both rutting and cracking, although the same stiffness makes the mixture unsuitable for projects requiring extensive handwork or raking. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] For dense‑graded mixtures the crumb rubber is used at a lower content with a finer gradation of #30 mesh or smaller, producing a binder of lower viscosity that can fill the limited void space between aggregates and must meet the physical requirements of the AASHTO M 320 (PG 64E‑22) specification as modified in Bulletin 25 or AASHTO M 332. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Chemically, the wet‑process blending of crumb rubber with the asphalt binder before aggregate addition is required to achieve proper integration, and when warm‑mix asphalt is employed a compatible chemical additive must be used while foaming is prohibited; these practices contribute to improved resistance to aging and oxidation. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Thermally, the modified binder can elevate a PG 64S‑22 grade to the higher PG 64E‑22 performance level, reflecting enhanced temperature‑susceptibility characteristics, and it also improves resistance to low‑temperature cracking while reducing roadway noise. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Design constraints include limiting the layer thickness of the gap‑graded wearing course to no more than 2 ½ inches in order to meet design limits. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>] Performance of asphalt‑rubber mixtures depends on the physical characteristics of the crumb rubber used as a stabilizer, which must meet a specific particle‑size distribution with a maximum allowable loss after sieve analysis of 7.65 % to ensure consistent gradation. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] The crumb rubber also must be free flowing to blend uniformly during mixing. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>] Chemical purity is controlled by limiting total contaminants to 2.5 % by weight, with no more than 1.0 % iron, 1.0 % fiber and 0.5 % other materials, which prevents adverse reactions in the binder. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 128–130); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 289–291)</small></p>
+<p>In the gap‑graded wearing course described in section 5.16 of the Pavement Policy Manual, the asphalt‑rubber binder is classified by confirming that its rubber content is at least 15 % of the total blend weight and that it contains crumb‑rubber particles up to No. 8 mesh (2.38 mm) size [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. These characteristics give the binder a higher viscosity than conventional neat binders, and its physical properties are measured against the limits set in ASTM D6114 Table 1 Type II, with compliance indicating suitability for gap‑graded mixtures [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The high‑viscosity binder is primarily described through performance effects such as good elastic recovery, greater durability, long‑term resistance to rutting, cracking, aging and oxidation, and reduced roadway noise; when blended with a conventional PG 64S‑22 binder the mixture shows increased stiffness that improves rut resistance, although asphalt‑rubber binders cannot be tested and graded according to the performance‑graded binder requirements in AASHTO M 320 or AASHTO M 332 [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For dense‑graded courses covered by section 5.17 of the same manual, a crumb‑rubber modified asphalt binder is characterized by verifying that it satisfies the physical requirements of the AASHTO M 320 (PG 64E‑22) specification as modified in Bulletin 25 or of AASHTO M 332, and meeting those specifications provides the classification basis for CRMAB used in dense‑graded mixtures [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. In the Pennsylvania Department of Transportation specifications, the properties of crumb rubber used as the Asphalt Rubber stabilizer are quantified primarily through sieve‑analysis according to ASTM D5461 (or FM 5‑559) on 200 mm sieves with a maximum allowable loss after sieve analysis of 7.65% [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Contaminant limits are set at a total of 2.5 % by weight, not exceeding 1.0 % iron, 1.0 % fiber and 0.5 % other contaminants; metal content is measured by passing a magnet through a 50.0 ± 0.1 g sample, and the amount of fiber is obtained by weighing the fiber balls generated during the gradation test [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 128–130); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 289–291)</small></p>
+<h2 id="behavior-and-mechanisms">Behavior and mechanisms</h2>
+<p>In the gap‑graded wearing course evaluated in section 5.16, the high‑viscosity binder in asphalt rubber provides good elastic recovery and increased durability, which helps the pavement absorb applied loads; this elasticity yields improved long‑term resistance to rutting and cracking, while the rubber also gives improved resistance to aging and oxidation, extending service life. Adding rubber to a conventional PG 64S‑22 binder can increase stiffness, further enhancing rut resistance. In the dense‑graded courses examined in section 5.17, the rubber‑modified asphalt binder provides good elastic recovery and increased durability, which leads to improved resistance to cracking—including reflective, fatigue, and low‑temperature cracking—and a reduction in rutting when compared with conventional mixes under traffic loading. The addition of crumb rubber can raise the performance grade of a PG 64S‑22 binder to PG 64E‑22, indicating enhanced behavior across temperature variations. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 128–130)</small></p>
+<p>The behavior of an Asphalt Rubber Gap‑Graded mixture is governed primarily by the physical swelling of crumb‑rubber particles during hot mixing, which raises the binder viscosity and enables a thicker film on the coarse aggregate skeleton created by the gap‑graded structure. This high‑viscosity rubberized binder can be placed in a mix with relatively large air voids, allowing higher binder content without bleeding and providing performance comparable to polymer‑modified binders; the rubberized binder must meet the physical requirements of ASTM D6114 Table 1 Type II and the rubber content is at least 15% by the weight of the total blend. In addition, the high‑viscosity binder provides good elastic recovery and increased durability, and adding crumb rubber raises the stiffness of a conventional PG 64S‑22 binder, which improves resistance to rutting and cracking while also improving resistance to aging and oxidation, thereby contributing to reduced roadway noise. The behavior of Crumb‑Rubber‑Modified Asphalt Binder in dense‑graded courses is governed primarily by physical factors: the rubber is ground to a fine gradation of #30 mesh or smaller, giving it a small particle size, and the resulting CRMAB has a lower viscosity than conventional asphalt rubber. These attributes permit the binder to flow into the limited void space of a dense‑graded aggregate skeleton, enabling proper coating and mix stability; CRMAB provides similar performance to polymer‑modified asphalt binders. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 128–130)</small></p>
+<h2 id="durability-and-deterioration">Durability and deterioration</h2>
+<p>The high‑viscosity binder used in asphalt rubber provides good elastic recovery, which translates into increased durability and therefore lowers its susceptibility to deterioration. Its inherent resistance to aging and oxidation further reduces degradation over time, while the added stiffness improves long‑term rutting and cracking performance, all of which act to diminish deterioration potential. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (p. 128)</small></p>
+<h2 id="material-interactions-and-compatibility">Material interactions and compatibility</h2>
+<p>In the gap‑graded wearing course described in section 5.16, Asphalt rubber is produced by blending crumb‑rubber modifier into the asphalt cement so that the rubber content reaches at least 15 % of the total blend; during specialized mixing the rubber particles swell and become up to No. 8 mesh (2.38 mm), which raises the binder viscosity relative to a neat binder. The higher‑viscosity rubberized binder can be placed in a gap‑graded aggregate skeleton that contains many air voids, allowing a greater binder content and a thicker film coating on the stones without compromising workability, and this interaction yields performance comparable to polymer‑modified binders, so AR‑GG mixtures are generally suitable for the same applications as stone mastic asphalt. In dense‑graded courses covered by section 5.17, the crumb‑rubber modified binder is blended with hot asphalt at a terminal and, because the rubber particles are finer than #30 mesh and the resulting binder has lower viscosity, it can be incorporated into the limited void space of the dense‑graded aggregate; this compatibility enables the CRMAB to perform similarly to polymer‑modified binders while still meeting the physical requirements of AASHTO M 320 (PG 64E‑22) as modified in Bulletin 25 or AASHTO M 332. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 128–130)</small></p>
+<p>Moisture susceptibility of the aggregates is controlled by limiting sodium sulfate soundness loss to no more than 15% in five cycles and requiring a sand equivalent of at least 45% for fine aggregate, which helps prevent stripping. Crumb‑rubber used as a stabilizer must be essentially free of fabric, wire, cord and other contaminants, with total contaminant content not exceeding 2.5 % (no more than 1.0 % iron, 1.0 % fiber and 0.5 % other). When recycled asphalt pavement is incorporated, the specification permits only up to 10 % RAP and mandates that it be processed free of foreign material and segregation. Additionally, cellulose pellet additives may contain binder ingredients but must not exceed 20.0 % of the pellet weight so as not to alter binder properties. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 289–291)</small></p>
+<h2 id="selection-specification-and-improvement">Selection, specification, and improvement</h2>
+<p>The specification of an Asphalt Rubber Gap‑Graded (AR‑GG) mixture is guided primarily by the rubber content and binder performance requirements; the crumb rubber modifier must constitute at least 15 % by the weight of the total blend, and the resulting rubberized binder has to satisfy the physical requirements of ASTM D6114, Table 1, Type II. Because the gap‑graded aggregate provides a high void content, a higher‑viscosity binder is permissible, allowing thicker film thicknesses comparable to polymer‑modified binders and making AR‑GG suitable for the same applications as stone mastic asphalt mixtures. Selection of an AR‑GG mixture is appropriate when the project would otherwise use a gap‑graded wearing or binder course with a polymer‑modified PG 64E‑22 binder, and it may be employed in new construction or as an overlay on asphalt, concrete, or composite pavements; however, it should be avoided where significant handwork or raking is required because of the mix’s stiffness. Because AR‑GG is a premium, higher‑cost material, it should only be specified when cost‑effectiveness can be demonstrated, and for new construction it must be used as the wearing course. For high‑traffic applications such as Interstates and Interstate look‑alikes, the project should have an average daily traffic greater than 25 000 vehicles, cumulative ESALs greater than 10 million over a 20‑year design life, and a total area greater than 50 000 square yards; in those cases AR‑GG may replace SMA wearing courses. Additional constraints include limiting layer thickness to not exceed 2 1/2 inches, producing the mix by the wet process, using chemical warm‑mix additives if WMA is employed (foaming is not allowed), and avoiding use on shoulders unless lane and shoulder are paved in one pass or on temporary lanes where a premium mix is not warranted. For dense‑graded courses, selection of crumb rubber modified asphalt binder is guided by the requirement that the binder meet the physical requirements of the AASHTO M 320 (PG 64E‑22) specification as modified in Bulletin 25 or AASHTO M 332; the binder must be produced with a lower crumb rubber content and a finer gradation (#30 mesh or smaller), which yields a smaller particle size and lower viscosity suitable for the limited void space of dense‑graded aggregate. The crumb rubber used in any Asphalt Rubber application must be derived from recycled tires, supplied as processed, free‑flowing material from a manufacturer listed in Bulletin 15 and certified as required; its particle‑size distribution must satisfy the gradation determined according to ASTM D5461 using 200 mm sieves while keeping the loss after sieve analysis at or below 7.65%; it must be relatively free of fabric, wire, cord and other contaminants, with total contaminant content not exceeding 2.5 % (no more than 1.0 % iron, 1.0 % fiber and 0.5 % other by weight); and the dosage rate must follow the values prescribed in Table B of the specification. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>][<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:begin key=6d6485f4 src=408_2026_1::tab:p290#1 -->
+<p>Table: TABLE ACoarse Aggregate Quality Requirements.</p>
+<div class="table-scroll" role="region" aria-labelledby="ct-asphalt-rubber-2-cap" tabindex="0"><table class="ct-table" id="ct-asphalt-rubber-2" aria-describedby="ct-asphalt-rubber-2-sum">
+<caption id="ct-asphalt-rubber-2-cap">TABLE ACoarse Aggregate Quality Requirements</caption>
+<thead>
+<tr><th scope="col">Characteristic</th><th scope="col">Test Method</th><th scope="col">Required Values</th></tr>
+</thead>
+<tbody>
+<tr><th scope="row">Abrasion Loss, %</th><td>AASHTO T 96</td><td>≤ 35</td></tr>
+<tr><th scope="row">Flat and Elongated Particles, %3:1 Ratio5:1 Ratio</th><td>ASTM D4791, Method B(measured by mass, on material retained onand above the 4.75 mm (No.4) sieve)</td><td>≤ 20≤5</td></tr>
+<tr><th scope="row">Absorption, %</th><td>AASHTO T 85</td><td>≤ 2.0</td></tr>
+<tr><th scope="row">Crushed Fragments, %One Fractured FaceTwo or More Fractured Faces</th><td>ASTM D5821</td><td>100≥ 90</td></tr>
+</tbody>
+</table></div>
+
+<p class="ct-summary" id="ct-asphalt-rubber-2-sum">Rows list aggregate characteristics, columns provide test methods and required values for quality requirements.</p>
+
+<p><em>Source: Commonwealth of Pennsylvania DEPARTMENT OF TRANSPORTATION Publication 408/2026 SPECIFICATIONS, untitled table, p. 290.</em> [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<!-- concept-tabular:end -->
+
+<p><small>[1] — Ch. 5 (pp. 128–130); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 289–291)</small></p>
+<p>For AR‑GG gap‑graded wearing courses performance can be improved by using a crumb rubber modifier of at least 15 % by weight of the total blend and employing specialized mixing equipment that agitates and heats the binder until the rubber particles swell, producing a high‑viscosity binder containing swollen rubber particles up to No. 8 mesh (2.38 mm) [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The resulting binder must satisfy the physical requirements of ASTM D6114 Table 1 Type II, allowing placement at higher binder content and thicker film thickness because its high air voids promote stone‑to‑stone contact, providing stiffness comparable to polymer‑modified binders and thereby improving rut resistance, elastic recovery, durability, long‑term resistance to both rutting and cracking, resistance to aging and oxidation, and reducing roadway noise [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. The mixture is required to be produced using the wet process, blending the crumb rubber modifier with the asphalt binder before aggregates are added; when Warm Mix Asphalt is used a chemical warm‑mix additive must be utilized and foaming is not allowed [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. RAP or RAS may be incorporated as specified, layer thickness shall not exceed 2 ½ inches, and structural layer coefficients from Table 10.6 for Superpave courses should be applied in structural design [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. For dense‑graded courses a crumb‑rubber modified asphalt binder with lower rubber content and finer particle size—specifically #30 mesh or smaller—facilitates flow into the limited void space of dense‑graded aggregates, improving workability and performance [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. This CRMAB is produced by blending ground tire rubber with hot asphalt at a refinery or terminal and must be quality‑controlled by requiring compliance with the physical requirements of AASHTO M 320 (PG 64E‑22) as modified in Bulletin 25 or AASHTO M 332, which can raise the grade of a conventional PG 64S‑22 binder to PG 64E‑22 and deliver good elastic recovery, increased durability, improved resistance to reflective, fatigue and low‑temperature cracking, reduced rutting relative to conventional mixes, and lower roadway noise [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]. To further improve performance, alternative stabilizers such as mineral fibers, cellulose fibers, or an approved Warm Mix Asphalt technology additive may be incorporated in place of or alongside crumb rubber, provided any stabilizer meets the draindown tolerances specified in Table B [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. When crumb rubber is used under this specification it must be processed to the gradation defined by ASTM D5461 using 200 mm sieves and must not exceed a maximum allowable loss after sieve analysis of 7.65%, while its total contaminant content must stay below 2.5% (no more than 1.0% iron, 1.0% fiber, and 0.5% other) [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]. Quality control requires removal of rubber particles from the fiber balls before weighing, determination of metal content by passing a magnet through a 50.0 ± 0.1 g sample, and measurement of fiber content by weighing the fiber balls formed during gradation testing [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>].</p>
+<p><small>[1] — Ch. 5 (pp. 128–130); [2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 289–291)</small></p>
+<h2 id="performance-evaluation-and-implications">Performance evaluation and implications</h2>
+<p>Evaluation of the crumb‑rubber component in an asphalt‑rubber mix is based on a series of laboratory tests prescribed in Section 419. The fine aggregate must achieve at least 45 % sand equivalent using AASHTO T 176, and its sodium sulfate soundness loss may not exceed 15 % after five cycles; uncompacted void content is verified with AASHTO T 304, Method A, while mineral filler requires a hydrometer analysis per AASHTO T 88. Crumb rubber itself must meet a gradation determined by ASTM D5461 (or FM 5‑559) and be limited to no more than 2.5 % total contaminants, measured by magnet metal extraction and fiber‑ball weighing. The source does not describe any field or long‑term performance monitoring for Asphalt Rubber. [<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup>]</p>
+<p><small>[2] — SECTION 400 FLEXIBLE PAVEMENTS (pp. 289–291)</small></p>
+<p>The AR‑GG mixture specified in section 5.16 incorporates a rubberized binder that must contain at least 15 % crumb rubber by weight, and the resulting binder contains rubber particles up to No. 8 mesh (2.38 mm) and exhibits a higher viscosity than conventional neat asphalt binders. Because the gap‑graded aggregate possesses a high void content, this elevated viscosity permits a greater binder proportion and thicker film thickness; the stone‑to‑stone contact inherent in the gap grading further supports load transfer and durability. The high‑viscosity binder provides good elastic recovery, which translates into increased pavement durability, and it improves long‑term resistance to rutting and cracking while also resisting aging and oxidation and helping to lower roadway noise. When rubber is added to a conventional PG 64S‑22 binder the stiffness of the asphalt binder increases, enhancing rut resistance, although such asphalt‑rubber binders cannot be tested or graded according to the performance‑graded asphalt binder requirements in AASHTO M 320 or AASHTO M 332. Because AR‑GG mixtures are stiff, they should not be used on projects that require significant handwork or raking, which limits construction methods; their premium nature and higher cost mean they should only be employed when the anticipated performance benefits justify the expense for high‑traffic interstates meeting &gt; 25,000 ADT, &gt; 10 million ESALs over a 20‑year design life, or &gt; 50,000 sq yd. In structural design the AR‑GG layer is treated with the Superpave layer coefficients, its thickness should not exceed 2 ½ inches, and it must be produced using the wet process to ensure proper rubber blending; when placed as a wearing course it can replace SMA courses, although pavement markings require an increased wet film thickness of 5 mils.</p>
+<p>In section 5.17 the crumb‑rubber‑modified asphalt binder used in dense‑graded courses incorporates reclaimed ground tire rubber at a lower crumb‑rubber content and with a finer gradation of #30 mesh or smaller, resulting in a binder with smaller particle size and lower viscosity that can be incorporated into dense‑graded aggregate having limited void space. This CRMAB delivers performance comparable to polymer‑modified asphalt binders and meets the physical requirements of AASHTO M 320 (PG 64E‑22) as modified in Bulletin 25 or AASHTO M 332. The rubber‑modified binder’s good elastic recovery and increased durability translate into longer‑lasting pavement structures, while its improved resistance to cracking—including reflective, fatigue, and low‑temperature cracks—helps maintain surface integrity under thermal and traffic stresses. By reducing rutting relative to conventional mixes the material sustains load‑bearing capacity, and the associated reduction of roadway noise enhances user comfort. Adding rubber to a PG 64S‑22 binder can bump the grade to PG 64E‑22, allowing designers to meet higher performance specifications without changing the base mix. [<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup>]</p>
+<p><small>[1] — Ch. 5 (pp. 128–130)</small></p>
+<section class="references" aria-labelledby="references-heading">
+<h2 id="references-heading">References</h2>
+<ol>
+<li id="ref-1">Pennsylvania Department of Transportation, &quot;Pavement Policy Manual,&quot; Publication 242, May 2015 Edition, Change No. 10, 2025. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub-242/pub%20242%20change%2010.pdf</a></li><li id="ref-2">Pennsylvania Department of Transportation, &quot;Publication 408/2026 Specifications,&quot; Change No. 1, 2026. [Online]. Available: <a href="https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf" rel="noopener noreferrer" target="_blank">https://www.pa.gov/content/dam/copapwp-pagov/en/penndot/documents/public/pubsforms/publications/pub_408/408_2026/408_2026_1/408_2026_1.pdf</a></li>
+</ol>
+</section></article>
+<div id="uc-banner" role="status" title="This page is still being built and may change."><span aria-hidden="true">🚧</span> Under construction</div>
+</main>
+</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="lb-cap"><button class="lb-close" aria-label="Close">×</button><img alt=""><div class="lb-cap" id="lb-cap"></div></div>
+<script>
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var sidebar = document.getElementById('sidebar');
+  var mobile = window.matchMedia('(max-width: 760px)');
+  function setInert() { if (sidebar) { if (mobile.matches && !sidebar.classList.contains('open')) { sidebar.setAttribute('inert', ''); } else { sidebar.removeAttribute('inert'); } } }
+  setInert();
+  if (mobile.addEventListener) mobile.addEventListener('change', setInert);
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        sidebar.removeAttribute('inert');
+        var first = sidebar.querySelector('input, a, summary');
+        if (first) first.focus();
+      } else {
+        setInert();
+        toggle.focus();
+      }
+    });
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('a') && mobile.matches) {
+        sidebar.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        setInert();
+      }
+    });
+  }
+  var filter = document.getElementById('filter');
+  var tree = document.getElementById('tree');
+  if (filter && tree) {
+    var snapshot = new Set();
+    tree.querySelectorAll('details').forEach(function (d) { if (d.hasAttribute('open')) snapshot.add(d); });
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      var items = tree.querySelectorAll('li');
+      if (!q) {
+        items.forEach(function (li) { li.hidden = false; });
+        tree.querySelectorAll('details').forEach(function (d) { d.open = snapshot.has(d); });
+        return;
+      }
+      items.forEach(function (li) { li.hidden = true; });
+      tree.querySelectorAll('li > a').forEach(function (a) {
+        if (a.textContent.toLowerCase().indexOf(q) === -1) return;
+        var li = a.parentElement;
+        li.hidden = false;
+        var p = li.parentElement;
+        while (p && p !== tree) {
+          if (p.tagName === 'LI') p.hidden = false;
+          if (p.tagName === 'DETAILS') p.open = true;
+          p = p.parentElement;
+        }
+      });
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  var lb, img, cap, closeBtn, opener;
+  function capFor(el) { var f = el.closest('figure'), fc = f && f.querySelector('figcaption');
+    var p = el.closest('p'), em = p && p.querySelector('em');
+    return (fc ? fc.textContent.trim().replace(/\s*\[\d+\]$/, '') : '')
+      || (em ? em.textContent.trim() : '') || el.getAttribute('alt') || ''; }
+  function openLb(el, btn) { if (!lb) return; opener = btn; img.setAttribute('src', el.getAttribute('src'));
+    var c = capFor(el); img.setAttribute('alt', c); cap.textContent = c;
+    cap.style.display = c ? '' : 'none';
+    lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false'); closeBtn.focus(); }
+  function closeLb() { if (!lb || !lb.classList.contains('open')) return; lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true'); img.removeAttribute('src');
+    if (opener) { opener.focus(); opener = null; } }
+  document.addEventListener('DOMContentLoaded', function () {
+    lb = document.getElementById('lightbox'); if (!lb) return;
+    img = lb.querySelector('img'); cap = lb.querySelector('.lb-cap'); closeBtn = lb.querySelector('.lb-close');
+    lb.addEventListener('click', closeLb);
+    document.querySelectorAll('article img').forEach(function (el) {
+      var c = capFor(el), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lb-open'; btn.textContent = 'Enlarge figure';
+      btn.setAttribute('aria-label', c ? 'Enlarge figure: ' + c : 'Enlarge figure');
+      el.insertAdjacentElement('afterend', btn);
+      btn.addEventListener('click', function () { openLb(el, btn); });
+      el.addEventListener('click', function () { openLb(el, btn); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>
